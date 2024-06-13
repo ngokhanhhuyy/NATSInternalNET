@@ -1,0 +1,1 @@
+class r{getRoleBootstrapColor(o){return{Developer:"danger",Manager:"primary",Accountant:"success",Staff:"secondary"}[o]}getRoleBootstrapIconClassName(o){return{Developer:"bi bi-wrench",Manager:"bi bi-star-fill",Accountant:"bi bi-star-half",Staff:"bi bi-star"}[o]}}function a(){return new r}export{a as u};

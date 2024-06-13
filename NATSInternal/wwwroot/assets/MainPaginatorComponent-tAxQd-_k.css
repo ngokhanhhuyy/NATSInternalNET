@@ -1,0 +1,1 @@
+button.page-button[data-v-a76ab922]:not(:hover):not(:focus):not(:is(.active)){background:#fff!important;color:var(--font-color)!important;border-color:rgba(var(--bs-primary-rgb),.25)}button.page-button.active[data-v-a76ab922]{background:var(--bs-primary)!important;color:#fff!important;border-color:var(--bs-primary)}

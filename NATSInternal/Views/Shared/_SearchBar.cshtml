@@ -1,0 +1,24 @@
+﻿<div class="search-container flex-fill align-items-center h-100 ms-1"
+        id="search-bar-container">
+    <input type="text" class="form-control" placeholder="Tìm kiếm"
+           ref="searchInputElement"
+           v-model="searchContent">
+    <i class="bi bi-search search-icon"></i>
+    @* <div class="search-results-container border border-primary-subtle rounded-3 shadow"
+         v-show="searchContent.length > 0">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item p-2 d-flex justify-content-center align-items-center
+                        text-body-tertiary"
+                v-if="model.results.length === 0">
+                Không tìm thấy kết quả
+            </li>
+            <li class="list-group-item px-3 py-2 d-flex flex-column"
+                v-else
+                v-for="result in model.results">
+                <span class="fw-bold">{{ result.title }}</span>
+                <span class="small text-body-tertiary">{{ result.matchedContent }}</span>
+            </li>
+        </ul>
+    </div>
+    <i class="bi bi-x-circle-fill clear-icon"></i> *@
+</div>

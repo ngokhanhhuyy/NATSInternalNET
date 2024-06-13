@@ -1,0 +1,216 @@
+@model UserListModel
+@{
+    ViewBag.PageName = "userList";
+}
+@functions {
+    private string FormId => "user-list-form";
+    private PaginationRangeModel largeScreenPagination => Html.PaginationRange(
+        Model.Page,
+        Model.PageCount,
+        5);
+    private PaginationRangeModel smallScreenPagination => Html.PaginationRange(
+        Model.Page,
+        Model.PageCount,
+        3);
+
+    private string RoleButtonClassName(string roleName)
+    { 
+        string color = Html.RoleBootstrapColor(roleName);
+        return $"bg-{color} bg-opacity-10 border-{color}-subtle text-{color}";
+    }
+
+    private string PaginationButtonClassName(int page)
+    {
+        string className = "";
+        if (page == Model.Page)
+        {
+            className += "active";
+        }
+
+        bool exceedLeft = page < smallScreenPagination.StartingPage;
+        bool exceedRight = page > smallScreenPagination.EndingPage;
+        if (exceedLeft || exceedRight)
+        {
+            className += " d-sm-flex d-none";
+        }
+
+        return className;
+    }
+}
+
+<div class="container-fluid d-flex flex-column justify-content-center pb-5">
+    <div class="row mt-3 g-0">
+        <div class="col col-xl-8 col-lg-12 col-md-12 col-sm-12 col-12">
+            <div class="row g-3 mb-2 px-2 pb-2">
+                <div class="block block-list-options bg-white rounded-3 p-0">
+                    <div class="block-header bg-primary bg-opacity-25
+                                border border-primary-subtle px-3 py-2 rounded-top">
+                        <span class="text-primary small fw-bold">
+                            LỌC VÀ SẮP XẾP
+                        </span>
+                    </div>
+                    <div class="block-body d-flex flex-row p-3 pb-2 border border-top-0
+                                rounded-bottom w-100 row g-0">
+                        <form asp-action="UserList" asp-controller="User" id="@FormId"
+                                method="get" novalidate></form>
+                        <div class="col mb-md-0 mb-sm-2 mb-2 me-md-2 me-sm-0 me-0">
+                            <!-- Search content -->
+                            <input asp-for="Content" form="@FormId"
+                                    class="form-control flex-fill" type="text"
+                                    placeholder="Họ và tên, thông tin liên lạc ...">
+                        </div>
+                        <div class="col col-md-4 col-sm-12 col-12">
+                            <!-- Sorting options -->
+                            <div class="input-group">
+                                <!-- Sort by field -->
+                                <select asp-for="OrderByField" form="@FormId" class="form-select">
+                                    <option value="LastName">@DisplayNames.LastName</option>
+                                    <option value="FirstName">@DisplayNames.FirstName</option>
+                                    <option value="UserName">@DisplayNames.UserName</option>
+                                    <option value="Birthday">@DisplayNames.Birthday</option>
+                                    <option value="CreatedDateTime">@DisplayNames.CreatedDateTime</option>
+                                    <option value="Role">@DisplayNames.Role</option>
+                                </select>
+
+                                <!-- Sort by direction -->
+                                <button class="btn btn-primary" id="order-direction-button">
+                                    @if (Model.OrderByAscending)
+                                    {
+                                        <i class="bi bi-sort-alpha-down"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort-alpha-up"></i>
+                                    }
+                                </button>
+                                <input asp-for="OrderByAscending" type="hidden" />
+                            </div>
+                        </div>
+                        <div class="col col-12 flex-row mt-3">
+                            <button class="btn btn-sm me-2 mb-2 all-role-button"
+                                    role-input-value="">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                                Tất cả
+                            </button>
+                            @foreach (RoleBasicModel role in Model.RoleOptions)
+                            {
+                                <div class="btn btn-sm me-2 mb-2 @RoleButtonClassName(role.Name)">
+                                    <i class="@Html.RoleBootstrapIcon(role.Name)"></i>
+                                    @role.DisplayName
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User list result items -->
+            <div class="row g-3 justify-content-start">
+                @foreach (UserBasicModel user in Model.Results)
+                {
+                    <div class="col col-xl-4 col-lg-4 col-md-4 col-sm-6 col-6 mb-3">
+                        <div class="block block-list-item bg-white d-flex flex-column bg-body rounded-3 h-100">
+                            <div class="block-body flex-fill row border border-bottom-0
+                                        border-@Html.RoleBootstrapColor(user.Role.Name)
+                                        border-default rounded-top"
+                                    style="--bs-border-opacity: .25">
+                                <div class="col col-12 d-flex justify-content-center p-3">
+                                    <div class="avatar-container">
+                                        <a asp-action="UserDetail" asp-controller="User" asp-route-id="@user.Id">
+                                            <img src='@(user.AvatarUrl ?? Html.DefaultAvatar(user.FullName))' />
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col col-12 pb-3">
+                                    <div class="identity-container d-flex flex-column
+                                                align-items-center text-center">
+                                        <router-link :to='{ name: "userProfile", params: { userId: id } }'>
+                                            <span class="fullname fw-bold text-center">@user.FullName</span>
+                                        </router-link>
+                                        <span class="username small opacity-75">@user.UserName</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="block-footer d-flex flex-row justify-content-center rounded-bottom p-0">
+                                <div class="d-flex h-100 w-100 p-1 justify-content-center
+                                            rounded-bottom-3 border"
+                                        :class="footerClassName">
+                                    <span class="px-2">
+                                        <i :class="iconClassName"></i>
+                                    </span>
+                                    <span>
+                                        @user.Role.DisplayName
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <!-- Pagination -->
+            @if (Model.PageCount > 1)
+            {
+                <div class="col col-12 d-flex flex-row justify-content-center mb-5"
+                    v-if="model.pageCount > 1">
+                    <button class="btn mx-1 btn-outline-primary page-button"
+                            disabled="@(Model.Page == 1)">
+                        Trang đầu
+                    </button>
+                    @for (int i = largeScreenPagination.StartingPage; i <= largeScreenPagination.EndingPage; i++)
+                    {
+                        <button class="btn mx-1 btn-outline-primary page-button @PaginationButtonClassName(i)">
+                        </button>
+                    }
+                    <button class="btn mx-1 btn-outline-primary page-button"
+                            disabled="@(Model.Page == Model.PageCount)">
+                        Trang cuối
+                    </button>
+                </div>
+            }
+            
+        </div>
+        <div class="col col-xl-4 col-lg-12 col-md-12 col-sm-12 col-12">
+            <div class="row g-3">
+                <div class="col col-xl-12 col-lg-12 col-md-12 col-12 mb-3">
+                    <div class="block block-newest-users p-0">
+                        <div class="block-header bg-primary bg-opacity-25 border
+                                    border-primary-subtle rounded-top px-3 py-2">
+                            <span class="text-primary small fw-bold">
+                                HÀNH ĐỘNG
+                            </span>
+                        </div>
+                        <div class="block-body bg-white border border-top-0 rounded-bottom p-3">
+                            <!-- Create button -->
+                            <a asp-action="UserCreate" asp-controller="User"
+                                    class="btn btn-primary w-100">
+                                <i class="bi bi-person-add me-1"></i>
+                                Tạo mới
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col col-xl-12 col-lg-6 col-md-6 col-12 mb-3">
+                    <!-- Newest user list -->
+                </div>
+                <div class="col col-xl-12 col-lg-6 col-md-6 col-12 mb-3">
+                    <!-- Upcoming birthday list -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const userListController = useUserListController(
+        @Json.Serialize(FormId),
+        "order-direction-button",
+        @Json.Serialize(Html.IdFor(model => model.OrderByAscending)));
+</script>
+
+@section PageTitle { Danh sách nhân viên }
+@section Styles {
+    <link href="/css/user/user_list.css" rel="stylesheet" />
+}
+@section Scripts {
+    <script src="/js/userListInteractive.js"></script>
+}

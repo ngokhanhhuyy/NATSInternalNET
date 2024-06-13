@@ -1,0 +1,230 @@
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication;
+using NATSInternal.Middlewares;
+using NATSInternal.Services.Identity;
+using System.Globalization;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+//string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+//if (environment == Environments.Development)
+//{
+//    builder.Services.AddControllersWithViews()
+//        .AddRazorRuntimeCompilation();
+//}
+//else
+//{
+//    builder.Services.AddControllersWithViews();
+//}
+
+// Add signalR
+builder.Services.AddSignalR();
+
+// Connection string - EF Core.
+string connectionString = builder.Configuration.GetConnectionString("Mysql");
+builder.Services.AddDbContext<DatabaseContext>(options => options
+    .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+    .AddInterceptors(new VietnamTimeInterceptor()));
+
+// Identity
+builder.Services.AddIdentity<User, Role>()
+    .AddEntityFrameworkStores<DatabaseContext>()
+    .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
+    .AddDefaultTokenProviders();
+builder.Services.Configure<IdentityOptions>(options => {
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 0;
+});
+
+// Authentication by cookies strategies.
+//builder.Services.ConfigureApplicationCookie(options => {
+//    options.Cookie.HttpOnly = true;
+//    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+//    options.LoginPath = "/Authentication/SignIn";
+//    options.LogoutPath = "/Authentication/SignOut";
+//    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+//    options.SlidingExpiration = true;
+//    options.Events.OnValidatePrincipal = async context =>
+//    {
+//        IAuthorizationService authorizationService = context.HttpContext
+//                .RequestServices
+//                .GetRequiredService<IAuthorizationService>();
+//        string userIdAsString = context.Principal?
+//            .FindFirst(ClaimTypes.NameIdentifier)?
+//            .Value;
+
+//        // Validate user id in the token.
+//        int userId;
+//        try
+//        {
+//            userId = int.Parse(userIdAsString);
+//            await authorizationService.SetUserId(userId);
+//        }
+//        catch
+//        {
+//            // If an exception occurs, sign out the user and redirect to the login page
+//            context.RejectPrincipal();
+//            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+//            context.HttpContext.Response.Redirect(options.LoginPath);
+//        }
+//    };
+//});
+
+// Authentication by JWT strategies.
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    }).AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                IAuthorizationService authorizationService = context.HttpContext
+                    .RequestServices
+                    .GetRequiredService<IAuthorizationService>();
+                string userIdAsString = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?
+                    .Value;
+
+                // Validate user id in the token.
+                int userId;
+                try
+                {
+                    userId = int.Parse(userIdAsString);
+                    await authorizationService.SetUserId(userId);
+                }
+                catch (Exception exception)
+                {
+                    context.Fail(exception);
+                    return;
+                }
+            }
+        };
+    });
+
+// Authorization policies.
+builder.Services
+    .AddAuthorizationBuilder()
+    .AddPolicy("CanCreateUser", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateUser))
+    .AddPolicy("CanResetPassword", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.ResetOtherUserPassword))
+    .AddPolicy("CanDeleteUser", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteUser))
+    .AddPolicy("CanRestoreUser", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.RestoreUser))
+    .AddPolicy("CanGetCustomerDetail", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.GetCustomerDetail))
+    .AddPolicy("CanCreateCustomer", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateCustomer))
+    .AddPolicy("CanEditCustomer", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditCustomer))
+    .AddPolicy("CanDeleteCustomer", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteCustomer))
+    .AddPolicy("CanCreateBrand", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateBrand))
+    .AddPolicy("CanUpdateBrand", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.UpdateBrand))
+    .AddPolicy("CanDeleteBrand", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteBrand))
+    .AddPolicy("CanCreateProduct", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateProduct))
+    .AddPolicy("CanUpdateProduct", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.UpdateProduct))
+    .AddPolicy("CanUpdateProduct", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteProduct))
+    .AddPolicy("CanCreateProductCategory", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateProductCategory))
+    .AddPolicy("CanUpdateProductCategory", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.UpdateProductCategory))
+    .AddPolicy("CanDeleteProductCategory", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteProductCategory));
+    
+
+// FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<SignInValidator>();
+ValidatorOptions.Global.LanguageManager.Enabled = true;
+ValidatorOptions.Global.LanguageManager = new ValidatorLanguageManager
+{
+    Culture = new CultureInfo("vi")
+};
+ValidatorOptions.Global.PropertyNameResolver = (a, b, c) => b.Name.First().ToString().ToLower() + b.Name[1..];
+
+// Add controllers with json serialization policy.
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    });
+
+// Dependancy injection
+builder.Services.AddScoped<SignInManager<User>>();
+builder.Services.AddScoped<RoleManager<Role>>();
+builder.Services.AddScoped<DatabaseContext>();
+builder.Services.AddScoped<SqlExceptionHandler>();
+builder.Services.AddScoped<NATSInternal.Services.Interfaces.IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Add CORS.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        name: "LocalhostDevelopment",
+        builder => builder .AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
+WebApplication app = builder.Build();
+DataInitializer dataInitializer;
+dataInitializer = new DataInitializer();
+dataInitializer.InitializeData(app);
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+else
+{
+    app.UseHttpsRedirection();
+}
+app.UseCors("LocalhostDevelopment");
+app.UseMiddleware<RequestLoggingMiddleware>();
+// app.MapControllerRoute("default", "{controller=Home}/{action=Index}");
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.UseStaticFiles();
+app.MapFallbackToFile("/index.html");
+app.Run();
