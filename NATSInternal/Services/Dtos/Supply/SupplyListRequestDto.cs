@@ -6,6 +6,7 @@ public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>
     public string OrderByField { get; set; } = nameof(FieldOptions.SuppliedDateTime);
     public DateOnly? RangeFrom { get; set; }
     public DateOnly? RangeTo { get; set; }
+    public int? UserId { get; set; }
     public int Page { get; set; } = 1;
     public int ResultsPerPage { get; set; } = 15;
 
@@ -20,6 +21,6 @@ public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>
         TotalAmount,
         SuppliedDateTime,
         ShipmentFee,
-        PaidAmount
+        ItemAmount,
     }
 }

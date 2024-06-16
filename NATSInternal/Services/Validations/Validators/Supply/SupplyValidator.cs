@@ -10,9 +10,6 @@ public class SupplyValidator : Validator<SupplyUpsertRequestDto>
         RuleFor(dto => dto.ShipmentFee)
             .GreaterThanOrEqualTo(0)
             .WithName(DisplayNames.ShipmentFee);
-        RuleFor(dto => dto.PaidAmount)
-            .GreaterThanOrEqualTo(0)
-            .WithName(DisplayNames.PaidAmount);
         RuleFor(dto => dto.Note)
             .MaximumLength(255)
             .WithName(DisplayNames.Note);

@@ -20,6 +20,7 @@ global using NATSInternal.Services.Exceptions;
 global using NATSInternal.Services.Extensions;
 global using NATSInternal.Services.Interfaces;
 global using NATSInternal.Services.Localization;
+global using NATSInternal.Services.Tasks;
 global using NATSInternal.Services.Utilities;
 global using NATSInternal.Services.Validations;
 global using NATSInternal.Services.Validations.Validators;

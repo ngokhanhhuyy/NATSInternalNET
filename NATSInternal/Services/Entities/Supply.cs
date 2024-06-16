@@ -15,10 +15,6 @@ public class Supply
     [Required]
     public long ShipmentFee { get; set; } = 0;
 
-    [Column("paid_amount")]
-    [Required]
-    public long PaidAmount { get; set; } = 0;
-
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
@@ -26,6 +22,10 @@ public class Supply
     [Column("created_datetime")]
     [Required]
     public DateTime CreatedDateTime { get; set; }
+
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; }
 
     // Foreign keys
     [Column("user_id")]
@@ -42,4 +42,11 @@ public class Supply
     public virtual List<SupplyItem> Items { get; set; }
     public virtual List<SupplyPhoto> Photos { get; set; }
     public virtual List<SupplyUpdateHistories> UpdateHistories { get; set; }
+
+    // Properties for convinience.
+    [NotMapped]
+    public long ItemAmount => Items.Sum(i => i.Amount);
+
+    [NotMapped]
+    public long TotalAmount => ItemAmount + ShipmentFee;
 }

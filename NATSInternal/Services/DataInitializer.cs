@@ -108,6 +108,7 @@ public sealed class DataInitializer
                         PermissionConstants.DeleteProduct,
                         PermissionConstants.CreateSupply,
                         PermissionConstants.EditSupply,
+                        PermissionConstants.EditClosedSupply,
                         PermissionConstants.DeleteSupply,
                         PermissionConstants.EditSupplyItem,
                         PermissionConstants.DeleteSupplyItem,
@@ -819,8 +820,8 @@ public sealed class DataInitializer
                 {
                     SuppliedDateTime = currentDateTime,
                     ShipmentFee = 0,
-                    PaidAmount = supplyItems.Sum(si => si.Amount),
                     Note = faker.Lorem.Sentences(5),
+                    IsClosed = ShouldClose(currentDateTime),
                     CreatedDateTime = currentDateTime,
                     UserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
                     Items = supplyItems
@@ -907,5 +908,35 @@ public sealed class DataInitializer
         }
 
         return value.Substring(0, maxLength);
+    }
+
+    private static bool ShouldClose(DateTime resouceDateTime)
+    {
+        DateTime minRangeToBeClosed;
+        DateTime maxRangeToBeClosed;
+        if (DateTime.Now.Day >= 4 && DateTime.Now.Hour >= 1)
+        {
+            minRangeToBeClosed = new DateTime(
+                DateTime.Now.AddMonths(-2).Year,
+                DateTime.Now.AddMonths(-2).Month,
+                1,
+                0, 0, 0);
+            maxRangeToBeClosed = minRangeToBeClosed.AddMonths(1);
+        }
+        else
+        {
+            minRangeToBeClosed = new DateTime(
+                DateTime.Now.AddMonths(-3).Year,
+                DateTime.Now.AddMonths(-3).Month,
+                1,
+                0, 0, 0);
+            maxRangeToBeClosed = minRangeToBeClosed.AddMonths(1);
+        }
+
+        if (resouceDateTime >= minRangeToBeClosed && resouceDateTime < maxRangeToBeClosed)
+        {
+            return true;
+        }
+        return false;
     }
 }

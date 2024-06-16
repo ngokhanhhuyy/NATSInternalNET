@@ -30,6 +30,10 @@ public class Treatment
     [StringLength(255)]
     public string Note { get; set; }
 
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; } = false;
+
     [Column("is_deleted")]
     [Required]
     public bool IsDeleted { get; set; } = false;

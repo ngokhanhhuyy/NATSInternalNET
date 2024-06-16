@@ -18,11 +18,14 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<Treatment> Treatments { get; set; }
     public DbSet<TreatmentSession> TreatmentSessions { get; set; }
     public DbSet<TreatmentItem> TreatmentItems { get; set; }
+    public DbSet<TreatmentPayment> TreatmentPayments { get; set; }
     public DbSet<Expense> Expenses { get; set; }
     public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
     public DbSet<ExpensePayee> ExpensePayees { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
+    public DbSet<DailyStats> DailyStats { get; set; }
+    public DbSet<MonthlyStats> MonthlyStats { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -315,6 +318,8 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .OnDelete(DeleteBehavior.SetNull);
             e.Property(ex => ex.VatFactor)
                 .HasPrecision(18, 2);
+            e.HasIndex(ex => new { ex.PaidDateTime, ex.BillingMonth, ex.BillingYear })
+                .HasDatabaseName("IX__paid_datetime__billing_month__billing_year");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });
@@ -359,6 +364,27 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(urt => urt.UserId)
                 .HasConstraintName("FK__user_refresh_tokens__users__user_id")
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DailyStats>(e =>
+        {
+            e.ToTable("daily_stats");
+            e.HasOne(dfs => dfs.Monthly)
+                .WithMany(mfs => mfs.DailyStats)
+                .HasForeignKey(dfs => dfs.MonthlyStatsId)
+                .HasConstraintName("FK__daily_stats__monthly_stats__monthly_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(dfs => dfs.RecordedDate)
+                .IsUnique()
+                .HasDatabaseName("UX__daily_stats__recorded_date");
+        });
+
+        modelBuilder.Entity<MonthlyStats>(e =>
+        {
+            e.ToTable("monthly_stats");
+            e.HasIndex(dfs => new { dfs.RecordedMonth, dfs.RecordedYear })
+                .IsUnique()
+                .HasDatabaseName("UX_monthly_stats__recorded_month__recorded_year");
         });
 
         // Identity entities

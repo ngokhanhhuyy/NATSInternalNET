@@ -40,6 +40,7 @@ public static class PermissionConstants
     // Permissions to interact with supplies.
     public const string CreateSupply = "CreateSupply";
     public const string EditSupply = "EditSupply";
+    public const string EditClosedSupply = "EditClosedSupply";
     public const string DeleteSupply = "DeleteSupply";
 
     // Permissions to interact with supply items.

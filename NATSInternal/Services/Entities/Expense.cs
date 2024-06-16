@@ -19,9 +19,21 @@ public class Expense
     [Required]
     public DateTime PaidDateTime { get; set; }
 
+    [Column("billing_month")]
+    [Required]
+    public int BillingMonth { get; set; }
+
+    [Column("billing_year")]
+    [Required]
+    public int BillingYear { get; set; }
+
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
+
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; }
 
     // Foreign keys
     [Column("user_id")]

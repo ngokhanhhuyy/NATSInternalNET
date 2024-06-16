@@ -2,9 +2,8 @@
 
 public class SupplyUpsertRequestDto : IRequestDto<SupplyUpsertRequestDto>
 {
-    public DateTime SuppliedDateTime { get; set; } = DateTime.Now;
+    public DateTime SuppliedDateTime { get; set; }
     public long ShipmentFee { get; set; }
-    public long PaidAmount { get; set; }
     public string Note { get; set; }
     public string UpdateReason { get; set; }
     public List<SupplyItemRequestDto> Items { get; set; }

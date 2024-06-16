@@ -8,15 +8,18 @@ public class SupplyService : ISupplyService
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IStatsService _statsService;
 
     public SupplyService(
             DatabaseContext context,
             IPhotoService photoservice,
-            IAuthorizationService authorizationService)
+            IAuthorizationService authorizationService,
+            IStatsService statsService)
     {
         _context = context;
         _photoService = photoservice;
         _authorizationService = authorizationService;
+        _statsService = statsService;
     }
 
     /// <inheritdoc />
@@ -33,7 +36,7 @@ public class SupplyService : ISupplyService
         {
             case nameof(SupplyListRequestDto.FieldOptions.TotalAmount):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(s => s.Items.Sum(i => i.Amount))
+                    ? query.OrderBy(s => s.TotalAmount)
                         .ThenBy(s => s.SuppliedDateTime)
                     : query.OrderByDescending(s => s.Items.Sum(i => i.Amount))
                         .ThenByDescending(s => s.SuppliedDateTime);
@@ -45,11 +48,11 @@ public class SupplyService : ISupplyService
                     : query.OrderByDescending(s => s.SuppliedDateTime)
                         .ThenByDescending(s => s.Items.Sum(i => i.Amount));
                 break;
-            case nameof(SupplyListRequestDto.FieldOptions.PaidAmount):
+            case nameof(SupplyListRequestDto.FieldOptions.ItemAmount):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(s => s.PaidAmount)
+                    ? query.OrderBy(s => s.ItemAmount)
                         .ThenBy(s => s.SuppliedDateTime)
-                    : query.OrderByDescending(s => s.PaidAmount)
+                    : query.OrderByDescending(s => s.ItemAmount)
                         .ThenByDescending(s => s.SuppliedDateTime);
                 break;
             case nameof(SupplyListRequestDto.FieldOptions.ShipmentFee):
@@ -77,6 +80,12 @@ public class SupplyService : ISupplyService
             query = query.Where(s => s.SuppliedDateTime <= rangeToDateTime);
         }
 
+        // Filter by user id if specified.
+        if (requestDto.UserId.HasValue)
+        {
+            query = query.Where(s => s.UserId == requestDto.UserId.Value);
+        }
+
         // Response dto initialization;
         SupplyListResponseDto responseDto = new SupplyListResponseDto();
         int resultCount = await query.CountAsync();
@@ -92,6 +101,7 @@ public class SupplyService : ISupplyService
                 Id = s.Id,
                 SuppliedDateTime = s.SuppliedDateTime,
                 TotalAmount = s.Items.Sum(i => i.Amount) + s.ShipmentFee,
+                IsClosed = s.IsClosed,
                 User = new UserBasicResponseDto
                 {
                     Id = s.User.Id,
@@ -115,7 +125,7 @@ public class SupplyService : ISupplyService
                 FirstPhotoUrl = s.Photos
                     .OrderBy(p => p.Id)
                     .Select(p => p.Url)
-                    .SingleOrDefault()
+                    .FirstOrDefault()
             }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .ToListAsync();
@@ -136,8 +146,10 @@ public class SupplyService : ISupplyService
                 Id = s.Id,
                 SuppliedDateTime = s.SuppliedDateTime,
                 ShipmentFee = s.ShipmentFee,
-                PaidAmount = s.PaidAmount,
+                ItemAmount = s.ItemAmount,
+                TotalAmount = s.TotalAmount,
                 Note = s.Note,
+                IsClosed = s.IsClosed,
                 Items = s.Items
                     .OrderBy(i => i.Id)
                     .Select(i => new SupplyItemResponseDto
@@ -181,8 +193,10 @@ public class SupplyService : ISupplyService
                         DisplayName = s.User.Role.DisplayName,
                         PowerLevel = s.User.Role.PowerLevel
                     }
-                }
-            }).SingleOrDefaultAsync()
+                },
+                Authorization = _authorizationService.GetSupplyDetailAuthorization(s),
+            }).AsSplitQuery()
+            .SingleOrDefaultAsync()
         ?? throw new ResourceNotFoundException(
             nameof(Supply),
             nameof(id),
@@ -222,7 +236,6 @@ public class SupplyService : ISupplyService
         {
             SuppliedDateTime = requestDto.SuppliedDateTime,
             ShipmentFee = requestDto.ShipmentFee,
-            PaidAmount = requestDto.PaidAmount,
             Note = requestDto.Note,
             CreatedDateTime = DateTime.Now,
             UserId = _authorizationService.GetUserId(),
@@ -265,6 +278,8 @@ public class SupplyService : ISupplyService
         try
         {
             await _context.SaveChangesAsync();
+            await _statsService.IncrementSupplyCostAsync(supply.ItemAmount);
+            await _statsService.IncrementShipmentCostAsync(supply.ShipmentFee);
             await transaction.CommitAsync();
             return supply.Id;
         }
@@ -291,11 +306,17 @@ public class SupplyService : ISupplyService
             .Include(s => s.Photos)
             .Include(s => s.UpdateHistories)
             .Where(s => s.Id == id)
+            .AsSplitQuery()
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Supply),
                 nameof(id),
                 id.ToString());
+
+        if (!_authorizationService.CanEditSupply(supply))
+        {
+            throw new AuthorizationException();
+        }
 
         string oldDataJson = GenerateSupplyUpdateHistoryJson(supply);
 
@@ -303,9 +324,10 @@ public class SupplyService : ISupplyService
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         // Update supply properties.
+        long originalItemAmount = supply.ItemAmount;
+        long originalShipmentFee = supply.ShipmentFee;
         supply.SuppliedDateTime = requestDto.SuppliedDateTime;
         supply.ShipmentFee = requestDto.ShipmentFee;
-        supply.PaidAmount = requestDto.PaidAmount;
         supply.Note = requestDto.Note;
 
         // Update supply items.
@@ -396,6 +418,8 @@ public class SupplyService : ISupplyService
         try
         {
             await _context.SaveChangesAsync();
+            await _statsService.IncrementSupplyCostAsync(supply.ItemAmount - originalItemAmount);
+            await _statsService.IncrementShipmentCostAsync(supply.ShipmentFee - originalShipmentFee);
             await transaction.CommitAsync();
             foreach (string url in shouldDeleteWhenSucceedUrls)
             {
@@ -428,10 +452,19 @@ public class SupplyService : ISupplyService
                 nameof(id),
                 id.ToString());
 
+        if (!_authorizationService.CanDeleteSupply(supply))
+        {
+            throw new AuthorizationException();
+        }
+
         try
         {
+            long originalItemAmount = supply.ItemAmount;
+            long originalShipmentFee = supply.ShipmentFee;
             _context.Supplies.Remove(supply);
             await _context.SaveChangesAsync();
+            await _statsService.IncrementSupplyCostAsync(-originalItemAmount);
+            await _statsService.IncrementSupplyCostAsync(-originalShipmentFee);
             if (supply.Photos != null)
             {
                 foreach (string url in supply.Photos.Select(p => p.Url))
@@ -499,7 +532,6 @@ public class SupplyService : ISupplyService
             supply.Id,
             supply.SuppliedDateTime,
             supply.ShipmentFee,
-            supply.PaidAmount,
             supply.Note,
             supply.CreatedDateTime,
             supply.UserId,

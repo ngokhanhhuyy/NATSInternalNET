@@ -14,6 +14,10 @@ public class TreatmentSession
     [Column("ending_datetime")]
     public DateTime? EndingDateTime { get; set; }
 
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; } = false;
+
     // Foreign key
     [Column("treatment_id")]
     [Required]

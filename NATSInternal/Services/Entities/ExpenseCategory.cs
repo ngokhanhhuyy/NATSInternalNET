@@ -12,6 +12,10 @@ public class ExpenseCategory
     [StringLength(30)]
     public string Name { get; set; }
 
+    [Column("type")]
+    [Required]
+    public ExpenseType Type { get; set; }
+
     // Concurrency operation tracking field
     [Timestamp]
     public byte[] RowVersion { get; set; }

@@ -20,6 +20,10 @@ public class OrderPayment
     [StringLength(255)]
     public string Note { get; set; }
 
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; } = false;
+
     // Foreign keys
     [Column("order_id")]
     [Required]

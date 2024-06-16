@@ -122,6 +122,16 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
+    // Authorization for supply.
+    public SupplyDetailAuthorizationResponseDto GetSupplyDetailAuthorization(Supply supply)
+    {
+        return new()
+        {
+            CanEdit = CanEditSupply(supply),
+            CanDelete = CanEditSupply(supply)
+        };
+    }
+
     // Permissions to interact with users.
     public bool CanEditUserPersonalInformation(User targetUser)
     {
@@ -207,6 +217,36 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Permissions to interact with supplies.
+    public bool CanEditSupply(Supply supply)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditSupply))
+        {
+            return false;
+        }
+
+        if (supply.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedSupply))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool CanDeleteSupply(Supply supply)
+    {
+        if (!_user.HasPermission(PermissionConstants.DeleteSupply))
+        {
+            return false;
+        }
+
+        if (supply.IsClosed)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     public bool CanEditSupplyItems()
     {
         return _user.HasPermission(PermissionConstants.EditSupplyItem);

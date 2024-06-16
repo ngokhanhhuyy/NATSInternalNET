@@ -1,5 +1,4 @@
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Authentication;
 using NATSInternal.Middlewares;
 using NATSInternal.Services.Identity;
 using System.Globalization;
@@ -201,7 +200,7 @@ builder.Services.AddScoped<SignInManager<User>>();
 builder.Services.AddScoped<RoleManager<Role>>();
 builder.Services.AddScoped<DatabaseContext>();
 builder.Services.AddScoped<SqlExceptionHandler>();
-builder.Services.AddScoped<NATSInternal.Services.Interfaces.IAuthenticationService, NATSInternal.Services.AuthenticationService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -212,8 +211,15 @@ builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
 builder.Services.AddScoped<ISupplyService, SupplyService>();
+builder.Services.AddScoped<IStatsService, StatsService>();
+builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Background tasks.
+builder.Services.AddHostedService<RefreshTokenCleanerTask>();
+builder.Services.AddHostedService<StatsTask>();
 
 // Add CORS.
 builder.Services.AddCors(options =>

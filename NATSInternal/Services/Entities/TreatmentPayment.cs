@@ -19,6 +19,10 @@ public class TreatmentPayment
     [StringLength(255)]
     public string Note { get; set; }
 
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; } = false;
+
     // Foreign keys
     [Column("treatment_id")]
     [Required]

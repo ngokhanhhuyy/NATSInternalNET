@@ -15,17 +15,13 @@ public class Order
     [Required]
     public long Amount { get; set; }
 
-    [Column("shipment_fee")]
-    [Required]
-    public long ShipmentFee { get; set; } = 0;
-
-    [Column("shipment_fee_included")]
-    [Required]
-    public bool ShipmentFeeIncluded { get; set; } = false;
-
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
+
+    [Column("is_closed")]
+    [Required]
+    public bool IsClosed { get; set; } = false;
 
     [Column("is_deleted")]
     [Required]

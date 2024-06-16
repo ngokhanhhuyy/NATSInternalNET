@@ -86,6 +86,7 @@ public class SupplyApiController : ControllerBase
     [Authorize(Policy = "CanEditSupply")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> SupplyUpdate(int id, [FromBody] SupplyUpsertRequestDto requestDto)
@@ -104,6 +105,10 @@ public class SupplyApiController : ControllerBase
             await _service.UpdateAsync(id, requestDto);
             return Ok();
         }
+        catch (AuthorizationException)
+        {
+            return Forbid();
+        }
         catch (ResourceNotFoundException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
@@ -119,6 +124,7 @@ public class SupplyApiController : ControllerBase
     [HttpDelete("{id:int}/Delete")]
     [Authorize(Policy = "CanDeleteSupply")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> SupplyDelete(int id)
@@ -127,6 +133,10 @@ public class SupplyApiController : ControllerBase
         {
             await _service.DeleteAsync(id);
             return Ok();
+        }
+        catch (AuthorizationException)
+        {
+            return Forbid();
         }
         catch (ResourceNotFoundException exception)
         {
