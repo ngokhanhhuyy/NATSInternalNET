@@ -125,8 +125,6 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(si => si.ProductId)
                 .HasConstraintName("FK__supply_items__products__product_id")
                 .OnDelete(DeleteBehavior.Cascade);
-            e.Property(ex => ex.VatFactor)
-                .HasPrecision(18, 2);
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });

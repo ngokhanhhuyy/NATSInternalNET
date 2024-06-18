@@ -12,8 +12,8 @@ using NATSInternal.Services;
 namespace NATSInternal.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240602080803_RenameSupplyRowVersionColumnToSnakeCase")]
-    partial class RenameSupplyRowVersionColumnToSnakeCase
+    [Migration("20240618160941_RemoveSupplyItemVatFactor")]
+    partial class RemoveSupplyItemVatFactor
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -144,7 +144,7 @@ namespace NATSInternal.Migrations
                         .HasColumnType("int")
                         .HasColumnName("category");
 
-                    b.Property<string>("ProductName")
+                    b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(5000)
                         .HasColumnType("varchar(5000)")
@@ -404,6 +404,82 @@ namespace NATSInternal.Migrations
                     b.ToTable("customers", (string)null);
                 });
 
+            modelBuilder.Entity("NATSInternal.Services.Entities.DailyStats", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ConsultantRevenue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("consultant_revenue");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_datetime");
+
+                    b.Property<long>("EquipmentExpenses")
+                        .HasColumnType("bigint")
+                        .HasColumnName("equipment_expenses");
+
+                    b.Property<long>("MonthlyStatsId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("monthly_stats_id");
+
+                    b.Property<long>("OfficeExpense")
+                        .HasColumnType("bigint")
+                        .HasColumnName("office_expese");
+
+                    b.Property<DateTime?>("OfficiallyClosedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("officially_closed_datetime");
+
+                    b.Property<DateOnly>("RecordedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("recorded_date");
+
+                    b.Property<long>("RetailRevenue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("retail_revenue");
+
+                    b.Property<long>("ShipmentCost")
+                        .HasColumnType("bigint")
+                        .HasColumnName("shipment_cost");
+
+                    b.Property<long>("StaffExpense")
+                        .HasColumnType("bigint")
+                        .HasColumnName("staff_expense");
+
+                    b.Property<long>("SupplyCost")
+                        .HasColumnType("bigint")
+                        .HasColumnName("supply_expense");
+
+                    b.Property<DateTime?>("TemporarilyClosedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("temporarily_closed_datetime");
+
+                    b.Property<long>("TreatmentRevenue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("treatment_revenue");
+
+                    b.Property<long>("UtilitiesExpenses")
+                        .HasColumnType("bigint")
+                        .HasColumnName("utilities_expenses");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MonthlyStatsId");
+
+                    b.HasIndex("RecordedDate")
+                        .IsUnique()
+                        .HasDatabaseName("UX__daily_stats__recorded_date");
+
+                    b.ToTable("daily_stats", (string)null);
+                });
+
             modelBuilder.Entity("NATSInternal.Services.Entities.Expense", b =>
                 {
                     b.Property<int>("Id")
@@ -417,9 +493,21 @@ namespace NATSInternal.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("amount");
 
+                    b.Property<int>("BillingMonth")
+                        .HasColumnType("int")
+                        .HasColumnName("billing_month");
+
+                    b.Property<int>("BillingYear")
+                        .HasColumnType("int")
+                        .HasColumnName("billing_year");
+
                     b.Property<int?>("CategoryId")
                         .HasColumnType("int")
                         .HasColumnName("category_id");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
 
                     b.Property<string>("Note")
                         .HasMaxLength(255)
@@ -456,6 +544,9 @@ namespace NATSInternal.Migrations
 
                     b.HasIndex("UserId");
 
+                    b.HasIndex("PaidDateTime", "BillingMonth", "BillingYear")
+                        .HasDatabaseName("IX__paid_datetime__billing_month__billing_year");
+
                     b.ToTable("expenses", (string)null);
                 });
 
@@ -478,6 +569,10 @@ namespace NATSInternal.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp(6)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int")
+                        .HasColumnName("type");
 
                     b.HasKey("Id");
 
@@ -546,6 +641,84 @@ namespace NATSInternal.Migrations
                     b.ToTable("expense_photos", (string)null);
                 });
 
+            modelBuilder.Entity("NATSInternal.Services.Entities.MonthlyStats", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ConsultantRevenue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("consultant_revenue");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_datetime");
+
+                    b.Property<long>("EquipmentExpenses")
+                        .HasColumnType("bigint")
+                        .HasColumnName("equipment_expenses");
+
+                    b.Property<long>("MonthlyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("monthly_id");
+
+                    b.Property<long>("OfficeExpense")
+                        .HasColumnType("bigint")
+                        .HasColumnName("office_expese");
+
+                    b.Property<DateTime?>("OfficiallyClosedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("officially_closed_datetime");
+
+                    b.Property<long>("RecordedMonth")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recorded_month");
+
+                    b.Property<long>("RecordedYear")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recoreded_year");
+
+                    b.Property<long>("RetailRevenue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("retail_revenue");
+
+                    b.Property<long>("ShipmentCost")
+                        .HasColumnType("bigint")
+                        .HasColumnName("shipment_cost");
+
+                    b.Property<long>("StaffExpense")
+                        .HasColumnType("bigint")
+                        .HasColumnName("staff_expense");
+
+                    b.Property<long>("SupplyCost")
+                        .HasColumnType("bigint")
+                        .HasColumnName("supply_expense");
+
+                    b.Property<DateTime?>("TemporarilyClosedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("temporarily_closed_datetime");
+
+                    b.Property<long>("TreatmentRevenue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("treatment_revenue");
+
+                    b.Property<long>("UtilitiesExpenses")
+                        .HasColumnType("bigint")
+                        .HasColumnName("utilities_expenses");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedMonth", "RecordedYear")
+                        .IsUnique()
+                        .HasDatabaseName("UX_monthly_stats__recorded_month__recorded_year");
+
+                    b.ToTable("monthly_stats", (string)null);
+                });
+
             modelBuilder.Entity("NATSInternal.Services.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -562,6 +735,10 @@ namespace NATSInternal.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int")
                         .HasColumnName("customer_id");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)")
@@ -580,14 +757,6 @@ namespace NATSInternal.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp(6)");
-
-                    b.Property<long>("ShipmentFee")
-                        .HasColumnType("bigint")
-                        .HasColumnName("shipment_fee");
-
-                    b.Property<bool>("ShipmentFeeIncluded")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("shipment_fee_included");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int")
@@ -663,6 +832,10 @@ namespace NATSInternal.Migrations
                     b.Property<long>("Amount")
                         .HasColumnType("bigint")
                         .HasColumnName("amount");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -923,14 +1096,14 @@ namespace NATSInternal.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_datetime");
 
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
+
                     b.Property<string>("Note")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
                         .HasColumnName("note");
-
-                    b.Property<long>("PaidAmount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("paid_amount");
 
                     b.Property<DateTime?>("RowVersion")
                         .IsConcurrencyToken()
@@ -990,11 +1163,6 @@ namespace NATSInternal.Migrations
                     b.Property<int>("SupplyId")
                         .HasColumnType("int")
                         .HasColumnName("supply_id");
-
-                    b.Property<decimal>("VatFactor")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("vat_factor");
 
                     b.HasKey("Id");
 
@@ -1103,6 +1271,10 @@ namespace NATSInternal.Migrations
                         .HasColumnType("int")
                         .HasColumnName("customer_id");
 
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_deleted");
@@ -1196,6 +1368,10 @@ namespace NATSInternal.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
+
                     b.Property<string>("Note")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
@@ -1282,6 +1458,10 @@ namespace NATSInternal.Migrations
                     b.Property<DateTime?>("EndingDateTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("ending_datetime");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_closed");
 
                     b.Property<DateTime?>("RowVersion")
                         .IsConcurrencyToken()
@@ -1578,6 +1758,18 @@ namespace NATSInternal.Migrations
                     b.Navigation("CreatedUser");
 
                     b.Navigation("Introducer");
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.DailyStats", b =>
+                {
+                    b.HasOne("NATSInternal.Services.Entities.MonthlyStats", "Monthly")
+                        .WithMany("DailyStats")
+                        .HasForeignKey("MonthlyStatsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__daily_stats__monthly_stats__monthly_id");
+
+                    b.Navigation("Monthly");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Expense", b =>
@@ -1963,6 +2155,11 @@ namespace NATSInternal.Migrations
             modelBuilder.Entity("NATSInternal.Services.Entities.ExpensePayee", b =>
                 {
                     b.Navigation("Expenses");
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.MonthlyStats", b =>
+                {
+                    b.Navigation("DailyStats");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Order", b =>

@@ -156,7 +156,6 @@ public class SupplyService : ISupplyService
                     {
                         Id = i.Id,
                         Amount = i.Amount,
-                        VatFactor = i.VatFactor,
                         SuppliedQuantity = i.SuppliedQuantity,
                         Product = new ProductBasicResponseDto
                         {
@@ -250,7 +249,6 @@ public class SupplyService : ISupplyService
             SupplyItem supplyItem = new()
             {
                 Amount = itemRequestDto.Amount,
-                VatFactor = itemRequestDto.VatFactor,
                 SuppliedQuantity = itemRequestDto.SuppliedQuantity,
                 ProductId = product.Id
             };
@@ -356,7 +354,6 @@ public class SupplyService : ISupplyService
                     }
 
                     supplyItem.Amount = itemRequestDto.Amount;
-                    supplyItem.VatFactor = itemRequestDto.VatFactor;
 
                     int suppliedQuantityDifference = itemRequestDto.SuppliedQuantity - supplyItem.SuppliedQuantity;
                     supplyItem.SuppliedQuantity = itemRequestDto.SuppliedQuantity;
@@ -540,7 +537,6 @@ public class SupplyService : ISupplyService
                 {
                     supplyItem.Id,
                     supplyItem.Amount,
-                    supplyItem.VatFactor,
                     supplyItem.SuppliedQuantity,
                     supplyItem.ProductId,
                 }).ToList(),

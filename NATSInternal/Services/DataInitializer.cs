@@ -809,10 +809,11 @@ public sealed class DataInitializer
                     SupplyItem supplyItem = new()
                     {
                         Amount = product.Price,
-                        VatFactor = product.VatFactor,
                         SuppliedQuantity = random.Next(50),
                         ProductId = product.Id
                     };
+
+                    product.StockingQuantity += supplyItem.SuppliedQuantity;
                     supplyItems.Add(supplyItem);
                 }
 

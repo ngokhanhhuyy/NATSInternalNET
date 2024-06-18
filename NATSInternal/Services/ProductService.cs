@@ -18,14 +18,23 @@ public class ProductService : IProductService
         IQueryable<Product> query = _context.Products
             .OrderBy(p => p.CreatedDateTime);
 
+        // Filter by category name.
         if (requestDto.CategoryName != null)
         {
             query = query.Where(p => p.Category != null && p.Category.Name == requestDto.CategoryName);
         }
 
+        // Filter by brand id.
         if (requestDto.BrandId != null)
         {
             query = query.Where(p => p.BrandId == requestDto.BrandId);
+        }
+
+        // Filter by product name.
+        if (requestDto.ProductName != null)
+        {
+            string productNonDiacriticsName = requestDto.ProductName.ToNonDiacritics();
+            query = query.Where(p => p.Name.ToLower().Contains(productNonDiacriticsName.ToLower()));
         }
 
         ProductListResponseDto responseDto = new ProductListResponseDto();
@@ -43,6 +52,7 @@ public class ProductService : IProductService
                 Name = p.Name,
                 Unit = p.Unit,
                 Price = p.Price,
+                StockingQuantity = p.StockingQuantity,
                 ThumbnailUrl = p.ThumbnailUrl
             }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)

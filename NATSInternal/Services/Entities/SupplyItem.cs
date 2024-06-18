@@ -11,10 +11,6 @@ public class SupplyItem
     [Required]
     public long Amount { get; set; }
 
-    [Column("vat_factor")]
-    [Required]
-    public decimal VatFactor { get; set; } = 0.1M;
-
     [Column("supplied_quantities")]
     [Required]
     public int SuppliedQuantity { get; set; } = 1;

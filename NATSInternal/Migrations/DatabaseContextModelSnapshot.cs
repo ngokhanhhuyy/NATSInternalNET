@@ -1161,11 +1161,6 @@ namespace NATSInternal.Migrations
                         .HasColumnType("int")
                         .HasColumnName("supply_id");
 
-                    b.Property<decimal>("VatFactor")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("vat_factor");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");

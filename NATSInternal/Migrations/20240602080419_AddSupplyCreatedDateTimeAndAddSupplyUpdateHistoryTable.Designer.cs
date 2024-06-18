@@ -144,7 +144,7 @@ namespace NATSInternal.Migrations
                         .HasColumnType("int")
                         .HasColumnName("category");
 
-                    b.Property<string>("Content")
+                    b.Property<string>("ProductName")
                         .IsRequired()
                         .HasMaxLength(5000)
                         .HasColumnType("varchar(5000)")
