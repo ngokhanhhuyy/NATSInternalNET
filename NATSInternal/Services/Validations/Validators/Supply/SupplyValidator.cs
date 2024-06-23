@@ -5,7 +5,7 @@ public class SupplyValidator : Validator<SupplyUpsertRequestDto>
     public SupplyValidator()
     {
         RuleFor(dto => dto.SuppliedDateTime)
-            .LessThanOrEqualTo(DateTime.Now)
+            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime())
             .WithName(DisplayNames.SuppliedDateTime);
         RuleFor(dto => dto.ShipmentFee)
             .GreaterThanOrEqualTo(0)

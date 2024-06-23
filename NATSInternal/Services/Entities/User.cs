@@ -54,7 +54,7 @@ public class User : IdentityUser<int>
 
     [Column("created_datetime")]
     [Required]
-    public DateTime CreatedDateTime { get; set; } = DateTime.Now;
+    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
     [Column("updated_datetime")]
     public DateTime? UpdatedDateTime { get; set; }

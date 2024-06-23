@@ -14,7 +14,7 @@ public class ProductCategory
 
     [Column("created_datetime")]
     [Required]
-    public DateTime CreatedDateTime { get; set; } = DateTime.Now;
+    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
     // Relationships
     public virtual List<Product> Products { get; set; }

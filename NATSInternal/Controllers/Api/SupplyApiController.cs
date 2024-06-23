@@ -73,7 +73,7 @@ public class SupplyApiController : ControllerBase
         {
             int createdId = await _service.CreateAsync(requestDto);
             string createdResourceUrl = Url.Action("SupplyDetail", new { id = createdId });
-            return Created(createdResourceUrl, new { SupplyId = createdId });
+            return Created(createdResourceUrl, createdId);
         }
         catch (OperationException exception)
         {

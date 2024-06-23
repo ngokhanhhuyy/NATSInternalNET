@@ -8,6 +8,7 @@ public class ProductDetailResponseDto
     public string Unit { get; set; }
     public long Price { get; set; }
     public decimal VatFactor { get; set; }
+    public int StockingQuantity { get; set; }
     public bool IsForRetail { get; set; }
     public bool IsDiscontinued { get; set; }
     public DateTime CreatedDateTime { get; set; }

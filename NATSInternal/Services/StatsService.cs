@@ -49,17 +49,46 @@ public class StatsService : IStatsService
         dailyStats.Monthly.SupplyCost += value;
         await _context.SaveChangesAsync();
     }
+    
+    public async Task IncrementExpenseAsync(
+            long value, 
+            ExpenseCategory category,
+            DateOnly? date = null)
+    {
+        DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
+        switch (category)
+        {
+            case ExpenseCategory.Equipment:
+                dailyStats.EquipmentExpenses += value;
+                dailyStats.Monthly.EquipmentExpenses += value;
+                break;
+            case ExpenseCategory.Office:
+                dailyStats.OfficeExpense += value;
+                dailyStats.Monthly.OfficeExpense += value;
+                break;
+            case ExpenseCategory.Utilities:
+                dailyStats.UtilitiesExpenses += value;
+                dailyStats.Monthly.UtilitiesExpenses += value;
+                break;
+            default:
+            case ExpenseCategory.Staff:
+                dailyStats.StaffExpense += value;
+                dailyStats.Monthly.StaffExpense += value;
+                break;
+        }
+        await _context.SaveChangesAsync();
+    }
 
     public async Task TemporarilyCloseAsync(DateOnly date)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
-        dailyStats.TemporarilyClosedDateTime = DateTime.Now;
+        dailyStats.TemporarilyClosedDateTime = DateTime.UtcNow.ToApplicationTime();
         await _context.SaveChangesAsync();
     }
 
     private async Task<DailyStats> FetchStatisticsEntitiesAsync(DateOnly? date = null)
     {
-        DateOnly dateValue = date ?? DateOnly.FromDateTime(DateTime.Today);
+        DateOnly dateValue = date ?? DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
         DailyStats dailyStats = await _context.DailyStats
             .Include(ds => ds.Monthly)
             .Where(ds => ds.RecordedDate == dateValue)
@@ -70,7 +99,7 @@ public class StatsService : IStatsService
             dailyStats = new DailyStats
             {
                 RecordedDate = dateValue,
-                CreatedDateTime = DateTime.Now,
+                CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             };
             _context.DailyStats.Add(dailyStats);
 

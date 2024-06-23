@@ -20,6 +20,8 @@ public interface IAuthorizationService
 
     SupplyDetailAuthorizationResponseDto GetSupplyDetailAuthorization(Supply supply);
 
+    ExpenseAuthorizationResponseDto GetExpenseAuthorization(Expense expense);
+    
     bool CanEditUserPersonalInformation(User targetUser);
 
     bool CanEditUserUserInformation(User targetUser);
@@ -41,4 +43,8 @@ public interface IAuthorizationService
     bool CanEditSupplyItems();
 
     bool CanEditSupplyPhotos();
+    
+    bool CanEditExpense(Expense expense);
+    
+    bool CanDeleteExpense(Expense expense);
 }

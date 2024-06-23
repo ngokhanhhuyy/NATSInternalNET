@@ -9,7 +9,7 @@ public class Order
 
     [Column("ordered_datetime")]
     [Required]
-    public DateTime OrderedDateTime { get; set; } = DateTime.Now;
+    public DateTime OrderedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
     [Column("amount")]
     [Required]

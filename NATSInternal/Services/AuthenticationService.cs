@@ -60,7 +60,7 @@ public class AuthenticationService : IAuthenticationService
 
         // Generate refresh token.
         string refreshToken = GenerateRefreshToken();
-        DateTime refreshTokenIssuedDateTime = DateTime.Now;
+        DateTime refreshTokenIssuedDateTime = DateTime.UtcNow.ToApplicationTime();
 
         // Store the refresh token in the database.
         user.RefreshTokens.Add(new UserRefreshToken
@@ -71,7 +71,7 @@ public class AuthenticationService : IAuthenticationService
         });
         await _context.SaveChangesAsync();
 
-        DateTime expiringDateTime = DateTime.Now.AddMinutes(30);
+        DateTime expiringDateTime = DateTime.UtcNow.ToApplicationTime().AddDays(7);
         return new AccessTokenResponseDto
         {
             AccessToken = GenerateAccessToken(user, expiringDateTime),
@@ -100,20 +100,20 @@ public class AuthenticationService : IAuthenticationService
             ?? throw new OperationException("Mã làm mới không tồn tại.");
 
         // Check if the refresh token has expired.
-        if (storedRefreshToken.ExpiringDateTime < DateTime.Now)
+        if (storedRefreshToken.ExpiringDateTime < DateTime.UtcNow.ToApplicationTime())
         {
             throw new OperationException("Mã làm mới đã hết hạn.");
         }
 
         // Refresh token is valid, generate another one.
         storedRefreshToken.Token = GenerateRefreshToken();
-        storedRefreshToken.IssuedDateTime = DateTime.Now;
+        storedRefreshToken.IssuedDateTime = DateTime.UtcNow.ToApplicationTime();
         storedRefreshToken.ExpiringDateTime = storedRefreshToken.IssuedDateTime.AddDays(7);
 
         // Save new refresh token into the database.
         await _context.SaveChangesAsync();
 
-        DateTime expiringDateTime = DateTime.Now.AddMinutes(30);
+        DateTime expiringDateTime = DateTime.UtcNow.ToApplicationTime().AddMinutes(30);
         AccessTokenResponseDto responseDto = new AccessTokenResponseDto
         {
             AccessToken = GenerateAccessToken(user, expiringDateTime),

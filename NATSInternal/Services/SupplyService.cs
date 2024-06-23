@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using System.Text.Json;
 
 namespace NATSInternal.Services;
 
@@ -86,7 +87,7 @@ public class SupplyService : ISupplyService
             query = query.Where(s => s.UserId == requestDto.UserId.Value);
         }
 
-        // Response dto initialization;
+        // Initialize response dto.
         SupplyListResponseDto responseDto = new SupplyListResponseDto();
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
@@ -140,6 +141,7 @@ public class SupplyService : ISupplyService
             .Include(s => s.Items).ThenInclude(si => si.Product)
             .Include(s => s.Photos)
             .Include(s => s.User).ThenInclude(u => u.Roles)
+            .Include(s => s.UpdateHistories)
             .Where(s => s.Id == id)
             .Select(s => new SupplyDetailResponseDto
             {
@@ -150,6 +152,8 @@ public class SupplyService : ISupplyService
                 TotalAmount = s.TotalAmount,
                 Note = s.Note,
                 IsClosed = s.IsClosed,
+                CreatedDateTime = s.CreatedDateTime,
+                UpdatedDateTime = s.UpdatedDateTime,
                 Items = s.Items
                     .OrderBy(i => i.Id)
                     .Select(i => new SupplyItemResponseDto
@@ -233,10 +237,10 @@ public class SupplyService : ISupplyService
         // Initialize supply.
         Supply supply = new()
         {
-            SuppliedDateTime = requestDto.SuppliedDateTime,
+            SuppliedDateTime = requestDto.SuppliedDateTime ?? DateTime.UtcNow.ToApplicationTime(),
             ShipmentFee = requestDto.ShipmentFee,
             Note = requestDto.Note,
-            CreatedDateTime = DateTime.Now,
+            CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             UserId = _authorizationService.GetUserId(),
             Items = [],
             Photos = []
@@ -324,7 +328,7 @@ public class SupplyService : ISupplyService
         // Update supply properties.
         long originalItemAmount = supply.ItemAmount;
         long originalShipmentFee = supply.ShipmentFee;
-        supply.SuppliedDateTime = requestDto.SuppliedDateTime;
+        supply.SuppliedDateTime = requestDto.SuppliedDateTime ?? DateTime.UtcNow.ToApplicationTime();
         supply.ShipmentFee = requestDto.ShipmentFee;
         supply.Note = requestDto.Note;
 
@@ -403,7 +407,7 @@ public class SupplyService : ISupplyService
         string newDataJson = GenerateSupplyUpdateHistoryJson(supply);
         SupplyUpdateHistories supplyHistory = new()
         {
-            UpdatedDateTime = DateTime.Now,
+            UpdatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             Reason = requestDto.UpdateReason,
             OldData = oldDataJson,
             NewData = newDataJson,
@@ -441,7 +445,7 @@ public class SupplyService : ISupplyService
     {
         // Fetch the entity with given id from the database and ensure it exists.
         Supply supply = await _context.Supplies
-            .Include(s => s.Items)
+            .Include(s => s.Items).ThenInclude(si => si.Product)
             .Include(s => s.Photos)
             .SingleOrDefaultAsync(s => s.Id == id)
             ?? throw new ResourceNotFoundException(
@@ -454,14 +458,27 @@ public class SupplyService : ISupplyService
             throw new AuthorizationException();
         }
 
+        // Using transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
+
         try
         {
             long originalItemAmount = supply.ItemAmount;
             long originalShipmentFee = supply.ShipmentFee;
             _context.Supplies.Remove(supply);
             await _context.SaveChangesAsync();
+            // Adjust product stocking quantity.
+            foreach (SupplyItem item in supply.Items)
+            {
+                item.Product.StockingQuantity -= item.SuppliedQuantity;
+            }
+            // Adjust stats.
             await _statsService.IncrementSupplyCostAsync(-originalItemAmount);
             await _statsService.IncrementSupplyCostAsync(-originalShipmentFee);
+            // Commit transaction.
+            await transaction.CommitAsync();
+            // Delete all supply photos after transaction succeeded.
             if (supply.Photos != null)
             {
                 foreach (string url in supply.Photos.Select(p => p.Url))

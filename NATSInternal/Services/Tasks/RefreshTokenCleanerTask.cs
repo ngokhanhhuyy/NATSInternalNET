@@ -21,8 +21,9 @@ public class RefreshTokenCleanerTask : BackgroundService
 
     private static async Task CleanExpiredRefreshTokens(DatabaseContext context)
     {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
         List<UserRefreshToken> expiredRefreshTokens = await context.UserRefreshTokens
-            .Where(t => t.ExpiringDateTime < DateTime.Now)
+            .Where(t => t.ExpiringDateTime < currentDateTime)
             .ToListAsync();
 
         foreach (UserRefreshToken refreshToken in expiredRefreshTokens)

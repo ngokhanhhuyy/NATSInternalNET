@@ -13,7 +13,7 @@ public class UserRefreshToken
 
     [Column("issued_datetime")]
     [Required]
-    public DateTime IssuedDateTime { get; set; } = DateTime.Now;
+    public DateTime IssuedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
     [Column("expiring_datetime")]
     [Required]

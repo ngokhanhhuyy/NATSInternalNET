@@ -20,8 +20,8 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<TreatmentItem> TreatmentItems { get; set; }
     public DbSet<TreatmentPayment> TreatmentPayments { get; set; }
     public DbSet<Expense> Expenses { get; set; }
-    public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
     public DbSet<ExpensePayee> ExpensePayees { get; set; }
+    public DbSet<ExpensePhoto> ExpensePhotos { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
     public DbSet<DailyStats> DailyStats { get; set; }
@@ -125,13 +125,13 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(si => si.ProductId)
                 .HasConstraintName("FK__supply_items__products__product_id")
                 .OnDelete(DeleteBehavior.Cascade);
-            e.Property(c => c.RowVersion)
+            e.Property(si => si.RowVersion)
                 .IsRowVersion();
         });
         modelBuilder.Entity<SupplyPhoto>(e =>
         {
             e.ToTable("supply_photos");
-            e.HasKey(e => e.Id);
+            e.HasKey(p => p.Id);
             e.HasOne(p => p.Supply)
                 .WithMany(s => s.Photos)
                 .HasForeignKey(p => p.SupplyId)
@@ -143,7 +143,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
         modelBuilder.Entity<SupplyUpdateHistories>(e =>
         {
             e.ToTable("supply_update_histories");
-            e.HasKey(e => e.Id);
+            e.HasKey(suh => suh.Id);
             e.HasOne(suh => suh.Supply)
                 .WithMany(s => s.UpdateHistories)
                 .HasForeignKey(suh => suh.SupplyId)
@@ -309,15 +309,6 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(exp => exp.PayeeId)
                 .HasConstraintName("FK__expenses__expense_payees__payee_id")
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(ex => ex.Category)
-                .WithMany(exc => exc.Expenses)
-                .HasForeignKey(ex => ex.CategoryId)
-                .HasConstraintName("FK__expenses__expense_categories__category_id")
-                .OnDelete(DeleteBehavior.SetNull);
-            e.Property(ex => ex.VatFactor)
-                .HasPrecision(18, 2);
-            e.HasIndex(ex => new { ex.PaidDateTime, ex.BillingMonth, ex.BillingYear })
-                .HasDatabaseName("IX__paid_datetime__billing_month__billing_year");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });
@@ -392,12 +383,12 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
             e.HasMany(u => u.Roles)
                 .WithMany(r => r.Users)
                 .UsingEntity<UserRole>(
-                    ur => ur
+                    userRole => userRole
                         .HasOne(ur => ur.Role)
                         .WithMany()
                         .HasForeignKey(ur => ur.RoleId)
                         .HasConstraintName("FK__user_roles__roles__role_id"),
-                    ur => ur
+                    userRole => userRole
                         .HasOne(ur => ur.User)
                         .WithMany()
                         .HasForeignKey(ur => ur.UserId)

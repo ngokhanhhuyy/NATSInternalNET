@@ -4,11 +4,11 @@ public class StatsTaskService : IStatsTaskService
 {
     public DateTime StartedDateTime { get; private set; }
     public DateTime ExpectedRestartingDateTime => StartedDateTime.AddHours(29);
-    public TimeSpan RunningTime => DateTime.Now - StartedDateTime;
-    public TimeSpan RemainingTime => ExpectedRestartingDateTime - DateTime.Now;
+    public TimeSpan RunningTime => DateTime.UtcNow.ToApplicationTime() - StartedDateTime;
+    public TimeSpan RemainingTime => ExpectedRestartingDateTime - DateTime.UtcNow.ToApplicationTime();
 
     public StatsTaskService()
     {
-        StartedDateTime = DateTime.Now;
+        StartedDateTime = DateTime.UtcNow.ToApplicationTime();
     }
 }

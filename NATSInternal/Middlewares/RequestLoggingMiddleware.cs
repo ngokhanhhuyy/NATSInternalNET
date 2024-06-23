@@ -35,7 +35,7 @@ public class RequestLoggingMiddleware
                 break;
         }
         Console.Write(statusCode);
-        Console.Write(" " + DateTime.Now.ToString());
+        Console.Write(" " + DateTime.UtcNow.ToApplicationTime().ToString());
         Console.BackgroundColor = ConsoleColor.Black;
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine($" {method} {path}{queryString}");

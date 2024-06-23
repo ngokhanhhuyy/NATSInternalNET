@@ -193,7 +193,7 @@ public class CustomerService : ICustomerService
             FacebookUrl = requestDto.FacebookUrl,
             Email = requestDto.Email,
             Address = requestDto.Address,
-            CreatedDateTime = DateTime.Now,
+            CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             Note = requestDto.Note,
             IntroducerId = null,
             CreatedUserId = _authorizationService.GetUserId()
@@ -270,7 +270,7 @@ public class CustomerService : ICustomerService
                     .SetProperty(c => c.FacebookUrl, requestDto.FacebookUrl)
                     .SetProperty(c => c.Email, requestDto.Email)
                     .SetProperty(c => c.Address, requestDto.Address)
-                    .SetProperty(c => c.UpdatedDateTime, DateTime.Now)
+                    .SetProperty(c => c.UpdatedDateTime, DateTime.UtcNow.ToApplicationTime())
                     .SetProperty(c => c.Note, requestDto.Note)
                     .SetProperty(c => c.IntroducerId, requestDto.IntroducerId.HasValue
                         ? requestDto.IntroducerId.Value
@@ -314,7 +314,7 @@ public class CustomerService : ICustomerService
         int affectedRows = await _context.Customers
             .Where(c => !c.IsDeleted && c.Id == id)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(c => c.UpdatedDateTime, DateTime.Now)
+                .SetProperty(c => c.UpdatedDateTime, DateTime.UtcNow.ToApplicationTime())
                 .SetProperty(c => c.IntroducerId, (int?)null)
                 .SetProperty(c => c.IsDeleted, true));
 

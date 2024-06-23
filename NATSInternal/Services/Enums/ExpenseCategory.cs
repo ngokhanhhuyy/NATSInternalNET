@@ -5,5 +5,5 @@ public enum ExpenseCategory
     Utilities,
     Equipment,
     Office,
-    Salary
+    Staff
 }

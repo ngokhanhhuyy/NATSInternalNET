@@ -50,5 +50,12 @@ public static class PermissionConstants
     // Permissions to interact with supply photos.
     public const string EditSupplyPhoto = "EditSupplyPhoto";
     public const string DeleteSupplyPhoto = "DeleteSupplyPhoto";
+    
+    // Permissions to interact with expense.
+    public const string CreateExpense = "CreateExpense";
+    public const string EditExpense = "EditExpense";
+    public const string EditClosedExpense = "EditClosedExpense";
+    public const string DeleteExpense = "DeleteExpense";
+    
 
 }

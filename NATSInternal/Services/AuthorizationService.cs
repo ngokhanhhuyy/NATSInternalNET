@@ -131,6 +131,16 @@ public class AuthorizationService : IAuthorizationService
             CanDelete = CanEditSupply(supply)
         };
     }
+    
+    // Authorization for expense.
+    public ExpenseAuthorizationResponseDto GetExpenseAuthorization(Expense expense)
+    {
+        return new ExpenseAuthorizationResponseDto
+        {
+            CanEdit = CanEditExpense(expense),
+            CanDelete = CanDeleteExpense(expense)
+        };
+    }
 
     // Permissions to interact with users.
     public bool CanEditUserPersonalInformation(User targetUser)
@@ -255,5 +265,26 @@ public class AuthorizationService : IAuthorizationService
     public bool CanEditSupplyPhotos()
     {
         return _user.HasPermission(PermissionConstants.EditSupplyPhoto);
+    }
+    
+    // Permissions to interact with expenses.
+    public bool CanEditExpense(Expense expense)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditExpense))
+        {
+            return false;
+        }
+        
+        if (expense.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedExpense))
+        {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public bool CanDeleteExpense(Expense expense)
+    {
+        return _user.HasPermission(PermissionConstants.DeleteExpense) && !expense.IsClosed;
     }
 }

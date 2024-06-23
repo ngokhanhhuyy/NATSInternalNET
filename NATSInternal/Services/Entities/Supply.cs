@@ -49,4 +49,11 @@ public class Supply
 
     [NotMapped]
     public long TotalAmount => ItemAmount + ShipmentFee;
+
+    [NotMapped]
+    public DateTime? UpdatedDateTime => UpdateHistories
+        .OrderByDescending(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.UpdatedDateTime)
+        .Cast<DateTime?>()
+        .FirstOrDefault();
 }

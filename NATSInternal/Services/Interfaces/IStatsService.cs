@@ -89,6 +89,30 @@ public interface IStatsService
     /// The changes are persisted to the database immediately after the increment operation.
     /// </remarks>
     Task IncrementShipmentCostAsync(long value, DateOnly? date = null);
+    
+    /// <summary>
+    /// Increases the expense with given category statistics for a specific date 
+    /// or today if not specified.
+    /// </summary>
+    /// <param name="value">
+    /// The amount by which to increment the expense.
+    /// </param>
+    /// <param name="category">
+    /// The category of expense to increment.
+    /// </param>
+    /// <param name="date">
+    /// Optional. The date for which to update the statistics. 
+    /// If not provided, today's date is used.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <remarks>
+    /// This method updates both the daily and monthly expense statistics.
+    /// If <paramref name="date"/> is not specified, the statistics for today are updated.
+    /// The changes are persisted to the database immediately after the increment operation.
+    /// </remarks>
+    Task IncrementExpenseAsync(long value, ExpenseCategory category, DateOnly? date = null);
 
     /// <summary>
     /// Increases the supply cost statistics for a specific date 

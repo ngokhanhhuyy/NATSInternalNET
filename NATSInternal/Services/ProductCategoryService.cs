@@ -49,7 +49,7 @@ public class ProductCategoryService : IProductCategoryService
         ProductCategory productCategory = new ProductCategory
         {
             Name = requestDto.Name,
-            CreatedDateTime = DateTime.Now
+            CreatedDateTime = DateTime.UtcNow.ToApplicationTime()
         };
 
         try

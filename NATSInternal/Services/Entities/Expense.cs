@@ -11,21 +11,13 @@ public class Expense
     [Required]
     public long Amount { get; set; }
 
-    [Column("vat_factor")]
-    [Required]
-    public decimal VatFactor { get; set; } = 0.1M;
-
     [Column("paid_datetime")]
     [Required]
     public DateTime PaidDateTime { get; set; }
-
-    [Column("billing_month")]
+    
+    [Column("category")]
     [Required]
-    public int BillingMonth { get; set; }
-
-    [Column("billing_year")]
-    [Required]
-    public int BillingYear { get; set; }
+    public ExpenseCategory Category { get; set; }
 
     [Column("note")]
     [StringLength(255)]
@@ -40,9 +32,6 @@ public class Expense
     [Required]
     public int UserId { get; set; }
 
-    [Column("category_id")]
-    public int? CategoryId { get; set; }
-
     [Column("payee_id")]
     [Required]
     public int PayeeId { get; set; }
@@ -53,7 +42,6 @@ public class Expense
 
     // Navigation properties
     public virtual User User { get; set; }
-    public virtual ExpenseCategory Category { get; set; }
     public virtual ExpensePayee Payee { get; set; }
     public virtual List<ExpensePhoto> Photos { get; set; }
 }

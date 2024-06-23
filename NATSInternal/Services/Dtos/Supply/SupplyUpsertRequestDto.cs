@@ -2,7 +2,7 @@
 
 public class SupplyUpsertRequestDto : IRequestDto<SupplyUpsertRequestDto>
 {
-    public DateTime SuppliedDateTime { get; set; }
+    public DateTime? SuppliedDateTime { get; set; }
     public long ShipmentFee { get; set; }
     public string Note { get; set; }
     public string UpdateReason { get; set; }

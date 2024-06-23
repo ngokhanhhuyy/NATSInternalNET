@@ -11,7 +11,7 @@ public class SupplyItemRequestDto : IRequestDto<SupplyItemRequestDto>
 
     public SupplyItemRequestDto TransformValues()
     {
-        Id = Id.HasValue && Id.Value == 0 ? null : Id.Value;
+        Id = Id.HasValue && Id.Value == 0 ? null : Id;
         return this;
     }
 }

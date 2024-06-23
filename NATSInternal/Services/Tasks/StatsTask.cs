@@ -26,7 +26,7 @@ public class StatsTask : BackgroundService
             if (_isInitialExecution)
             {
                 await CreateStatsRecordsAsync(context);
-                if (DateTime.Now.Hour < 1)
+                if (DateTime.UtcNow.ToApplicationTime().Hour < 1)
                 {
                     nextExecutionDateTime = new DateTime(
                         DateOnly.FromDateTime(DateTime.Today),
@@ -38,7 +38,7 @@ public class StatsTask : BackgroundService
                         DateOnly.FromDateTime(DateTime.Today.AddDays(1)),
                         new TimeOnly(1, 0, 0));
 
-                    if (DateTime.Now.Hour >= 1 && DateTime.Now.Hour < 3)
+                    if (DateTime.UtcNow.ToApplicationTime().Hour >= 1 && DateTime.UtcNow.ToApplicationTime().Hour < 3)
                     {
                         await TemporarilyCloseAsync(
                             context,
@@ -68,7 +68,7 @@ public class StatsTask : BackgroundService
                     }
                 }
             }
-            await Task.Delay(nextExecutionDateTime - DateTime.Now, cancellationToken);
+            await Task.Delay(nextExecutionDateTime - DateTime.UtcNow.ToApplicationTime(), cancellationToken);
 
         }
     }
@@ -81,12 +81,12 @@ public class StatsTask : BackgroundService
             .SingleOrDefaultAsync();
         if (dailyStats != null && !dailyStats.IsOfficiallyClosed)
         {
-            dailyStats.TemporarilyClosedDateTime = DateTime.Now;
+            dailyStats.TemporarilyClosedDateTime = DateTime.UtcNow.ToApplicationTime();
 
             // Close month stats record if it's the first day of the month.
             if (dailyStats.RecordedDate.AddDays(1).Day == 1)
             {
-                dailyStats.Monthly.TemporarilyClosedDateTime = DateTime.Now;
+                dailyStats.Monthly.TemporarilyClosedDateTime = DateTime.UtcNow.ToApplicationTime();
             }
             await context.SaveChangesAsync();
         }
@@ -113,7 +113,7 @@ public class StatsTask : BackgroundService
             .SingleOrDefaultAsync();
         if (monthlyStats != null && !monthlyStats.IsOfficiallyClosed)
         {
-            monthlyStats.OfficiallyClosedDateTime = DateTime.Now;
+            monthlyStats.OfficiallyClosedDateTime = DateTime.UtcNow.ToApplicationTime();
             foreach (DailyStats dailyStats in monthlyStats.DailyStats)
             {
                 dailyStats.OfficiallyClosedDateTime = monthlyStats.OfficiallyClosedDateTime;
@@ -177,7 +177,7 @@ public class StatsTask : BackgroundService
         {
             DailyStats dailyStats = new DailyStats
             {
-                CreatedDateTime = DateTime.Now,
+                CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
                 RecordedDate = currentCreatingDate
             };
             context.DailyStats.Add(dailyStats);
@@ -190,7 +190,7 @@ public class StatsTask : BackgroundService
             {
                 monthlyStats = new MonthlyStats
                 {
-                    CreatedDateTime = DateTime.Now,
+                    CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
                     RecordedYear = dailyStats.RecordedDate.Year,
                     RecordedMonth = dailyStats.RecordedDate.Month
                 };

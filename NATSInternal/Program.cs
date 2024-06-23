@@ -109,16 +109,18 @@ builder.Services
                     .Value;
 
                 // Validate user id in the token.
-                int userId;
                 try
                 {
-                    userId = int.Parse(userIdAsString);
+                    if (userIdAsString == null)
+                    {
+                        throw new Exception();
+                    }
+                    int userId = int.Parse(userIdAsString);
                     await authorizationService.SetUserId(userId);
                 }
                 catch (Exception exception)
                 {
                     context.Fail(exception);
-                    return;
                 }
             }
         };
@@ -184,7 +186,10 @@ ValidatorOptions.Global.LanguageManager = new ValidatorLanguageManager
 {
     Culture = new CultureInfo("vi")
 };
-ValidatorOptions.Global.PropertyNameResolver = (a, b, c) => b.Name.First().ToString().ToLower() + b.Name[1..];
+ValidatorOptions.Global.PropertyNameResolver = (_, b, _) => b.Name
+    .First()
+    .ToString()
+    .ToLower() + b.Name[1..];
 
 // Add controllers with json serialization policy.
 builder.Services
@@ -211,6 +216,7 @@ builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
 builder.Services.AddScoped<ISupplyService, SupplyService>();
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
 
@@ -226,7 +232,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(
         name: "LocalhostDevelopment",
-        builder => builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+        policyBuilder => policyBuilder
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod());
 });
 
 WebApplication app = builder.Build();

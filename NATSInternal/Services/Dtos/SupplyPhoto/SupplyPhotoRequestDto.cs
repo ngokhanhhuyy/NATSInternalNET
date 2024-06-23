@@ -8,7 +8,7 @@ public class SupplyPhotoRequestDto : IRequestDto<SupplyPhotoRequestDto>
 
     public SupplyPhotoRequestDto TransformValues()
     {
-        Id = Id.HasValue && Id.Value == 0 ? null : Id.Value;
+        Id = Id.HasValue && Id.Value == 0 ? null : Id;
         return this;
     }
 }

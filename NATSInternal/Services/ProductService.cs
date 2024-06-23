@@ -76,6 +76,7 @@ public class ProductService : IProductService
                 Unit = p.Unit,
                 Price = p.Price,
                 VatFactor = p.VatFactor,
+                StockingQuantity = p.StockingQuantity,
                 IsForRetail = p.IsForRetail,
                 IsDiscontinued = p.IsDiscontinued,
                 CreatedDateTime = p.CreatedDateTime,
@@ -110,7 +111,7 @@ public class ProductService : IProductService
             VatFactor = requestDto.VatFactor,
             IsForRetail = requestDto.IsForRetail,
             IsDiscontinued = requestDto.IsDiscontinued,
-            CreatedDateTime = DateTime.Now,
+            CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             UpdatedDateTime = null,
             StockingQuantity = 0,
             BrandId = requestDto.Brand == null ? null
@@ -163,7 +164,7 @@ public class ProductService : IProductService
         product.IsDiscontinued = requestDto.IsDiscontinued;
         product.CategoryId = requestDto.Category == null ? null : requestDto.Category.Id;
         product.BrandId = requestDto.Brand == null ? null : requestDto.Brand.Id;
-        product.UpdatedDateTime = DateTime.Now;
+        product.UpdatedDateTime = DateTime.UtcNow.ToApplicationTime();
 
         // Update the thumbnail if changed.
         if (requestDto.ThumbnailChanged)

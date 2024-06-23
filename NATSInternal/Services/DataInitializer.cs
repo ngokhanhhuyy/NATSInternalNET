@@ -186,7 +186,7 @@ public sealed class DataInitializer
             foreach (Role role in roles)
             {
                 role.Claims = new List<IdentityRoleClaim<int>>();
-                string[] permissions = permissionsByRoles[role.Name];
+                string[] permissions = permissionsByRoles[role.Name!];
                 foreach (string permission in permissions)
                 {
                     _roleManager
@@ -310,7 +310,7 @@ public sealed class DataInitializer
         {
             Console.WriteLine("Initializing customers");
             List<int> userIds = _context.Users.Select(u => u.Id).ToList();
-            DateTime creatingDateTime = DateTime.Now.AddYears(-5);
+            DateTime creatingDateTime = DateTime.UtcNow.ToApplicationTime().AddYears(-5);
             Faker faker = new Faker("vi");
             Random random = new Random();
             for (int i = 0; i < 100; i++)
@@ -350,8 +350,8 @@ public sealed class DataInitializer
                     NickName = nameElements.LastName + " " + faker.Lorem.Word(),
                     Gender = genderInt == 0 ? Gender.Male : Gender.Female,
                     Birthday = DateOnly.FromDateTime(faker.Date.Between(
-                        DateTime.Now.AddYears(-20),
-                        DateTime.Now.AddYears(-80))),
+                        DateTime.UtcNow.ToApplicationTime().AddYears(-20),
+                        DateTime.UtcNow.ToApplicationTime().AddYears(-80))),
                     PhoneNumber = phoneNumber,
                     ZaloNumber = new string[] { phoneNumber, faker.Phone.PhoneNumber() }
                         .Skip(random.Next(3)).Take(1).SingleOrDefault(),
@@ -700,7 +700,7 @@ public sealed class DataInitializer
                 ProductCategory category = new ProductCategory
                 {
                     Name = name,
-                    CreatedDateTime = DateTime.Now
+                    CreatedDateTime = DateTime.UtcNow.ToApplicationTime()
                 };
 
                 _context.ProductCategories.Add(category);
@@ -751,7 +751,7 @@ public sealed class DataInitializer
                     VatFactor = 0.1M,
                     IsForRetail = random.Next(10) < 7 ? true : false,
                     IsDiscontinued = false,
-                    CreatedDateTime = DateTime.Now,
+                    CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
                     BrandId = brandIds
                         .Skip(random.Next(brandIds.Count))
                         .Take(1)
@@ -783,9 +783,9 @@ public sealed class DataInitializer
             Random random = new();
             Faker faker = new Faker("vi");
             DateTime startingDateTime = new(
-                DateOnly.FromDateTime(DateTime.Now.AddDays(-60)),
+                DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime().AddMonths(-6)),
                 new TimeOnly(8, 0, 0));
-            DateTime endingDateTime = DateTime.Now;
+            DateTime endingDateTime = DateTime.UtcNow.ToApplicationTime();
             DateTime currentDateTime = startingDateTime;
             List<Product> products = _context.Products.ToList();
             List<int> userIds = _context.Users
@@ -834,7 +834,8 @@ public sealed class DataInitializer
                 do
                 {
                     nextDateTime = currentDateTime.AddHours(random.Next(24 * 9, 24 * 10));
-                } while (!(nextDateTime.Hour >= 8 && nextDateTime.Hour <= 17));
+                }
+                while (!(nextDateTime.Hour >= 8 && nextDateTime.Hour <= 17));
                 currentDateTime = nextDateTime;
             }
             _context.SaveChanges();
@@ -913,28 +914,25 @@ public sealed class DataInitializer
 
     private static bool ShouldClose(DateTime resouceDateTime)
     {
-        DateTime minRangeToBeClosed;
         DateTime maxRangeToBeClosed;
-        if (DateTime.Now.Day >= 4 && DateTime.Now.Hour >= 1)
+        if (DateTime.UtcNow.ToApplicationTime().Day >= 4 && DateTime.UtcNow.ToApplicationTime().Hour >= 1)
         {
-            minRangeToBeClosed = new DateTime(
-                DateTime.Now.AddMonths(-2).Year,
-                DateTime.Now.AddMonths(-2).Month,
+            maxRangeToBeClosed = new DateTime(
+                DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Year,
+                DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Month,
                 1,
                 0, 0, 0);
-            maxRangeToBeClosed = minRangeToBeClosed.AddMonths(1);
         }
         else
         {
-            minRangeToBeClosed = new DateTime(
-                DateTime.Now.AddMonths(-3).Year,
-                DateTime.Now.AddMonths(-3).Month,
+            maxRangeToBeClosed = new DateTime(
+                DateTime.UtcNow.ToApplicationTime().AddMonths(-2).Year,
+                DateTime.UtcNow.ToApplicationTime().AddMonths(-2).Month,
                 1,
                 0, 0, 0);
-            maxRangeToBeClosed = minRangeToBeClosed.AddMonths(1);
         }
 
-        if (resouceDateTime >= minRangeToBeClosed && resouceDateTime < maxRangeToBeClosed)
+        if (resouceDateTime < maxRangeToBeClosed)
         {
             return true;
         }

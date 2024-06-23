@@ -538,7 +538,7 @@ public class UserService : IUserService
             }
         }
 
-        user.UpdatedDateTime = DateTime.Now;
+        user.UpdatedDateTime = DateTime.UtcNow.ToApplicationTime();
 
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();

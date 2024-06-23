@@ -39,10 +39,10 @@ public class Product
 
     [Column("created_datetime")]
     [Required]
-    public DateTime CreatedDateTime { get; set; } = DateTime.Now;
+    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
     
     [Column("updated_datetime")]
-    public DateTime? UpdatedDateTime { get; set; } = DateTime.Now;
+    public DateTime? UpdatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
     
     [Column("thumbnail_url")]
     [StringLength(255)]
