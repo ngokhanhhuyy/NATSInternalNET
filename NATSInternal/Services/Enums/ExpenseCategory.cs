@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Services.Enums;
 
-public enum ExpenseType
+public enum ExpenseCategory
 {
     Utilities,
     Equipment,
