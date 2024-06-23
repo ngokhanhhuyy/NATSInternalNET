@@ -25,7 +25,6 @@ public class ExpenseService : IExpenseService
     {
         // Initialze query.
         IQueryable<Expense> query = _context.Expenses
-            .Include(e => e.Category)
             .Include(e => e.Photos);
         
         // Sorting direction and sorting by field.

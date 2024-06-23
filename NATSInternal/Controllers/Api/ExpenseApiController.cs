@@ -22,7 +22,8 @@ public class ExpenseApiController : ControllerBase
     [HttpGet("List")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ExpenseList(ExpenseListRequestDto requestDto)
+    public async Task<IActionResult> ExpenseList(
+            [FromQuery] ExpenseListRequestDto requestDto)
     {
         // Validate data from request.
         ValidationResult validationResult = _listValidator
@@ -59,7 +60,8 @@ public class ExpenseApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ExpenseCreate(ExpenseUpsertRequestDto requestDto)
+    public async Task<IActionResult> ExpenseCreate(
+            [FromBody] ExpenseUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult = _upsertValidator
@@ -91,7 +93,9 @@ public class ExpenseApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ExpenseUpdate(int id, ExpenseUpsertRequestDto requestDto)
+    public async Task<IActionResult> ExpenseUpdate(
+            int id,
+            [FromBody] ExpenseUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult = _upsertValidator
