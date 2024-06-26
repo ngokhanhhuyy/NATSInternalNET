@@ -176,7 +176,13 @@ builder.Services
     .AddPolicy("CanEditSupplyPhoto", policy =>
         policy.RequireClaim("Permission", PermissionConstants.EditSupplyPhoto))
     .AddPolicy("CanDeleteSupplyPhoto", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteSupplyPhoto));
+        policy.RequireClaim("Permission", PermissionConstants.DeleteSupplyPhoto))
+    .AddPolicy("CanCreateExpense", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateExpense))
+    .AddPolicy("CanEditExpense", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditExpense))
+    .AddPolicy("CanDeleteExpense", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteExpense));
 
 
 // FluentValidation

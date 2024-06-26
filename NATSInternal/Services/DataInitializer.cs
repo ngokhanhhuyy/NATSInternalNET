@@ -25,6 +25,7 @@ public sealed class DataInitializer
         InitializeProductCategories();
         InitializeProducts();
         InitializeSupply();
+        InitializeExpense();
         _context.SaveChanges();
         transaction.Commit();
     }
@@ -113,7 +114,11 @@ public sealed class DataInitializer
                         PermissionConstants.EditSupplyItem,
                         PermissionConstants.DeleteSupplyItem,
                         PermissionConstants.EditSupplyPhoto,
-                        PermissionConstants.DeleteSupplyPhoto
+                        PermissionConstants.DeleteSupplyPhoto,
+                        PermissionConstants.CreateExpense,
+                        PermissionConstants.EditExpense,
+                        PermissionConstants.EditClosedExpense,
+                        PermissionConstants.DeleteExpense,
                     }
                 },
                 {
@@ -147,7 +152,11 @@ public sealed class DataInitializer
                         PermissionConstants.EditSupplyItem,
                         PermissionConstants.DeleteSupplyItem,
                         PermissionConstants.EditSupplyPhoto,
-                        PermissionConstants.DeleteSupplyPhoto
+                        PermissionConstants.DeleteSupplyPhoto,
+                        PermissionConstants.CreateExpense,
+                        PermissionConstants.EditExpense,
+                        PermissionConstants.EditClosedExpense,
+                        PermissionConstants.DeleteExpense,
                     }
                 },
                 {
@@ -166,6 +175,8 @@ public sealed class DataInitializer
                         PermissionConstants.EditSupply,
                         PermissionConstants.EditSupplyItem,
                         PermissionConstants.EditSupplyPhoto,
+                        PermissionConstants.CreateExpense,
+                        PermissionConstants.EditExpense,
                     }
                 },
                 {
@@ -178,6 +189,7 @@ public sealed class DataInitializer
                         PermissionConstants.GetCustomerDetail,
                         PermissionConstants.CreateCustomer,
                         PermissionConstants.CreateSupply,
+                        PermissionConstants.CreateExpense,
                     }
                 }
             };
@@ -359,7 +371,7 @@ public sealed class DataInitializer
                     Email = faker.Internet.Email(),
                     Address = faker.Address.FullAddress(),
                     CreatedDateTime = creatingDateTime,
-                    Note = faker.Lorem.Paragraph(3),
+                    Note = faker.Lorem.Paragraph(),
                     CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single()
                 };
                 _context.Customers.Add(customer);
@@ -749,7 +761,7 @@ public sealed class DataInitializer
                     Unit = units.Skip(random.Next(units.Length)).Take(1).Single(),
                     Price = random.Next(75, 500) * 1000,
                     VatFactor = 0.1M,
-                    IsForRetail = random.Next(10) < 7 ? true : false,
+                    IsForRetail = random.Next(10) < 7,
                     IsDiscontinued = false,
                     CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
                     BrandId = brandIds
@@ -842,6 +854,58 @@ public sealed class DataInitializer
         }
     }
 
+    private void InitializeExpense()
+    {
+        if (!_context.Expenses.Any())
+        {
+            Console.WriteLine("Initializing expenses.");
+            Random random = new Random();
+            Faker faker = new Faker();
+            List<int> userIds = _context.Users.Select(u => u.Id).ToList();
+            DateTime endingDateTime = DateTime.UtcNow.ToApplicationTime();
+            DateTime currentDateTime = endingDateTime.AddMonths(-6);
+            while (currentDateTime < endingDateTime)
+            {
+                // Generating category.
+                ExpenseCategory category = Enum.GetValues(typeof(ExpenseCategory))
+                    .OfType<ExpenseCategory>()
+                    .MinBy(_ => Guid.NewGuid());
+                
+                // Generating company name.
+                string companyName = faker.Company.CompanyName();
+                ExpensePayee payee = _context.ExpensePayees.SingleOrDefault(e => e.Name == companyName);
+                if (payee is null)
+                {
+                    payee = new ExpensePayee
+                    {
+                        Name = companyName
+                    };
+                    _context.ExpensePayees.Add(payee);
+                }
+                
+                // Generating expense.
+                Expense expense = new Expense
+                {
+                    Amount = random.Next(500, 5000) * 1000,
+                    PaidDateTime = currentDateTime,
+                    Category = category,
+                    Note = null,
+                    IsClosed = ShouldClose(currentDateTime),
+                    UserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
+                    Payee = payee
+                };
+                _context.Expenses.Add(expense);
+                
+                do
+                {
+                    currentDateTime = currentDateTime.AddHours(random.Next(36, 72));
+                } while (currentDateTime.Hour is < 8 or > 17);
+            }
+            
+            _context.SaveChanges();
+        }
+    }
+
     private static T ValueOrNull<T>(T value)
     {
         Random random = new Random();
@@ -909,7 +973,7 @@ public sealed class DataInitializer
             return value;
         }
 
-        return value.Substring(0, maxLength);
+        return value[..maxLength];
     }
 
     private static bool ShouldClose(DateTime resouceDateTime)

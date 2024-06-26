@@ -12,9 +12,13 @@ public class ExpenseUpsertRequestDto : IRequestDto<ExpenseUpsertRequestDto>
     public ExpenseUpsertRequestDto TransformValues()
     {
         PayeeName = PayeeName?.ToNullIfEmpty();
-        foreach (ExpensePhotoRequestDto photo in Photos)
+        
+        if (Photos != null)
         {
-            photo.TransformValues();
+            foreach (ExpensePhotoRequestDto photo in Photos)
+            {
+                photo?.TransformValues();
+            }
         }
         
         return this;

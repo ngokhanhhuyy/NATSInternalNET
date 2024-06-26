@@ -94,7 +94,7 @@ public class ExpenseService : IExpenseService
     public async Task<ExpenseDetailResponseDto> GetDetailAsync(int id)
     {
         return await _context.Expenses
-            .Include(e => e.User)
+            .Include(e => e.User).ThenInclude(u => u.Roles)
             .Include(e => e.Payee)
             .Include(e => e.Photos)
             .Where(e => e.Id == id)
@@ -105,6 +105,7 @@ public class ExpenseService : IExpenseService
                 PaidDateTime = e.PaidDateTime,
                 Category = e.Category,
                 Note = e.Note,
+                IsClosed = e.IsClosed,
                 User = new UserBasicResponseDto
                 {
                     Id = e.User.Id,
@@ -112,7 +113,7 @@ public class ExpenseService : IExpenseService
                     FirstName = e.User.FirstName,
                     MiddleName = e.User.MiddleName,
                     LastName = e.User.LastName,
-                    FullName = e.User.FirstName,
+                    FullName = e.User.FullName,
                     Gender = e.User.Gender,
                     Birthday = e.User.Birthday,
                     JoiningDate = e.User.JoiningDate,
@@ -197,6 +198,7 @@ public class ExpenseService : IExpenseService
         // Save changes and commit.
         try
         {
+            _context.Expenses.Add(expense);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             return expense.Id;
@@ -300,40 +302,43 @@ public class ExpenseService : IExpenseService
         // Update photos.
         List<string> photoUrlsToBeDeletedWhenSucceeded = new List<string>();
         List<string> photoUrlsToBeDeletedWhenFailed = new List<string>();
-        for (int i = 0; i < requestDto.Photos.Count; i++)
+        if (requestDto.Photos != null)
         {
-            ExpensePhotoRequestDto photoRequestDto = requestDto.Photos[i];
-            ExpensePhoto photo;
-            if (!photoRequestDto.Id.HasValue)
+            for (int i = 0; i < requestDto.Photos.Count; i++)
             {
-                string url = await _photoService
-                    .CreateAsync(photoRequestDto.File, "expenses", false);
-                photoUrlsToBeDeletedWhenFailed.Add(url);
-                photo = new ExpensePhoto { Url = url };
-                expense.Photos.Add(photo);
-            }
-            else if (photoRequestDto.HasBeenChanged)
-            {
-                photo = expense.Photos.SingleOrDefault(e => e.Id == photoRequestDto.Id);
-                if (photo == null)
-                {
-                    string errorMessage = ErrorMessages.NotFoundByProperty
-                        .ReplaceResourceName(DisplayNames.ExpensePhoto);
-                    throw new OperationException($"photos[{i}].id", errorMessage);
-                }
-
-                // Delete old photo.
-                photoUrlsToBeDeletedWhenSucceeded.Add(photo.Url);
-
-                // Create new photo.
-                if (photoRequestDto.File != null)
+                ExpensePhotoRequestDto photoRequestDto = requestDto.Photos[i];
+                ExpensePhoto photo;
+                if (!photoRequestDto.Id.HasValue)
                 {
                     string url = await _photoService
                         .CreateAsync(photoRequestDto.File, "expenses", false);
                     photoUrlsToBeDeletedWhenFailed.Add(url);
-                    photo.Url = url;
-                } else {
-                    _context.ExpensePhotos.Remove(photo);
+                    photo = new ExpensePhoto { Url = url };
+                    expense.Photos.Add(photo);
+                }
+                else if (photoRequestDto.HasBeenChanged)
+                {
+                    photo = expense.Photos.SingleOrDefault(e => e.Id == photoRequestDto.Id);
+                    if (photo == null)
+                    {
+                        string errorMessage = ErrorMessages.NotFoundByProperty
+                            .ReplaceResourceName(DisplayNames.ExpensePhoto);
+                        throw new OperationException($"photos[{i}].id", errorMessage);
+                    }
+
+                    // Delete old photo.
+                    photoUrlsToBeDeletedWhenSucceeded.Add(photo.Url);
+
+                    // Create new photo.
+                    if (photoRequestDto.File != null)
+                    {
+                        string url = await _photoService
+                            .CreateAsync(photoRequestDto.File, "expenses", false);
+                        photoUrlsToBeDeletedWhenFailed.Add(url);
+                        photo.Url = url;
+                    } else {
+                        _context.ExpensePhotos.Remove(photo);
+                    }
                 }
             }
         }

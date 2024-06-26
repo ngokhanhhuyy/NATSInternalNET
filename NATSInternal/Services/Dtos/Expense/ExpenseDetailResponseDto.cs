@@ -7,6 +7,7 @@ public class ExpenseDetailResponseDto
     public DateTime PaidDateTime { get; set; }
     public ExpenseCategory Category { get; set; }
     public string Note { get; set; }
+    public bool IsClosed { get; set; }
     public UserBasicResponseDto User { get; set; }
     public ExpensePayeeResponseDto Payee { get; set; }
     public List<ExpensePhotoResponseDto> Photos { get; set; }

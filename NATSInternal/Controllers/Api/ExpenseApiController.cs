@@ -86,7 +86,7 @@ public class ExpenseApiController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Detail")]
+    [HttpPut("{id:int}/Update")]
     [Authorize(Policy = "CanEditExpense")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
