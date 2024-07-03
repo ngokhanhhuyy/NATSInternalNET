@@ -31,4 +31,8 @@ public class TreatmentSession
     public virtual Treatment Treatment { get; set; }
     public virtual List<TreatmentItem> Items { get; set; }
     public virtual List<User> Therapists { get; set; }
+
+    // Properties for convinience.
+    [NotMapped]
+    public long ItemAmount => Items.Sum(i => i.Amount);
 }

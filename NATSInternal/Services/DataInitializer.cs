@@ -26,6 +26,7 @@ public sealed class DataInitializer
         InitializeProducts();
         InitializeSupply();
         InitializeExpense();
+        InitializeOrders();
         _context.SaveChanges();
         transaction.Commit();
     }
@@ -119,6 +120,14 @@ public sealed class DataInitializer
                         PermissionConstants.EditExpense,
                         PermissionConstants.EditClosedExpense,
                         PermissionConstants.DeleteExpense,
+                        PermissionConstants.CreateOrder,
+                        PermissionConstants.EditOrder,
+                        PermissionConstants.EditClosedOrder,
+                        PermissionConstants.DeleteOrder,
+                        PermissionConstants.CreateOrderPayment,
+                        PermissionConstants.EditOrderPayment,
+                        PermissionConstants.EditClosedOrderPayment,
+                        PermissionConstants.DeleteOrderPayment,
                     }
                 },
                 {
@@ -155,8 +164,13 @@ public sealed class DataInitializer
                         PermissionConstants.DeleteSupplyPhoto,
                         PermissionConstants.CreateExpense,
                         PermissionConstants.EditExpense,
-                        PermissionConstants.EditClosedExpense,
                         PermissionConstants.DeleteExpense,
+                        PermissionConstants.CreateOrder,
+                        PermissionConstants.EditOrder,
+                        PermissionConstants.DeleteOrder,
+                        PermissionConstants.CreateOrderPayment,
+                        PermissionConstants.EditOrderPayment,
+                        PermissionConstants.DeleteOrderPayment,
                     }
                 },
                 {
@@ -177,6 +191,10 @@ public sealed class DataInitializer
                         PermissionConstants.EditSupplyPhoto,
                         PermissionConstants.CreateExpense,
                         PermissionConstants.EditExpense,
+                        PermissionConstants.CreateOrder,
+                        PermissionConstants.EditOrder,
+                        PermissionConstants.CreateOrderPayment,
+                        PermissionConstants.EditOrderPayment,
                     }
                 },
                 {
@@ -190,6 +208,8 @@ public sealed class DataInitializer
                         PermissionConstants.CreateCustomer,
                         PermissionConstants.CreateSupply,
                         PermissionConstants.CreateExpense,
+                        PermissionConstants.CreateOrder,
+                        PermissionConstants.CreateOrderPayment,
                     }
                 }
             };
@@ -902,6 +922,83 @@ public sealed class DataInitializer
                 } while (currentDateTime.Hour is < 8 or > 17);
             }
             
+            _context.SaveChanges();
+        }
+    }
+
+    private void InitializeOrders()
+    {
+        if (!_context.Orders.Any())
+        {
+            Console.WriteLine("Initializing orders.");
+            Random random = new Random();
+            DateTime maxOrderedDateTime = DateTime.UtcNow.ToApplicationTime();
+            DateTime currentDateTime = maxOrderedDateTime
+                .AddMonths(-6);
+            List<int> customerIds = _context.Customers.Select(c => c.Id).ToList();
+            List<Product> products = _context.Products.ToList();
+            List<int> userIds = _context.Users
+                .Include(u => u.Roles).ThenInclude(r => r.Claims)
+                .Where(u => u.Roles
+                    .Single()
+                    .Claims
+                    .Select(c => c.ClaimValue)
+                    .Contains(PermissionConstants.CreateOrder))
+                .Select(u => u.Id)
+                .ToList();
+            while (currentDateTime < maxOrderedDateTime)
+            {
+                // Determine datetime
+                do
+                {
+                    currentDateTime = currentDateTime.AddMinutes(random.Next(120, 360));
+                } while (currentDateTime.Hour < 8 || currentDateTime.Hour > 17);
+
+                // Initialize order.
+                Order order = new Order
+                {
+                    OrderedDateTime = currentDateTime,
+                    Note = null,
+                    IsClosed = ShouldClose(currentDateTime),
+                    CustomerId = customerIds.OrderBy(_ => Guid.NewGuid()).First(),
+                    UserId = userIds.OrderBy(_ => Guid.NewGuid()).First(),
+                    Items = new List<OrderItem>(),
+                    Payments = new List<OrderPayment>()
+                };
+                _context.Orders.Add(order);
+
+                // Initialize order items.
+                int orderItemCount = random.Next(3, 10);
+                List<int> pickedProductIds = new List<int>();
+                for (int i = 0; i < orderItemCount; i++)
+                {
+                    // Determine product.
+                    Product product = products
+                        .OrderBy(_ => Guid.NewGuid())
+                        .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
+                        .First();
+                    pickedProductIds.Add(product.Id);
+
+                    OrderItem item = new OrderItem
+                    {
+                        Amount = product.Price,
+                        VatFactor = 0,
+                        Quantity = Math.Min(5, product.StockingQuantity),
+                        ProductId = product.Id
+                    };
+                    order.Items.Add(item);
+                }
+
+                // Initialize payments.
+                OrderPayment payment = new OrderPayment
+                {
+                    Amount = (int)Math.Round(order.Items.Sum(i => i.Amount + i.Amount * i.VatFactor)),
+                    PaidDateTime = currentDateTime,
+                    UserId = order.UserId
+                };
+                order.Payments.Add(payment);
+            }
+
             _context.SaveChanges();
         }
     }

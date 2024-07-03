@@ -11,10 +11,6 @@ public class Order
     [Required]
     public DateTime OrderedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
-    [Column("amount")]
-    [Required]
-    public long Amount { get; set; }
-
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
@@ -46,4 +42,14 @@ public class Order
     public virtual List<OrderItem> Items { get; set; }
     public virtual List<OrderPayment> Payments { get; set; }
     public virtual List<OrderPhoto> Photos { get; set; }
+    
+    // Property for convinience.
+    [NotMapped]
+    public long ItemAmount => Items.Sum(i => i.Amount);
+
+    [NotMapped]
+    public long PaidAmount => Payments.Sum(p => p.Amount);
+
+    [NotMapped]
+    public long Dept => ItemAmount - PaidAmount;
 }

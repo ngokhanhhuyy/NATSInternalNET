@@ -5,3 +5,6 @@ csharp_style_namespace_declarations = block_scoped
 
 # IDE0290: Use primary constructor
 dotnet_diagnostic.IDE0290.severity = none
+
+# Default severity for all analyzer diagnostics
+dotnet_analyzer_diagnostic.severity = none

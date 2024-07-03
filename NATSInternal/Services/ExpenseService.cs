@@ -23,7 +23,7 @@ public class ExpenseService : IExpenseService
     /// <inheritdoc/>
     public async Task<ExpenseListResponseDto> GetListAsync(ExpenseListRequestDto requestDto)
     {
-        // Initialze query.
+        // Initialize query.
         IQueryable<Expense> query = _context.Expenses
             .Include(e => e.Photos);
         
@@ -32,13 +32,17 @@ public class ExpenseService : IExpenseService
         {
             case nameof(ExpenseListRequestDto.FieldOptions.Amount):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(e => e.Amount).ThenBy(e => e.PaidDateTime)
-                    : query.OrderByDescending(e => e.Amount).ThenBy(e => e.PaidDateTime);
+                    ? query.OrderBy(e => e.Amount)
+                        .ThenBy(e => e.PaidDateTime)
+                    : query.OrderByDescending(e => e.Amount)
+                        .ThenByDescending(e => e.PaidDateTime);
                 break;
             default:
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(e => e.PaidDateTime).ThenBy(e => e.Amount)
-                    : query.OrderByDescending(e => e.PaidDateTime).ThenBy(e => e.Amount);
+                    ? query.OrderBy(e => e.PaidDateTime)
+                        .ThenBy(e => e.Amount)
+                    : query.OrderByDescending(e => e.PaidDateTime)
+                        .ThenByDescending(e => e.Amount);
                 break;
         }
 
@@ -63,7 +67,6 @@ public class ExpenseService : IExpenseService
         {
             query = query.Where(e => e.Category == requestDto.Category.Value);
         }
-        
         
         // Initialize response dto.
         ExpenseListResponseDto responseDto = new ExpenseListResponseDto();

@@ -34,4 +34,6 @@ public static class ErrorMessages
     public const string NotAvailableByProperty = "{ResourceName} có {PropertyName} '{AttemptedValue}' hiện đang không khả dụng.";
     public const string UpdateRestricted = "{ResourceName} không thể được chỉnh sửa do liên kết với các tài nguyên khác.";
     public const string DeleteRestricted = "{ResourceName} không thể được xoá do liên kết với các tài nguyên khác.";
+    public const string PaymentAlreadyCompleted = "{ResourceName} đã được thanh toán đầy đủ, Không thể thanh toán thêm.";
+    public const string ModificationTimeExpired = "{ResourceName} đã bị khoá do quá hạn chỉnh sửa/xoá.";
 }

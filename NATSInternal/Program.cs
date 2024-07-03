@@ -182,7 +182,25 @@ builder.Services
     .AddPolicy("CanEditExpense", policy =>
         policy.RequireClaim("Permission", PermissionConstants.EditExpense))
     .AddPolicy("CanDeleteExpense", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteExpense));
+        policy.RequireClaim("Permission", PermissionConstants.DeleteExpense))
+    .AddPolicy("CanCreateOrder", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateOrder))
+    .AddPolicy("CanEditOrder", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditOrder))
+    .AddPolicy("CanDeleteOrder", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteOrder))
+    .AddPolicy("CanCreateOrder", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateOrder))
+    .AddPolicy("CanEditOrder", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditOrder))
+    .AddPolicy("CanDeleteOrder", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteOrder))
+    .AddPolicy("CanCreateOrderPayment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateOrderPayment))
+    .AddPolicy("CanEditOrderPayment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditOrderPayment))
+    .AddPolicy("CanDeleteOrderPayment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteOrderPayment));
 
 
 // FluentValidation
@@ -223,6 +241,8 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
 builder.Services.AddScoped<ISupplyService, SupplyService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderPaymentService, OrderPaymentService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
 

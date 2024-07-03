@@ -51,11 +51,21 @@ public static class PermissionConstants
     public const string EditSupplyPhoto = "EditSupplyPhoto";
     public const string DeleteSupplyPhoto = "DeleteSupplyPhoto";
     
-    // Permissions to interact with expense.
+    // Permissions to interact with expenses.
     public const string CreateExpense = "CreateExpense";
     public const string EditExpense = "EditExpense";
     public const string EditClosedExpense = "EditClosedExpense";
     public const string DeleteExpense = "DeleteExpense";
     
+    // Permissions to interact with orders.
+    public const string CreateOrder = "CreateOrder";
+    public const string EditOrder = "EditOrder";
+    public const string EditClosedOrder = "EditClosedOrder";
+    public const string DeleteOrder = "DeleteOrder";
 
+    // Permissions to interact with order payments;
+    public const string CreateOrderPayment = "CreateOrderPayment";
+    public const string EditOrderPayment = "EditOrderPayment";
+    public const string EditClosedOrderPayment = "EditClosedOrderPayment";
+    public const string DeleteOrderPayment = "DeleteOrderPayment";
 }

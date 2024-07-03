@@ -18,9 +18,9 @@ public class Treatment
     [Column("updated_datetime")]
     public DateTime? UpdatedDateTime { get; set; }
 
-    [Column("amount")]
+    [Column("service_amount")]
     [Required]
-    public long Amount { get; set; } = 0;
+    public long ServiceAmount { get; set; } = 0;
 
     [Column("vat_factor")]
     [Required]
@@ -56,8 +56,7 @@ public class Treatment
     public virtual List<TreatmentPayment> Payments { get; set; }
     public virtual List<TreatmentPhoto> Photos { get; set; }
 
-
-    // Filtered properties for convinience
+    // Properties for convinience
     [NotMapped]
     public List<TreatmentPhoto> PreTreatmentPhotos => Photos?
         .OrderBy(p => p.Id)
@@ -69,4 +68,13 @@ public class Treatment
         .OrderBy(p => p.Id)
         .Where(p => p.Type == TreatmentPhotoType.After)
         .ToList();
+
+    [NotMapped]
+    public long ItemAmount => Sessions.Sum(ts => ts.ItemAmount);
+
+    [NotMapped]
+    public long TotalAmount => (long)Math.Round(ItemAmount + (Decimal)ServiceAmount * VatFactor);
+
+    [NotMapped]
+    public long Dept => TotalAmount - Payments.Sum(tp => tp.PaidAmount);
 }

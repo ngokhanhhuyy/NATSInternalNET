@@ -16,7 +16,6 @@ public class OrderPayment
     public DateTime PaidDateTime { get; set; }
 
     [Column("note")]
-    [Required]
     [StringLength(255)]
     public string Note { get; set; }
 

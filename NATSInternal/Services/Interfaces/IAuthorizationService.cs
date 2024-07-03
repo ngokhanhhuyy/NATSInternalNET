@@ -47,4 +47,8 @@ public interface IAuthorizationService
     bool CanEditExpense(Expense expense);
     
     bool CanDeleteExpense(Expense expense);
+    
+    bool CanEditOrder(Order order);
+    
+    bool CanDeleteOrder(Order order);
 }

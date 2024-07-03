@@ -287,4 +287,25 @@ public class AuthorizationService : IAuthorizationService
     {
         return _user.HasPermission(PermissionConstants.DeleteExpense) && !expense.IsClosed;
     }
+    
+    // Permissions to interact with orders.
+    public bool CanEditOrder(Order order)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditOrder))
+        {
+            return false;
+        }
+        
+        if (order.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedOrder))
+        {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public bool CanDeleteOrder(Order order)
+    {
+        return !order.IsClosed && _user.HasPermission(PermissionConstants.DeleteOrder);
+    }
 }
