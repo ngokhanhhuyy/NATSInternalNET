@@ -990,9 +990,13 @@ public sealed class DataInitializer
                 }
 
                 // Initialize payments.
+                Func<OrderItem, long> itemAmountSelector = (OrderItem item) =>
+                {
+                    return (long)Math.Round((item.Amount + item.Amount * item.VatFactor) * item.Quantity);
+                };
                 OrderPayment payment = new OrderPayment
                 {
-                    Amount = (int)Math.Round(order.Items.Sum(i => i.Amount + i.Amount * i.VatFactor)),
+                    Amount = order.Items.Sum(itemAmountSelector),
                     PaidDateTime = currentDateTime,
                     UserId = order.UserId
                 };

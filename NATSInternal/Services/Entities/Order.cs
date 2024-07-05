@@ -45,7 +45,7 @@ public class Order
     
     // Property for convinience.
     [NotMapped]
-    public long ItemAmount => Items.Sum(i => i.Amount);
+    public long ItemAmount => Items.Sum(i => i.Amount * i.Quantity);
 
     [NotMapped]
     public long PaidAmount => Payments.Sum(p => p.Amount);
