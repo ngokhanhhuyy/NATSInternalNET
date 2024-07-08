@@ -10,13 +10,18 @@ public class OrderUpsertValidator : Validator<OrderUpsertRequestDto>
         RuleFor(dto => dto.Items)
             .NotEmpty()
             .WithName(DisplayNames.OrderItem);
-        RuleForEach(dto => dto.Items).SetValidator(new OrderItemValidator());
+        RuleForEach(dto => dto.Items)
+            .SetValidator(new OrderItemValidator());
         RuleSet("Create", () =>
         {
             RuleFor(dto => dto.OrderedDateTime)
                 .GreaterThanOrEqualTo(MinimumOrderedDateTime)
+                .LessThanOrEqualTo(MaximumOrderedDateTime)
                 .When(dto => dto.OrderedDateTime.HasValue)
                 .WithName(DisplayNames.OrderedDateTime);
+            RuleFor(dto => dto.Payment)
+                .NotNull()
+                .WithName(DisplayNames.Payment);
         });
     }
 
@@ -28,4 +33,6 @@ public class OrderUpsertValidator : Validator<OrderUpsertRequestDto>
             return new DateTime(minDate.Year, minDate.Month, 1, 0, 0, 0);
         }
     }
+
+    private DateTime MaximumOrderedDateTime => DateTime.UtcNow.ToApplicationTime();
 }

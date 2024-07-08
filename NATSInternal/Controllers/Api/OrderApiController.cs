@@ -57,7 +57,8 @@ public class OrderApiController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
+    [HttpPost]
+    [Authorize(Policy = "CanCreateOrder")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
@@ -87,6 +88,7 @@ public class OrderApiController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = "CanUpdateOrder")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -127,6 +129,7 @@ public class OrderApiController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "CanDeleteOrder")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
@@ -153,7 +156,23 @@ public class OrderApiController : ControllerBase
         }
     }
 
-    [HttpPost("{id:int}/Payments")]
+    [HttpGet("{id:int}/Payment/{orderId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPaymentDetailAsync(int orderId)
+    {
+        try
+        {
+            return Ok(await _orderPaymentService.GetDetailAsync(orderId));
+        }
+        catch (ResourceNotFoundException exception)
+        {
+            ModelState.AddModelErrorsFromServiceException(exception);
+            return NotFound(ModelState);
+        }
+    }
+
+    [HttpPost("{id:int}/Payment")]
     [Authorize(Policy = "CanCreateOrderPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -193,7 +212,7 @@ public class OrderApiController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Payments/{paymentId:int}")]
+    [HttpPut("{id:int}/Payment/{paymentId:int}")]
     [Authorize(Policy = "CanUpdateOrderPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -232,7 +251,7 @@ public class OrderApiController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Payments/{paymentId:int}")]
+    [HttpDelete("{id:int}/Payment/{paymentId:int}")]
     [Authorize(Policy = "CanDeleteOrderPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

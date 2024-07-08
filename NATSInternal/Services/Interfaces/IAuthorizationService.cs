@@ -21,7 +21,13 @@ public interface IAuthorizationService
     SupplyDetailAuthorizationResponseDto GetSupplyDetailAuthorization(Supply supply);
 
     ExpenseAuthorizationResponseDto GetExpenseAuthorization(Expense expense);
-    
+
+    OrderListAuthorizationResponseDto GetOrderListAuthorization();
+
+    OrderAuthorizationResponseDto GetOrderAuthorization(Order order);
+
+    OrderPaymentAuthorizationResponseDto GetOrderPaymentAuthorization(OrderPayment orderPayment);
+
     bool CanEditUserPersonalInformation(User targetUser);
 
     bool CanEditUserUserInformation(User targetUser);
@@ -51,4 +57,8 @@ public interface IAuthorizationService
     bool CanEditOrder(Order order);
     
     bool CanDeleteOrder(Order order);
+
+    bool CanEditOrderPayment(OrderPayment payment);
+
+    bool CanDeleteOrderPayment(OrderPayment payment);
 }

@@ -1,7 +1,6 @@
-namespace NATSInternal.Services.Dtos
+namespace NATSInternal.Services.Dtos;
+
+public class OrderListAuthorizationResponseDto
 {
-    public class OrderListAuthorizationResponseDto
-    {
-        
-    }
+    public bool CanCreate { get; set; }
 }

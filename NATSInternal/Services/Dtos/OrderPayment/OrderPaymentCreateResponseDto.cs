@@ -1,8 +1,7 @@
-﻿namespace NATSInternal.Services.Dtos
+﻿namespace NATSInternal.Services.Dtos;
+
+public class OrderPaymentCreateResponseDto
 {
-    public class OrderPaymentCreateResponseDto
-    {
-        public int OrderId { get; set; }
-        public int OrderPaymentId { get; set; }
-    }
+    public int OrderId { get; set; }
+    public int OrderPaymentId { get; set; }
 }

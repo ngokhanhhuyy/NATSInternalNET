@@ -10,12 +10,9 @@ public class OrderPaymentValidator : Validator<OrderPaymentRequestDto>
         RuleFor(dto => dto.Note)
             .MaximumLength(255)
             .WithName(DisplayNames.Note);
-        RuleSet("Create", () => { });
-        RuleSet("Update", () =>
-        {
-            RuleFor(dto => dto.PaidDateTime)
-                .NotNull()
-                .WithName(DisplayNames.PaidDateTime);
-        });
+        RuleFor(dto => dto.PaidDateTime)
+            .NotNull()
+            .When(dto => dto.Id.HasValue)
+            .WithName(DisplayNames.PaidDateTime);
     }
 }

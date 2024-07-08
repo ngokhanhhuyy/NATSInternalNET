@@ -7,4 +7,5 @@ public class OrderBasicResponseDto
     public long Amount { get; set; }
     public bool IsClosed { get; set; }  
     public CustomerBasicResponseDto Customer { get; set; }
+    public OrderAuthorizationResponseDto Authorization { get; set; }
 }

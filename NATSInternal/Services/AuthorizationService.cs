@@ -20,6 +20,7 @@ public class AuthorizationService : IAuthorizationService
     {
         return _user.Id;
     }
+
     public UserDetailResponseDto GetUserDetail()
     {
         UserDetailResponseDto responseDto = new UserDetailResponseDto
@@ -122,7 +123,7 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    // Authorization for supply.
+    // Authorization for supplies.
     public SupplyDetailAuthorizationResponseDto GetSupplyDetailAuthorization(Supply supply)
     {
         return new()
@@ -132,13 +133,41 @@ public class AuthorizationService : IAuthorizationService
         };
     }
     
-    // Authorization for expense.
+    // Authorization for expenses.
     public ExpenseAuthorizationResponseDto GetExpenseAuthorization(Expense expense)
     {
         return new ExpenseAuthorizationResponseDto
         {
             CanEdit = CanEditExpense(expense),
             CanDelete = CanDeleteExpense(expense)
+        };
+    }
+
+    // Authorization for orders.
+    public OrderListAuthorizationResponseDto GetOrderListAuthorization()
+    {
+        return new OrderListAuthorizationResponseDto
+        {
+            CanCreate = _user.HasPermission(PermissionConstants.CreateOrder)
+        };
+    }
+
+    public OrderAuthorizationResponseDto GetOrderAuthorization(Order order)
+    {
+        return new OrderAuthorizationResponseDto
+        {
+            CanEdit = CanEditOrder(order),
+            CanDelete = CanDeleteOrder(order)
+        };
+    }
+
+    // Authorization for order payments.
+    public OrderPaymentAuthorizationResponseDto GetOrderPaymentAuthorization(OrderPayment orderPayment)
+    {
+        return new OrderPaymentAuthorizationResponseDto
+        {
+            CanEdit = CanEditOrderPayment(orderPayment),
+            CanDelete = CanDeleteOrderPayment(orderPayment)
         };
     }
 
@@ -289,6 +318,11 @@ public class AuthorizationService : IAuthorizationService
     }
     
     // Permissions to interact with orders.
+    public bool CanCreateOrder()
+    {
+        return _user.HasPermission(PermissionConstants.CreateOrder);
+    }
+
     public bool CanEditOrder(Order order)
     {
         if (!_user.HasPermission(PermissionConstants.EditOrder))
@@ -307,5 +341,31 @@ public class AuthorizationService : IAuthorizationService
     public bool CanDeleteOrder(Order order)
     {
         return !order.IsClosed && _user.HasPermission(PermissionConstants.DeleteOrder);
+    }
+
+    public bool CanCreateOrderPayment(Order order)
+    {
+        return order.Dept > 0;
+    }
+
+    // Permissions to interact with order payments.
+    public bool CanEditOrderPayment(OrderPayment payment)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditOrderPayment))
+        {
+            return false;
+        }
+
+        if (payment.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedOrderPayment))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool CanDeleteOrderPayment(OrderPayment payment)
+    {
+        return !_user.HasPermission(PermissionConstants.DeleteOrderPayment);
     }
 }

@@ -13,4 +13,5 @@ public class OrderDetailResponseDto
     public CustomerBasicResponseDto Customer { get; set; }
     public UserBasicResponseDto User { get; set; }
     public List<OrderPhotoResponseDto> Photos { get; set; }
+    public OrderAuthorizationResponseDto Authorization { get; set; }
 }
