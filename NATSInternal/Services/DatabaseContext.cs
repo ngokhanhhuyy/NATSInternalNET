@@ -198,7 +198,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .WithMany(u => u.OrderPayments)
                 .HasForeignKey(op => op.UserId)
                 .HasConstraintName("FK__order_payments__users__user_id")
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });

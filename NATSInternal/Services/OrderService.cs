@@ -25,6 +25,7 @@ public class OrderService : IOrderService
         _orderPaymentService = orderPaymentService;
     }
 
+    /// <inheritdoc />
     public async Task<OrderListResponseDto> GetListAsync(OrderListRequestDto requestDto)
     {
         // Initialize query.
@@ -105,7 +106,8 @@ public class OrderService : IOrderService
         responseDto.Authorization = _authorizationService.GetOrderListAuthorization();
         return responseDto;
     }
-    
+
+    /// <inheritdoc />
     public async Task<OrderDetailResponseDto> GetDetailAsync(int id)
     {
         return await _context.Orders
@@ -213,7 +215,8 @@ public class OrderService : IOrderService
                 nameof(id),
                 id.ToString());
     }
-    
+
+    /// <inheritdoc />
     public async Task<int> CreateAsync(OrderUpsertRequestDto requestDto)
     {
         // Using transaction for atomic operations.
@@ -251,6 +254,9 @@ public class OrderService : IOrderService
         try
         {
             await _context.SaveChangesAsync();
+            await _statsService.IncrementRetailRevenueAsync(
+                order.ItemAmount,
+                DateOnly.FromDateTime(order.OrderedDateTime));
             await transaction.CommitAsync();
             return order.Id;
         }
@@ -296,7 +302,8 @@ public class OrderService : IOrderService
             throw;
         }
     }
-    
+
+    /// <inheritdoc />
     public async Task UpdateAsync(int id, OrderUpsertRequestDto requestDto)
     {
         // Fetch the entity from the database and ensure it exists.
@@ -396,36 +403,65 @@ public class OrderService : IOrderService
         }
     }
 
+    /// <inheritdoc />
     public async Task DeleteAsync(int id)
     {
+        // Fetch the entity from the database and ensure it exists.
         Order order = await _context.Orders
+            .Include(o => o.Payments)
             .Where(o => !o.IsDeleted)
-            .SingleOrDefaultAsync()
+            .SingleOrDefaultAsync(o => o.Id == id)
             ?? throw new ResourceNotFoundException(
                 nameof(Order),
                 nameof(id),
                 id.ToString());
         
+        // Check if the current user has permission to delete the order.
         if (!_authorizationService.CanDeleteOrder(order))
         {
             throw new AuthorizationException();
         }
 
+        // Using transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
+
+        // Perform the deleting operation.
         try
         {
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
-        when (exception.InnerException is MySqlException sqlException)
         {
-            SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
-            exceptionHandler.Handle(sqlException);
-            if (exceptionHandler.IsDeleteOrUpdateRestricted)
+            // Handle concurrency exception.
+            if (exception is DbUpdateConcurrencyException)
             {
-                string errorMessage = ErrorMessages.DeleteRestricted
-                    .ReplaceResourceName(DisplayNames.Order);
-                throw new OperationException(nameof(id), errorMessage);
+                throw new ConcurrencyException();
+            }
+
+            // Handle operation exception.
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
+                exceptionHandler.Handle(sqlException);
+                if (exceptionHandler.IsDeleteOrUpdateRestricted)
+                {
+                    // Soft delete when there are any other related entities which are restricted to be deleted.
+                    order.IsDeleted = true;
+
+                    // Save changes.
+                    await _context.SaveChangesAsync();
+
+                    // Deleted the order successfully, adjust the stats.
+                    await _statsService.IncrementRetailRevenueAsync(
+                        order.PaidAmount,
+                        DateOnly.FromDateTime(order.OrderedDateTime));
+
+                    // Commit the transaction and finishing the operations.
+                    await transaction.CommitAsync();
+                }
             }
             throw;
         }
@@ -451,7 +487,7 @@ public class OrderService : IOrderService
         DateTime maxDateTime = order.OrderedDateTime.AddMonths(2) > currentDateTime
             ? currentDateTime
             : order.OrderedDateTime.AddMonths(2);
-        return newOrderedDateTime < minDateTime || newOrderedDateTime >= maxDateTime;
+        return newOrderedDateTime > minDateTime || newOrderedDateTime <= maxDateTime;
     }
 
     /// <summary>

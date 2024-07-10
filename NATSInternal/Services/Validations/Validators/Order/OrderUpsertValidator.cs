@@ -7,9 +7,12 @@ public class OrderUpsertValidator : Validator<OrderUpsertRequestDto>
         RuleFor(dto => dto.Note)
             .MaximumLength(255)
             .WithName(DisplayNames.Note);
+        RuleFor(dto => dto.CustomerId)
+            .NotEmpty()
+            .WithName(DisplayNames.Customer);
         RuleFor(dto => dto.Items)
             .NotEmpty()
-            .WithName(DisplayNames.OrderItem);
+            .WithName(DisplayNames.Product);
         RuleForEach(dto => dto.Items)
             .SetValidator(new OrderItemValidator());
         RuleSet("Create", () =>

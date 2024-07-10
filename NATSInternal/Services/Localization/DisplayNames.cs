@@ -74,7 +74,7 @@ public static class DisplayNames
     public const string Title = "Tiêu đề";
     public const string Content = "Nội dung";
     public const string IsPinned = "Được đánh dấu";
-    public const string OrderedDateTime = "Ngày giờ đặt";
+    public const string OrderedDateTime = "Ngày giờ đặt hàng";
     public const string OrderByField = "Trường sắp xếp";
     public const string OrderByAscending = "Thứ tự sắp xếp";
     public const string SearchByField = "Trường tìm kiếm";

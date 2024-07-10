@@ -157,6 +157,11 @@ public class OrderPaymentService : IOrderPaymentService
         try
         {
             await _context.SaveChangesAsync();
+
+            // No error occurs, adjust stats.
+            await _statsService.IncrementRetailRevenueAsync(
+                -payment.Amount,
+                DateOnly.FromDateTime(payment.PaidDateTime));     
             await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)

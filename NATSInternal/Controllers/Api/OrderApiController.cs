@@ -88,7 +88,7 @@ public class OrderApiController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = "CanUpdateOrder")]
+    [Authorize(Policy = "CanEditOrder")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -213,7 +213,7 @@ public class OrderApiController : ControllerBase
     }
 
     [HttpPut("{id:int}/Payment/{paymentId:int}")]
-    [Authorize(Policy = "CanUpdateOrderPayment")]
+    [Authorize(Policy = "CanEditOrderPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
