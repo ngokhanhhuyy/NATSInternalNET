@@ -26,7 +26,7 @@ public interface IAuthorizationService
 
     OrderAuthorizationResponseDto GetOrderAuthorization(Order order);
 
-    OrderPaymentAuthorizationResponseDto GetOrderPaymentAuthorization(OrderPayment orderPayment);
+    DebtAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment);
 
     bool CanEditUserPersonalInformation(User targetUser);
 
@@ -53,12 +53,24 @@ public interface IAuthorizationService
     bool CanEditExpense(Expense expense);
     
     bool CanDeleteExpense(Expense expense);
+
+    bool CanSetExpensePaidDateTime();
     
     bool CanEditOrder(Order order);
-    
+
+    bool CanSetOrderOrderedDateTime();
+
     bool CanDeleteOrder(Order order);
+    
+    bool CanEditDebt(Debt debt);
+    
+    bool CanDeleteDebt();
+    
+    bool CanSetDebtCreatedDateTime();
 
-    bool CanEditOrderPayment(OrderPayment payment);
+    bool CanEditDebtPayment(DebtPayment debtPayment);
 
-    bool CanDeleteOrderPayment(OrderPayment payment);
+    bool CanDeleteDebtPayment();
+
+    bool CanSetDebtPaymentPaidDateTime();
 }

@@ -1,6 +1,6 @@
 namespace NATSInternal.Services.Dtos;
 
-public class OrderPaymentRequestDto : IRequestDto<OrderPaymentRequestDto>
+public class DebtPaymentRequestDto : IRequestDto<DebtPaymentRequestDto>
 {
     public int? Id { get; set; }
     public long Amount { get; set; }
@@ -9,7 +9,7 @@ public class OrderPaymentRequestDto : IRequestDto<OrderPaymentRequestDto>
     public bool HasBeenChanged { get; set; }
     public bool HasBeenDeleted { get; set; }
         
-    public OrderPaymentRequestDto TransformValues()
+    public DebtPaymentRequestDto TransformValues()
     {
             Note = Note?.ToNullIfEmpty();
             return this;

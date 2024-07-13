@@ -26,7 +26,7 @@ public sealed class DataInitializer
         InitializeProducts();
         InitializeSupply();
         InitializeExpense();
-        InitializeOrders();
+        // InitializeOrders();
         _context.SaveChanges();
         transaction.Commit();
     }
@@ -120,14 +120,17 @@ public sealed class DataInitializer
                         PermissionConstants.EditExpense,
                         PermissionConstants.EditClosedExpense,
                         PermissionConstants.DeleteExpense,
+                        PermissionConstants.SetExpensePaidDateTime,
                         PermissionConstants.CreateOrder,
                         PermissionConstants.EditOrder,
                         PermissionConstants.EditClosedOrder,
+                        PermissionConstants.SetOrderOrderedDateTime,
                         PermissionConstants.DeleteOrder,
-                        PermissionConstants.CreateOrderPayment,
-                        PermissionConstants.EditOrderPayment,
-                        PermissionConstants.EditClosedOrderPayment,
-                        PermissionConstants.DeleteOrderPayment,
+                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.EditDebt,
+                        PermissionConstants.EditClosedDebt,
+                        PermissionConstants.SetDebtPaidDateTime,
+                        PermissionConstants.DeleteDebt,
                     }
                 },
                 {
@@ -165,12 +168,15 @@ public sealed class DataInitializer
                         PermissionConstants.CreateExpense,
                         PermissionConstants.EditExpense,
                         PermissionConstants.DeleteExpense,
+                        PermissionConstants.SetExpensePaidDateTime,
                         PermissionConstants.CreateOrder,
                         PermissionConstants.EditOrder,
+                        PermissionConstants.SetOrderOrderedDateTime,
                         PermissionConstants.DeleteOrder,
-                        PermissionConstants.CreateOrderPayment,
-                        PermissionConstants.EditOrderPayment,
-                        PermissionConstants.DeleteOrderPayment,
+                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.EditDebt,
+                        PermissionConstants.SetDebtPaidDateTime,
+                        PermissionConstants.DeleteDebt,
                     }
                 },
                 {
@@ -193,8 +199,8 @@ public sealed class DataInitializer
                         PermissionConstants.EditExpense,
                         PermissionConstants.CreateOrder,
                         PermissionConstants.EditOrder,
-                        PermissionConstants.CreateOrderPayment,
-                        PermissionConstants.EditOrderPayment,
+                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.EditDebt,
                     }
                 },
                 {
@@ -209,7 +215,7 @@ public sealed class DataInitializer
                         PermissionConstants.CreateSupply,
                         PermissionConstants.CreateExpense,
                         PermissionConstants.CreateOrder,
-                        PermissionConstants.CreateOrderPayment,
+                        PermissionConstants.CreateDebtPayment,
                     }
                 }
             };
@@ -292,7 +298,7 @@ public sealed class DataInitializer
                         Birthday = new DateOnly(2000, 10, 10),
                         JoiningDate = DateOnly.FromDateTime(DateTime.Today),
                     },
-                    ("quynh123", "Manager")
+                    ("quynh123", "Accountant")
                 },
                 {
                     new User

@@ -40,7 +40,6 @@ public class Order
     public virtual User User { get; set; }
     public virtual Customer Customer { get; set; }
     public virtual List<OrderItem> Items { get; set; }
-    public virtual List<OrderPayment> Payments { get; set; }
     public virtual List<OrderPhoto> Photos { get; set; }
     
     // Property for convinience.
@@ -48,8 +47,5 @@ public class Order
     public long ItemAmount => Items.Sum(i => i.Amount * i.Quantity);
 
     [NotMapped]
-    public long PaidAmount => Payments.Sum(p => p.Amount);
-
-    [NotMapped]
-    public long Dept => ItemAmount - PaidAmount;
+    public long VatAmount => Items.Sum(i => (long)Math.Round(i.Amount * i.VatFactor * i.Quantity));
 }

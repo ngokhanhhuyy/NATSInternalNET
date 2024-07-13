@@ -152,12 +152,35 @@ public class ExpenseService : IExpenseService
         // Use transaction for atomic operations.
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
+
+        // Determine paid datetime.
+        DateTime paidDateTime = DateTime.UtcNow.ToApplicationTime();
+        if (requestDto.PaidDateTime.HasValue)
+        {
+            // Check if the current user has permission to specify the paid datetime.
+            if (!_authorizationService.CanSetExpensePaidDateTime())
+            {
+                throw new AuthorizationException();
+            }
+
+            // Verify that with the specified paid datetime, the expense will not be considered as closed.
+            if (_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
+            {
+                string errorMessage = ErrorMessages.GreaterThanOrEqual
+                    .ReplacePropertyName(DisplayNames.PaidDateTime)
+                    .ReplaceComparisonValue(requestDto.PaidDateTime.Value.ToVietnameseString());
+                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+            }
+
+            // The specified paid datetime is valid, assign the expense to it.
+            paidDateTime = requestDto.PaidDateTime.Value;
+        }
         
         // Initialize entity.
         Expense expense = new Expense
         {
             Amount = requestDto.Amount,
-            PaidDateTime = requestDto.PaidDateTime ?? DateTime.UtcNow.ToApplicationTime(),
+            PaidDateTime = paidDateTime,
             Category = requestDto.Category,
             Note = requestDto.Note,
             Photos = new List<ExpensePhoto>()
@@ -261,27 +284,56 @@ public class ExpenseService : IExpenseService
         {
             throw new AuthorizationException();
         }
-        
+
         // Using transaction for atomic operations.
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
+
+        // Modifying the expense fields if the fields can affect the stats related data
+        // when the request specified them.
+        if (requestDto.PaidDateTime.HasValue || expense.Amount != requestDto.Amount)
+        {
+            // Check if the current user has permission to specify the paid datetime.
+            if (!_authorizationService.CanSetExpensePaidDateTime())
+            {
+                throw new AuthorizationException();
+            }
+
+            // Verify that with the new paid datetime, the status of the expense won't be changed.
+            bool expenseStatusWillNotBeChanged = _statsService
+                .VerifyResourceDateTimeToBeUpdated(
+                    expense.PaidDateTime,
+                    requestDto.PaidDateTime.Value);
+            if (!expenseStatusWillNotBeChanged)
+            {
+                string errorMessage = ErrorMessages.GreaterThanOrEqual
+                    .ReplacePropertyName(DisplayNames.PaidDateTime)
+                    .ReplaceComparisonValue(requestDto.PaidDateTime.Value.ToVietnameseString());
+                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+            }
+
+            // The specified paid datetime is valid, adjusting the amount.
+            expense.Amount = requestDto.Amount;
+
+            // Decrement previous stats.
+            await _statsService.IncrementExpenseAsync(
+                -expense.Amount,
+                expense.Category,
+                DateOnly.FromDateTime(expense.PaidDateTime));
+
+            // Assign the specified paid datetime to the expense.
+            expense.PaidDateTime = requestDto.PaidDateTime.Value;
+
+            // Adjust new stats.
+            await _statsService.IncrementExpenseAsync(
+                expense.Amount,
+                expense.Category,
+                DateOnly.FromDateTime(expense.PaidDateTime));
+        }
         
-        // Decrement previous stats.
-        await _statsService.IncrementExpenseAsync(
-            - expense.Amount,
-            expense.Category,
-            DateOnly.FromDateTime(expense.PaidDateTime));
-        
-        // Update expense and related entites.
-        expense.Amount = requestDto.Amount;
+        // Update other fields.
         expense.Category = requestDto.Category;
         expense.Note = requestDto.Note;
-        
-        // Adjust new stats.
-        await _statsService.IncrementExpenseAsync(
-            expense.Amount,
-            expense.Category,
-            DateOnly.FromDateTime(expense.PaidDateTime));
         
         // Update payee.
         if (expense.Payee.Name != requestDto.PayeeName)

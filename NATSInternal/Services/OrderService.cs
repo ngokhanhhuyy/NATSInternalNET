@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
@@ -9,20 +7,17 @@ public class OrderService : IOrderService
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
-    private readonly IOrderPaymentService _orderPaymentService;
         
     public OrderService(
         DatabaseContext context,
         IPhotoService photoService,
         IAuthorizationService authorizationService,
-        IStatsService statsService,
-        IOrderPaymentService orderPaymentService)
+        IStatsService statsService)
     {
         _context = context;
         _photoService = photoService;
         _authorizationService = authorizationService;
         _statsService = statsService;
-        _orderPaymentService = orderPaymentService;
     }
 
     /// <inheritdoc />
@@ -70,8 +65,8 @@ public class OrderService : IOrderService
             query = query.Where(o => o.OrderedDateTime <= rangeToDateTime);
         }
 
-        // Specify split query for better performance.
-        query = query.AsSingleQuery();
+        // Filter by not being soft deleted.
+        query = query.Where(o => !o.IsDeleted);
             
         // Initialize response dto.
         OrderListResponseDto responseDto = new OrderListResponseDto();
@@ -112,17 +107,15 @@ public class OrderService : IOrderService
     {
         return await _context.Orders
             .Include(o => o.Items).ThenInclude(oi => oi.Product)
-            .Include(o => o.Payments).ThenInclude(op => op.User).ThenInclude(u => u.Roles)
             .Include(o => o.Photos)
             .Include(o => o.Customer)
             .Include(o => o.User)
-            .Where(o => o.Id == id)
+            .Where(o => o.Id == id && !o.IsDeleted)
             .Select(o => new OrderDetailResponseDto
             {
                 Id = o.Id,
                 OrderedDateTime = o.OrderedDateTime,
-                ItemAmount = o.ItemAmount,
-                PaidAmount = o.PaidAmount,
+                Amount = o.ItemAmount,
                 Note = o.Note,
                 IsClosed = o.IsClosed,
                 Items = o.Items
@@ -141,36 +134,6 @@ public class OrderService : IOrderService
                             StockingQuantity = oi.Product.StockingQuantity,
                             ThumbnailUrl = oi.Product.ThumbnailUrl
                         }
-                    }).ToList(),
-                Payments = o.Payments
-                    .Select(op => new OrderPaymentResponseDto
-                    {
-                        Id = op.Id,
-                        Amount = op.Amount,
-                        PaidDateTime = op.PaidDateTime,
-                        Note = op.Note,
-                        IsClosed = op.IsClosed,
-                        UserInCharge = new UserBasicResponseDto
-                        {
-                            Id = op.User.Id,
-                            UserName = op.User.UserName,
-                            FirstName = op.User.FirstName,
-                            MiddleName = op.User.MiddleName,
-                            LastName = op.User.LastName,
-                            FullName = op.User.FullName,
-                            Gender = op.User.Gender,
-                            Birthday = op.User.Birthday,
-                            JoiningDate = op.User.JoiningDate,
-                            AvatarUrl = op.User.AvatarUrl,
-                            Role = new RoleBasicResponseDto
-                            {
-                                Id = op.User.Role.Id,
-                                Name = op.User.Role.Name,
-                                DisplayName = op.User.Role.DisplayName,
-                                PowerLevel = op.User.Role.PowerLevel
-                            },
-                        },
-                        Authorization = _authorizationService.GetOrderPaymentAuthorization(op)
                     }).ToList(),
                 Customer = new CustomerBasicResponseDto
                 {
@@ -220,43 +183,68 @@ public class OrderService : IOrderService
     public async Task<int> CreateAsync(OrderUpsertRequestDto requestDto)
     {
         // Using transaction for atomic operations.
-        using IDbContextTransaction transaction = await _context.Database
+        await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
+
+        // Determine ordered datetime.
+        DateTime orderedDateTime = DateTime.UtcNow.ToApplicationTime();
+        if (requestDto.OrderedDateTime.HasValue)
+        {
+            // Check if the current user has permission to specify the ordered datetime.
+            if (!_authorizationService.CanSetOrderOrderedDateTime())
+            {
+                throw new AuthorizationException();
+            }
+
+            // Check if that with the specified ordered datetime, the new order will not be closed.
+            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.OrderedDateTime.Value))
+            {
+                string errorMessage = ErrorMessages.GreaterThanOrEqual
+                    .ReplacePropertyName(DisplayNames.Order)
+                    .ReplaceComparisonValue(requestDto.OrderedDateTime.Value.ToVietnameseString());
+                throw new OperationException(nameof(requestDto.OrderedDateTime), errorMessage);
+            }
+
+            // The ordered datetime is valid, assign it to the new order.
+            orderedDateTime = requestDto.OrderedDateTime.Value;
+        }
 
         // Initialize order entity.
         Order order = new Order
         {
-            OrderedDateTime = requestDto.OrderedDateTime
-                ?? DateTime.UtcNow.ToApplicationTime(),
+            OrderedDateTime = orderedDateTime,
             Note = requestDto.Note,
             CustomerId = requestDto.CustomerId,
             UserId = _authorizationService.GetUserId(),
             Items = new List<OrderItem>(),
-            Photos = new List<OrderPhoto>(),
-            Payments = new List<OrderPayment>(),
+            Photos = new List<OrderPhoto>()
         };
         _context.Orders.Add(order);
 
         // Initialize order items entities.
         CreateItems(order, requestDto.Items);
-
-        // Initialize order payment entity.
-        if (requestDto.Payment != null)
-        {
-            await _orderPaymentService.CreateAsync(order, requestDto.Payment, "payment");
-        }
         
         // Initialize photos.
         if (requestDto.Photos != null)
         {
+            await CreatePhotosAsync(order, requestDto.Photos);
         }
         
+        // Perform the creating operation.
         try
         {
             await _context.SaveChangesAsync();
-            await _statsService.IncrementRetailRevenueAsync(
-                order.ItemAmount,
-                DateOnly.FromDateTime(order.OrderedDateTime));
+
+            // The order can be created successfully without any error. Add the order
+            // to the stats.
+            DateOnly orderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+            await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, orderedDate);
+            if (order.VatAmount > 0)
+            {
+                await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, orderedDate);
+            }
+
+            // Commit the transaction, finish the operation.
             await transaction.CommitAsync();
             return order.Id;
         }
@@ -311,37 +299,43 @@ public class OrderService : IOrderService
             .Include(o => o.User)
             .Include(o => o.Customer)
             .Include(o => o.Items).ThenInclude(oi => oi.Product)
-            .Include(o => o.Payments)
             .Include(o => o.Photos)
             .SingleOrDefaultAsync(o => o.Id == id)
             ?? throw new ResourceNotFoundException(nameof(Order), nameof(id), id.ToString());
-        
+
         // Check if the current user has permission to edit this order.
         if (!_authorizationService.CanEditOrder(order))
         {
             throw new AuthorizationException();
         }
 
-        // Check if ordered datetime is valid.
+        // Revert stats for items' amount and vat amount.
+        DateOnly oldOrderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+        await _statsService.IncrementRetailGrossRevenueAsync(-order.ItemAmount, oldOrderedDate);
+        await _statsService.IncrementVatCollectedAmountAsync(-order.VatAmount, oldOrderedDate);
+
+        // Handle the new ordered datetime when the request specify it.
         if (requestDto.OrderedDateTime.HasValue)
         {
+            // Check if the current user has permission to specify a new ordered datetime.
+            if (!_authorizationService.CanSetOrderOrderedDateTime())
+            {
+                throw new AuthorizationException();
+            }
+
+            // Check if that with the new ordered datetime, the status of the order won't be changed.
             if (!IsUpdatedOrderedDateTimeValid(order, requestDto.OrderedDateTime.Value))
             {
                 throw new OperationException(
                     nameof(requestDto.OrderedDateTime),
                     ErrorMessages.Invalid.ReplacePropertyName(DisplayNames.OrderedDateTime));
             }
-        }
-        
-        // Revert stats for amount if changed.
-        if (order.ItemAmount != requestDto.Items.Where(i => !i.HasBeenDeleted).Sum(i => i.Amount))
-        {
-            await _statsService.IncrementRetailRevenueAsync(order.ItemAmount);
+
+            // The new ordered datetime is considered to be valid, assign it to the order.
+            order.OrderedDateTime = requestDto.OrderedDateTime.Value;
         }
 
         // Update order properties.
-        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        order.OrderedDateTime = requestDto.OrderedDateTime ?? currentDateTime;
         order.Note = requestDto.Note;
         order.CustomerId = requestDto.CustomerId;
 
@@ -365,8 +359,14 @@ public class OrderService : IOrderService
             // Save all modifications.
             await _context.SaveChangesAsync();
 
-            // No error occured during the saving operation, finishing the transaction.
+            // The order can be updated successfully without any error.
+            // Adjust the stats for items' amount and vat collected amount.
             // Delete all old photos which have been replaced by new ones.
+            DateOnly newOrderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+            await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, newOrderedDate);
+            await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, newOrderedDate);
+
+            // Delete photo files which have been specified.
             foreach (string url in urlsToBeDeletedWhenSucceeds)
             {
                 _photoService.Delete(url);
@@ -408,7 +408,6 @@ public class OrderService : IOrderService
     {
         // Fetch the entity from the database and ensure it exists.
         Order order = await _context.Orders
-            .Include(o => o.Payments)
             .Where(o => !o.IsDeleted)
             .SingleOrDefaultAsync(o => o.Id == id)
             ?? throw new ResourceNotFoundException(
@@ -429,7 +428,6 @@ public class OrderService : IOrderService
         // Perform the deleting operation.
         try
         {
-            _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
         }
@@ -454,9 +452,9 @@ public class OrderService : IOrderService
                     // Save changes.
                     await _context.SaveChangesAsync();
 
-                    // Deleted the order successfully, adjust the stats.
-                    await _statsService.IncrementRetailRevenueAsync(
-                        order.PaidAmount,
+                    // Order has been deleted successfully, adjust the stats.
+                    await _statsService.IncrementRetailGrossRevenueAsync(
+                        order.ItemAmount,
                         DateOnly.FromDateTime(order.OrderedDateTime));
 
                     // Commit the transaction and finishing the operations.
@@ -488,28 +486,6 @@ public class OrderService : IOrderService
             ? currentDateTime
             : order.OrderedDateTime.AddMonths(2);
         return newOrderedDateTime > minDateTime || newOrderedDateTime <= maxDateTime;
-    }
-
-    /// <summary>
-    /// Check if the order should be closed with given ordered datetime. The order is closed if
-    /// the ordered datetime belongs to the month of 2 months ago.
-    /// </summary>
-    /// <param name="dateTime">The datetime of the order to be checked.</param>
-    /// <returns>
-    /// <c>true</c> if the ordered datetime belongs to the month of 2 months ago.;
-    /// otherwise, <c>false</c>.
-    /// </returns>
-    /// <example>
-    /// If the current datetime is 2024-01-01T00:00:00, the order should be closed if
-    /// the ordered datetime is earlier than 2023-10-31T23:59:59.
-    /// </example>
-    private bool ShouldOrderBeClosedByDateTime(DateTime dateTime)
-    {
-        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime().AddMonths(-2);
-        DateTime minimumAllowedDateTime = new DateTime(
-            currentDateTime.Year, currentDateTime.Month, 1,
-            0, 0, 0);
-        return dateTime < minimumAllowedDateTime;
     }
 
     /// <summary>
@@ -550,7 +526,7 @@ public class OrderService : IOrderService
             OrderItem item;
             if (itemRequestDto.Id.HasValue)
             {
-                item = order.Items.SingleOrDefault(i => i.Id == itemRequestDto.Id.Value);
+                item = order.Items.SingleOrDefault(oi => oi.Id == itemRequestDto.Id.Value);
 
                 // Throw error if the item couldn't be found.
                 if (item == null)
@@ -673,6 +649,7 @@ public class OrderService : IOrderService
                 {
                     Url = url
                 };
+                order.Photos.Add(photo);
 
                 // Mark the created photo to be deleted later if the transaction fails.
                 urlsToBeDeletedWhenFails.Add(url);

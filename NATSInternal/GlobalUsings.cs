@@ -1,4 +1,5 @@
 global using System.Reflection;
+global using System.Linq.Expressions;
 global using System.ComponentModel.DataAnnotations;
 global using System.ComponentModel.DataAnnotations.Schema;
 global using System.Text.Json.Serialization;
@@ -25,6 +26,7 @@ global using NATSInternal.Services.Localization;
 global using NATSInternal.Services.Tasks;
 global using NATSInternal.Services.Utilities;
 global using NATSInternal.Services.Validations;
+global using NATSInternal.Services.Validations.Rules;
 global using NATSInternal.Services.Validations.Validators;
 
 global using IAuthorizationService = NATSInternal.Services.Interfaces.IAuthorizationService;

@@ -161,13 +161,13 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    // Authorization for order payments.
-    public OrderPaymentAuthorizationResponseDto GetOrderPaymentAuthorization(OrderPayment orderPayment)
+    // Authorization for debt payments.
+    public DebtAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment)
     {
-        return new OrderPaymentAuthorizationResponseDto
+        return new DebtAuthorizationResponseDto
         {
-            CanEdit = CanEditOrderPayment(orderPayment),
-            CanDelete = CanDeleteOrderPayment(orderPayment)
+            CanEdit = CanEditDebtPayment(debtPayment),
+            CanDelete = CanDeleteDebtPayment()
         };
     }
 
@@ -316,6 +316,11 @@ public class AuthorizationService : IAuthorizationService
     {
         return _user.HasPermission(PermissionConstants.DeleteExpense) && !expense.IsClosed;
     }
+
+    public bool CanSetExpensePaidDateTime()
+    {
+        return _user.HasPermission(PermissionConstants.SetExpensePaidDateTime);
+    }
     
     // Permissions to interact with orders.
     public bool CanCreateOrder()
@@ -343,20 +348,46 @@ public class AuthorizationService : IAuthorizationService
         return !order.IsClosed && _user.HasPermission(PermissionConstants.DeleteOrder);
     }
 
-    public bool CanCreateOrderPayment(Order order)
+    public bool CanSetOrderOrderedDateTime()
     {
-        return order.Dept > 0;
+        return _user.HasPermission(PermissionConstants.SetOrderOrderedDateTime);
+    }
+    
+    // Permisisons to interact with debts.
+    public bool CanEditDebt(Debt debt)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditDebt))
+        {
+            return false;
+        }
+        
+        if (debt.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedDebt))
+        {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public bool CanDeleteDebt()
+    {
+        return _user.HasPermission(PermissionConstants.DeleteDebt);
+    }
+    
+    public bool CanSetDebtCreatedDateTime()
+    {
+        return _user.HasPermission(PermissionConstants.SetDebtCreatedDateTime);
     }
 
-    // Permissions to interact with order payments.
-    public bool CanEditOrderPayment(OrderPayment payment)
+    // Permissions to interact with debt payments.
+    public bool CanEditDebtPayment(DebtPayment debtPayment)
     {
-        if (!_user.HasPermission(PermissionConstants.EditOrderPayment))
+        if (!_user.HasPermission(PermissionConstants.EditDebt))
         {
             return false;
         }
 
-        if (payment.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedOrderPayment))
+        if (debtPayment.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedDebt))
         {
             return false;
         }
@@ -364,8 +395,13 @@ public class AuthorizationService : IAuthorizationService
         return true;
     }
 
-    public bool CanDeleteOrderPayment(OrderPayment payment)
+    public bool CanDeleteDebtPayment()
     {
-        return !_user.HasPermission(PermissionConstants.DeleteOrderPayment);
+        return !_user.HasPermission(PermissionConstants.DeleteDebt);
+    }
+
+    public bool CanSetDebtPaymentPaidDateTime()
+    {
+        return _user.HasPermission(PermissionConstants.SetDebtPaymentPaidDateTime);
     }
 }

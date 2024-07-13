@@ -56,16 +56,26 @@ public static class PermissionConstants
     public const string EditExpense = "EditExpense";
     public const string EditClosedExpense = "EditClosedExpense";
     public const string DeleteExpense = "DeleteExpense";
+    public const string SetExpensePaidDateTime = "SetExpensePaidDateTime";
     
     // Permissions to interact with orders.
     public const string CreateOrder = "CreateOrder";
     public const string EditOrder = "EditOrder";
     public const string EditClosedOrder = "EditClosedOrder";
+    public const string SetOrderOrderedDateTime = "SetOrderOrderedDateTime";
     public const string DeleteOrder = "DeleteOrder";
 
-    // Permissions to interact with order payments;
-    public const string CreateOrderPayment = "CreateOrderPayment";
-    public const string EditOrderPayment = "EditOrderPayment";
-    public const string EditClosedOrderPayment = "EditClosedOrderPayment";
-    public const string DeleteOrderPayment = "DeleteOrderPayment";
+    // Permissions to interact with debts.
+    public const string CreateDebt = "CreateDebt";
+    public const string EditDebt = "EditDebt";
+    public const string EditClosedDebt = "EditClosedDebt";
+    public const string SetDebtCreatedDateTime = "SetDebtCreatedDateTime";
+    public const string DeleteDebt = "DeleteDebt";
+
+    // Permissions to interact with debt payments.
+    public const string CreateDebtPayment = "CreateDebtPayment";
+    public const string EditDebtPayment = "EditDebtPayment";
+    public const string EditClosedDebtPayment = "EditClosedDebtPayment";
+    public const string SetDebtPaymentPaidDateTime = "SetDebtPaymentPaidDateTime";
+    public const string DeleteDebtPayment = "DeleteDebtPayment";
 }

@@ -17,7 +17,7 @@ public class UserPersonalInformationValidator : Validator<UserPersonalInformatio
             .WithName(dto => DisplayNames.Get(nameof(dto.LastName)));
         RuleFor(dto => dto.Birthday)
             .Must(EqualOrEarlierThanToday)
-            .WithMessage(ErrorMessages.EarlierThanOrEqualToday
+            .WithMessage(ErrorMessages.EarlierThanOrEqualToToday
                 .Replace("{Today}", DateOnly.FromDateTime(DateTime.Today).ToString("dd-MM-yyyy")))
             .WithName(dto => DisplayNames.Get(nameof(dto.Birthday)));
         RuleFor(dto => dto.PhoneNumber)

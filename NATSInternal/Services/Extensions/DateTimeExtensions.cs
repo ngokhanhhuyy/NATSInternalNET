@@ -72,4 +72,9 @@ public static class DateTimeExtensions
         double daysDifference = (dateTime - pastDateTime).TotalDays;
         return (double)Math.Round(daysDifference / 365.25, 1);
     }
+
+    public static string ToVietnameseString(this DateTime dateTime)
+    {
+        return $"{dateTime.Hour}g{dateTime.Minute}, {dateTime.Day} tháng {dateTime.Month}, {dateTime.Year}";
+    }
 }

@@ -80,11 +80,11 @@ public class User : IdentityUser<int>
     public virtual List<Customer> CreatedCustomers { get; set; }
     public virtual List<Supply> Supplies { get; set; }
     public virtual List<Order> Orders { get; set; }
-    public virtual List<OrderPayment> OrderPayments { get; set; }
     public virtual List<Treatment> Treatments { get; set; }
     public virtual List<TreatmentSession> TreatmentSessions { get; set; }
-    public virtual List<TreatmentPayment> TreatmentPayments { get; set; }
     public virtual List<Expense> Expenses { get; set; }
+    public virtual List<Debt> Debts { get; set; }
+    public virtual List<DebtPayment> DebtPayments { get; set; }
     public virtual List<Announcement> Announcements { get; set; }
 
     // Properties for convinience.

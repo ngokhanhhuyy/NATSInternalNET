@@ -195,12 +195,18 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditOrder))
     .AddPolicy("CanDeleteOrder", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteOrder))
-    .AddPolicy("CanCreateOrderPayment", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.CreateOrderPayment))
-    .AddPolicy("CanEditOrderPayment", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.EditOrderPayment))
-    .AddPolicy("CanDeleteOrderPayment", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteOrderPayment));
+    .AddPolicy("CanCreateDebt", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateDebt))
+    .AddPolicy("CanEditDebt", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditDebt))
+    .AddPolicy("CanDeleteDebt", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteDebt))
+    .AddPolicy("CanCreateDebtPayment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateDebtPayment))
+    .AddPolicy("CanEditDebtPayment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditDebtPayment))
+    .AddPolicy("CanDeleteDebtPayment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteDebtPayment));
 
 
 // FluentValidation
@@ -242,7 +248,7 @@ builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
 builder.Services.AddScoped<ISupplyService, SupplyService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<IOrderPaymentService, OrderPaymentService>();
+builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
 

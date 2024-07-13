@@ -34,5 +34,5 @@ public class TreatmentSession
 
     // Properties for convinience.
     [NotMapped]
-    public long ItemAmount => Items.Sum(i => i.Amount);
+    public long Amount => Items.Sum(i => (i.Amount + (long)Math.Round(i.Amount * i.VatFactor)) * i.Quantity);
 }

@@ -75,4 +75,9 @@ public static class StringExtensions
     {
         return value.Replace("{AttemptedValue}", attemptedValue);
     }
+
+    public static string ReplaceComparisonValue(this string value, string comparisonValue)
+    {
+        return value.Replace("{ComparisonValue}", comparisonValue);
+    }
 }

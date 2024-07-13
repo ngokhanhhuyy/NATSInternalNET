@@ -9,14 +9,14 @@ public class OrderApiController : ControllerBase
     private readonly IOrderPaymentService _orderPaymentService;
     private readonly IValidator<OrderListRequestDto> _listValidator;
     private readonly IValidator<OrderUpsertRequestDto> _upsertValidator;
-    private readonly IValidator<OrderPaymentRequestDto> _paymentValidator;
+    private readonly IValidator<DebtPaymentRequestDto> _paymentValidator;
 
     public OrderApiController(
             IOrderService orderService,
             IOrderPaymentService orderPaymentService,
             IValidator<OrderListRequestDto> listValidator,
             IValidator<OrderUpsertRequestDto> upsertValidator,
-            IValidator<OrderPaymentRequestDto> paymentValidator)
+            IValidator<DebtPaymentRequestDto> paymentValidator)
     {
         _orderService = orderService;
         _orderPaymentService = orderPaymentService;
@@ -156,14 +156,14 @@ public class OrderApiController : ControllerBase
         }
     }
 
-    [HttpGet("{id:int}/Payment/{orderId:int}")]
+    [HttpGet("{id:int}/Payment/{paymentId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPaymentDetailAsync(int orderId)
+    public async Task<IActionResult> GetPaymentDetailAsync(int paymentId)
     {
         try
         {
-            return Ok(await _orderPaymentService.GetDetailAsync(orderId));
+            return Ok(await _orderPaymentService.GetDetailAsync(paymentId));
         }
         catch (ResourceNotFoundException exception)
         {
@@ -180,7 +180,7 @@ public class OrderApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> OrderPaymentCreate(
             int id,
-            [FromBody] OrderPaymentRequestDto requestDto)
+            [FromBody] DebtPaymentRequestDto requestDto)
     {
         ValidationResult validationResult = _paymentValidator.Validate(
             requestDto.TransformValues(),
@@ -196,7 +196,7 @@ public class OrderApiController : ControllerBase
 
         try
         {
-            OrderPaymentCreateResponseDto responseDto;
+            DebtCreateResponseDto responseDto;
             responseDto = await _orderPaymentService.CreateAsync(id, requestDto);
             return Ok(responseDto);
         }
@@ -213,17 +213,18 @@ public class OrderApiController : ControllerBase
     }
 
     [HttpPut("{id:int}/Payment/{paymentId:int}")]
-    [Authorize(Policy = "CanEditOrderPayment")]
+    [Authorize(Policy = "CanEditDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> OrderPaymentUpdate(
             int paymentId,
-            [FromBody] OrderPaymentRequestDto requestDto)
+            [FromBody] DebtPaymentRequestDto requestDto)
     {
         ValidationResult validationResult = _paymentValidator.Validate(
-            requestDto,
+            requestDto.TransformValues(),
             options =>
             {
                 options.IncludeRuleSets("Update").IncludeRulesNotInRuleSet();
@@ -239,6 +240,10 @@ public class OrderApiController : ControllerBase
             await _orderPaymentService.UpdateAsync(paymentId, requestDto);
             return Ok();
         }
+        catch (AuthorizationException)
+        {
+            return Forbid();
+        }
         catch (ResourceNotFoundException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
@@ -252,7 +257,7 @@ public class OrderApiController : ControllerBase
     }
 
     [HttpDelete("{id:int}/Payment/{paymentId:int}")]
-    [Authorize(Policy = "CanDeleteOrderPayment")]
+    [Authorize(Policy = "CanDeleteDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]

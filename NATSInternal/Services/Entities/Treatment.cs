@@ -53,7 +53,6 @@ public class Treatment
     public virtual User User { get; set; }
     public virtual Customer Customer { get; set; }
     public virtual List<TreatmentSession> Sessions { get; set; }
-    public virtual List<TreatmentPayment> Payments { get; set; }
     public virtual List<TreatmentPhoto> Photos { get; set; }
 
     // Properties for convinience
@@ -70,11 +69,5 @@ public class Treatment
         .ToList();
 
     [NotMapped]
-    public long ItemAmount => Sessions.Sum(ts => ts.ItemAmount);
-
-    [NotMapped]
-    public long TotalAmount => (long)Math.Round(ItemAmount + (Decimal)ServiceAmount * VatFactor);
-
-    [NotMapped]
-    public long Dept => TotalAmount - Payments.Sum(tp => tp.PaidAmount);
+    public long Amount => Sessions.Sum(ts => ts.Amount);
 }

@@ -10,30 +10,61 @@ public class StatsService : IStatsService
         _context = context;
     }
 
-    public async Task IncrementRetailRevenueAsync(long value, DateOnly? date = null)
+    /// <inheritdoc />
+    public async Task IncrementRetailGrossRevenueAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
-        dailyStats.RetailRevenue += value;
-        dailyStats.Monthly.RetailRevenue += value;
+        dailyStats.RetailGrossRevenue += value;
+        dailyStats.Monthly.RetailGrossRevenue += value;
         await _context.SaveChangesAsync();
     }
     
-    public async Task IncrementTreatmentRevenueAsync(long value, DateOnly? date = null)
+    /// <inheritdoc />
+    public async Task IncrementTreatmentGrossRevenueAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
-        dailyStats.TreatmentRevenue += value;
-        dailyStats.Monthly.TreatmentRevenue += value;
+        dailyStats.TreatmentGrossRevenue += value;
+        dailyStats.Monthly.TreatmentGrossRevenue += value;
         await _context.SaveChangesAsync();
     }
 
-    public async Task IncrementConsultantRevenueAsync(long value, DateOnly? date = null)
+    /// <inheritdoc />
+    public async Task IncrementConsultantGrossRevenueAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
-        dailyStats.ConsultantRevenue += value;
-        dailyStats.Monthly.ConsultantRevenue += value;
+        dailyStats.ConsultantGrossRevenue += value;
+        dailyStats.Monthly.ConsultantGrossRevenue += value;
+        await _context.SaveChangesAsync();
+    }
+    
+    /// <inheritdoc />
+    public async Task IncrementDebtAmountAsync(long value, DateOnly? date = null)
+    {
+        DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
+        dailyStats.DebtAmount += value;
+        dailyStats.Monthly.DebtAmount += value;
+        await _context.SaveChangesAsync();
+    }
+    
+    /// <inheritdoc />
+    public async Task IncrementDebtPaidAmountAsync(long value, DateOnly? date = null)
+    {
+        DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
+        dailyStats.DebtPaidAmount += value;
+        dailyStats.Monthly.DebtPaidAmount += value;
         await _context.SaveChangesAsync();
     }
 
+    /// <inheritdoc />
+    public async Task IncrementVatCollectedAmountAsync(long amount, DateOnly? date = null)
+    {
+        DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
+        dailyStats.VatCollectedAmount += amount;
+        dailyStats.Monthly.VatCollectedAmount += amount;
+        await _context.SaveChangesAsync();
+    }
+
+    /// <inheritdoc />
     public async Task IncrementShipmentCostAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
@@ -42,6 +73,7 @@ public class StatsService : IStatsService
         await _context.SaveChangesAsync();
     }
 
+    /// <inheritdoc />
     public async Task IncrementSupplyCostAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
@@ -50,6 +82,7 @@ public class StatsService : IStatsService
         await _context.SaveChangesAsync();
     }
     
+    /// <inheritdoc />
     public async Task IncrementExpenseAsync(
             long value, 
             ExpenseCategory category,
@@ -79,11 +112,52 @@ public class StatsService : IStatsService
         await _context.SaveChangesAsync();
     }
 
+    /// <inheritdoc />
     public async Task TemporarilyCloseAsync(DateOnly date)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
         dailyStats.TemporarilyClosedDateTime = DateTime.UtcNow.ToApplicationTime();
         await _context.SaveChangesAsync();
+    }
+
+    /// <inheritdoc />
+    public bool VerifyResourceDateTimeToBeCreated(DateTime dateTime)
+    {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        DateTime resourceMinimumOpenedDateTime = GetResourceMinimumOpenedDateTime();
+
+        return currentDateTime > resourceMinimumOpenedDateTime;
+    }
+
+    /// <inheritdoc />
+    public bool VerifyResourceDateTimeToBeUpdated(DateTime originalDateTime, DateTime newDateTime)
+    {
+        bool isOriginalDateTimeClosed = originalDateTime < GetResourceMinimumOpenedDateTime();
+        bool isNewDateTimeClosed = newDateTime < GetResourceMinimumOpenedDateTime();
+        return isOriginalDateTimeClosed == isNewDateTimeClosed;
+    }
+
+    /// <inheritdoc />
+    public DateTime GetResourceMinimumOpenedDateTime()
+    {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        DateTime lastMonthEditableMaxDateTime = new DateTime(
+            currentDateTime.Year, currentDateTime.Month, 4,
+            2, 0, 0);
+        if (currentDateTime < lastMonthEditableMaxDateTime)
+        {
+            return new DateTime(
+                currentDateTime.AddMonths(-2).Year,
+                currentDateTime.AddMonths(-2).Month,
+                1,
+                0, 0, 0);
+        }
+
+        return new DateTime(
+            currentDateTime.AddMonths(-1).Year,
+            currentDateTime.AddMonths(-1).Month,
+            1,
+            0, 0, 0);
     }
 
     private async Task<DailyStats> FetchStatisticsEntitiesAsync(DateOnly? date = null)
@@ -123,4 +197,5 @@ public class StatsService : IStatsService
 
         return dailyStats;
     }
+
 }

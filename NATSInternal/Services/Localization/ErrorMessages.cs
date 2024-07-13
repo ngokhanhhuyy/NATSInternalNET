@@ -16,9 +16,13 @@ public static class ErrorMessages
     public const string LessThanOrEqual = "{PropertyName} phải có giá trị nhỏ hơn {ComparisonValue}.";
     public const string GreaterThan = "{PropertyName} phải có giá trị lớn hơn {ComparisonValue}.";
     public const string GreaterThanOrEqual = "{PropertyName} phải có giá trị lớn hơn {ComparisonValue}.";
+    public const string EarlierThan = "{PropertyName} phải đại diện cho thời gian sớm hơn \"{ComparisonValue}\"";
+    public const string EarlierThanOrEqual = "{PropertyName} phải đại diện cho thời gian sớm hơn hoặc bằng \"{ComparisonValue}\"";
+    public const string LaterThan = "{PropertyName} phải đại diện cho thời gian muộn hơn \"{ComparisonValue}\"";
+    public const string LaterThanOrEqual = "{PropertyName} phải đại diện cho thời gian sớm hơn hoặc bằng \"{ComparisonValue}\"";
     public const string Invalid = "{PropertyName} không hợp lệ.";
-    public const string EarlierThanOrEqualNow = "{PropertyName} phải là ngày giờ trước hoặc trùng với thời điểm hiện tại ({Now}).";
-    public const string EarlierThanOrEqualToday = "{PropertyName} phải là ngày trước hoặc trùng với ngày hôm nay ({Today}).";
+    public const string EarlierThanOrEqualToNow = "{PropertyName} phải là ngày giờ trước hoặc trùng với thời điểm hiện tại ({ComparisonValue}).";
+    public const string EarlierThanOrEqualToToday = "{PropertyName} phải là ngày trước hoặc trùng với ngày hôm nay ({ComparisonValue}).";
     public const string Null = "{PropertyName} phải chứa giá trị null.";
 
     // Error messages for business operations
@@ -36,4 +40,5 @@ public static class ErrorMessages
     public const string DeleteRestricted = "{ResourceName} không thể được xoá do liên kết với các tài nguyên khác.";
     public const string PaymentAlreadyCompleted = "{ResourceName} đã được thanh toán đầy đủ, Không thể thanh toán thêm.";
     public const string ModificationTimeExpired = "{ResourceName} đã bị khoá do quá hạn chỉnh sửa/xoá.";
+    public const string NegativeRemainingDebtAmount = "Khoản nợ không thể chứa giá trị âm.";
 }

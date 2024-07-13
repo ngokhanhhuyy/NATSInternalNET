@@ -109,8 +109,11 @@ public class Customer
     public virtual Customer Introducer { get; set; }
     public virtual List<Order> Orders { get; set; }
     public virtual List<Treatment> Treatments { get; set; }
+    public virtual List<Debt> Debts { get; set; }
+    public virtual List<DebtPayment> DebtPayments { get; set; }
 
     // Property for convinience.
-    public long OrderDept => Orders.Where(o => o.Dept > 0).Sum(o => o.Dept);
-    public long TreatmentDept => Treatments.Where(t => t.Dept > 0).Sum(t => t.Dept);
+    public long DebtAmount => Debts.Sum(d => d.Amount);
+    public long DebtPaidAmount => DebtPayments.Sum(dp => dp.Amount);
+    public long RemainingDebtAmount =>  DebtAmount - DebtPaidAmount;
 }

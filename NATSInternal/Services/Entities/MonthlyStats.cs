@@ -6,17 +6,29 @@ public class MonthlyStats
     [Key]
     public long Id { get; set; }
 
-    [Column("retail_revenue")]
+    [Column("retail_gross_revenue")]
     [Required]
-    public long RetailRevenue { get; set; }
+    public long RetailGrossRevenue { get; set; }
 
-    [Column("treatment_revenue")]
+    [Column("treatment_gross_revenue")]
     [Required]
-    public long TreatmentRevenue { get; set; }
+    public long TreatmentGrossRevenue { get; set; }
 
-    [Column("consultant_revenue")]
+    [Column("consultant_gross_revenue")]
     [Required]
-    public long ConsultantRevenue { get; set; }
+    public long ConsultantGrossRevenue { get; set; }
+
+    [Column("vat_collected_amount")]
+    [Required]
+    public long VatCollectedAmount { get; set; }
+
+    [Column("debt_amount")]
+    [Required]
+    public long DebtAmount { get; set; }
+
+    [Column("debt_paid_amount")]
+    [Required]
+    public long DebtPaidAmount { get; set; }
 
     [Column("shipment_cost")]
     [Required]
@@ -34,7 +46,7 @@ public class MonthlyStats
     [Required]
     public long EquipmentExpenses { get; set; }
 
-    [Column("office_expese")]
+    [Column("office_expense")]
     [Required]
     public long OfficeExpense { get; set; }
 
@@ -76,16 +88,22 @@ public class MonthlyStats
     public long Expenses => UtilitiesExpenses + EquipmentExpenses + OfficeExpense + StaffExpense;
 
     [NotMapped]
-    public long Revenue => RetailRevenue + TreatmentRevenue + ConsultantRevenue;
+    public long GrossRevenue => RetailGrossRevenue + TreatmentGrossRevenue + ConsultantGrossRevenue;
 
     [NotMapped]
-    public long NetProfit => Revenue - (Cost + Expenses);
+    public long NetRevenue => GrossRevenue - RemainingDebtAmount;
+    
+    [NotMapped]
+    public long RemainingDebtAmount => DebtAmount - DebtPaidAmount;
 
     [NotMapped]
-    public long GrossProfit => Revenue - Cost;
+    public long NetProfit => GrossRevenue - (Cost + Expenses);
 
     [NotMapped]
-    public long OperatingProfit => Revenue - Expenses;
+    public long GrossProfit => NetRevenue - Cost;
+
+    [NotMapped]
+    public long OperatingProfit => NetRevenue - Expenses;
 
     [NotMapped]
     public bool IsTemporarilyClosed => TemporarilyClosedDateTime.HasValue;

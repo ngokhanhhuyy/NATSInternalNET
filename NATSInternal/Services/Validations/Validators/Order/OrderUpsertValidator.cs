@@ -22,9 +22,6 @@ public class OrderUpsertValidator : Validator<OrderUpsertRequestDto>
                 .LessThanOrEqualTo(MaximumOrderedDateTime)
                 .When(dto => dto.OrderedDateTime.HasValue)
                 .WithName(DisplayNames.OrderedDateTime);
-            RuleFor(dto => dto.Payment)
-                .NotNull()
-                .WithName(DisplayNames.Payment);
         });
     }
 

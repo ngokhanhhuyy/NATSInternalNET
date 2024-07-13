@@ -2,7 +2,7 @@ using NATSInternal.Services.Dtos;
 
 namespace NATSInternal.Services.Dtos;
 
-public class OrderPaymentResponseDto
+public class DebtPaymentResponseDto
 {
     public int Id { get; set; }
     public long Amount { get; set; }
@@ -10,5 +10,5 @@ public class OrderPaymentResponseDto
     public string Note { get; set; }
     public bool IsClosed { get; set; }
     public UserBasicResponseDto UserInCharge { get; set; }
-    public OrderPaymentAuthorizationResponseDto Authorization { get; set; }
+    public DebtAuthorizationResponseDto Authorization { get; set; }
 }

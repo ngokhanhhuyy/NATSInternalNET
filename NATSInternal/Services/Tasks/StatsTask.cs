@@ -125,17 +125,13 @@ public class StatsTask : BackgroundService
                 .Where(s => s.SuppliedDateTime < maxDateTime)
                 .ExecuteUpdateAsync(setter => setter.SetProperty(s => s.IsClosed, true));
 
-            // Close orders, order payments.
+            // Close orders.
             await context.Orders
                 .Where(o => o.OrderedDateTime >= minDateTime)
                 .Where(o => o.OrderedDateTime < maxDateTime)
                 .ExecuteUpdateAsync(setter => setter.SetProperty(o => o.IsClosed, true));
-            await context.OrderPayments
-                .Where(op => op.PaidDateTime >= minDateTime)
-                .Where(op => op.PaidDateTime < maxDateTime)
-                .ExecuteUpdateAsync(setter => setter.SetProperty(op => op.IsClosed, true));
 
-            // Close treatments, treatment sessions, treatment payments.
+            // Close treatments and treatment sessions.
             await context.Treatments
                 .Where(t => t.OrderedDateTime >= minDateTime)
                 .Where(t => t.OrderedDateTime < maxDateTime)
@@ -144,10 +140,16 @@ public class StatsTask : BackgroundService
                 .Where(ts => ts.StartingDateTime >= minDateTime)
                 .Where(ts => ts.StartingDateTime < maxDateTime)
                 .ExecuteUpdateAsync(setter => setter.SetProperty(ts => ts.IsClosed, true));
-            await context.TreatmentPayments
-                .Where(tp => tp.PaidDateTime >= minDateTime)
-                .Where(tp => tp.PaidDateTime < maxDateTime)
-                .ExecuteUpdateAsync(setter => setter.SetProperty(tp => tp.IsClosed, true));
+
+            // Close debts and debt payments.
+            await context.Debts
+                .Where(t => t.CreatedDateTime >= minDateTime)
+                .Where(t => t.CreatedDateTime < maxDateTime)
+                .ExecuteUpdateAsync(setter => setter.SetProperty(ts => ts.IsClosed, true));
+            await context.DebtPayments
+                .Where(t => t.PaidDateTime >= minDateTime)
+                .Where(t => t.PaidDateTime < maxDateTime)
+                .ExecuteUpdateAsync(setter => setter.SetProperty(ts => ts.IsClosed, true));
 
             // Close expenses.
             await context.Expenses

@@ -98,6 +98,8 @@ public static class DisplayNames
     public const string RangeTo = "Khoảng kết thúc";
     public const string File = "File";
     public const string Reason = "Lý do";
+    public const string Debt = "Khoản nợ";
+    public const string DebtPayment = "Khoản thanh toán nợ";
 
     private static readonly Dictionary<string, string> names;
 

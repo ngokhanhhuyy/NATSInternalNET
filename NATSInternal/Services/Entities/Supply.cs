@@ -27,6 +27,10 @@ public class Supply
     [Required]
     public bool IsClosed { get; set; }
 
+    [Column("is_deleted")]
+    [Required]
+    public bool IsDeleted { get; set; }
+
     // Foreign keys
     [Column("user_id")]
     [Required]

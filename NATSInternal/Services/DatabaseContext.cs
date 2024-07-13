@@ -14,14 +14,14 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<SupplyItem> SupplyItems { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
-    public DbSet<OrderPayment> OrderPayments { get; set; }
     public DbSet<Treatment> Treatments { get; set; }
     public DbSet<TreatmentSession> TreatmentSessions { get; set; }
     public DbSet<TreatmentItem> TreatmentItems { get; set; }
-    public DbSet<TreatmentPayment> TreatmentPayments { get; set; }
     public DbSet<Expense> Expenses { get; set; }
     public DbSet<ExpensePayee> ExpensePayees { get; set; }
     public DbSet<ExpensePhoto> ExpensePhotos { get; set; }
+    public DbSet<Debt> Debts { get; set; }
+    public DbSet<DebtPayment> DebtPayments { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
     public DbSet<DailyStats> DailyStats { get; set; }
@@ -83,8 +83,8 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
         modelBuilder.Entity<Country>(e =>
         {
             e.ToTable("countries");
-            e.HasIndex(c => c.Name).IsUnique();
-            e.HasIndex(c => c.Code).IsUnique();
+            e.HasIndex(c => c.Name).IsUnique().HasDatabaseName("UX__countries__name");
+            e.HasIndex(c => c.Code).IsUnique().HasDatabaseName("UX__countries__code");
         });
         modelBuilder.Entity<Brand>(e =>
         {
@@ -109,6 +109,8 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
             e.HasIndex(s => s.SuppliedDateTime)
                 .IsUnique()
                 .HasDatabaseName("UX__supply_supplied_datetime");
+            e.HasIndex(s => s.IsDeleted)
+                .HasDatabaseName("IX__supplies__supplied_datetime");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });
@@ -163,6 +165,10 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(o => o.UserId)
                 .HasConstraintName("FK__orders__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(o => o.OrderedDateTime)
+                .HasDatabaseName("IX__orders__ordered_datetime");
+            e.HasIndex(o => o.IsDeleted)
+                .HasDatabaseName("IX__orders__is_deleted");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
             e.Property(c => c.RowVersion)
@@ -183,22 +189,6 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .OnDelete(DeleteBehavior.Restrict);
             e.Property(ex => ex.VatFactor)
                 .HasPrecision(18, 2);
-            e.Property(c => c.RowVersion)
-                .IsRowVersion();
-        });
-        modelBuilder.Entity<OrderPayment>(e =>
-        {
-            e.ToTable("order_payments");
-            e.HasOne(op => op.Order)
-                .WithMany(o => o.Payments)
-                .HasForeignKey(op => op.OrderId)
-                .HasConstraintName("FK__order_payments__orders__order_id")
-                .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(op => op.User)
-                .WithMany(u => u.OrderPayments)
-                .HasForeignKey(op => op.UserId)
-                .HasConstraintName("FK__order_payments__users__user_id")
-                .OnDelete(DeleteBehavior.Restrict);
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });
@@ -229,9 +219,13 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(t => t.CustomerId)
                 .HasConstraintName("FK__treatments__customers__customer_id")
                 .OnDelete(DeleteBehavior.Restrict);
-            e.Property(ex => ex.VatFactor)
+            e.HasIndex(t => t.OrderedDateTime)
+                .HasDatabaseName("IX__treatments__ordered_datetime");
+            e.HasIndex(t => t.IsDeleted)
+                .HasDatabaseName("IX__treatments__is_deleted");
+            e.Property(t => t.VatFactor)
                 .HasPrecision(18, 2);
-            e.Property(c => c.RowVersion)
+            e.Property(t => t.RowVersion)
                 .IsRowVersion();
         });
         modelBuilder.Entity<TreatmentSession>(e =>
@@ -263,22 +257,6 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .OnDelete(DeleteBehavior.Restrict);
             e.Property(ex => ex.VatFactor)
                 .HasPrecision(18, 2);
-            e.Property(c => c.RowVersion)
-                .IsRowVersion();
-        });
-        modelBuilder.Entity<TreatmentPayment>(e =>
-        {
-            e.ToTable("treatment_payments");
-            e.HasOne(tp => tp.Treatment)
-                .WithMany(t => t.Payments)
-                .HasForeignKey(tp => tp.TreatmentId)
-                .HasConstraintName("FK__treatment_payments__treatments__treatment_id")
-                .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(tp => tp.User)
-                .WithMany(u => u.TreatmentPayments)
-                .HasForeignKey(tp => tp.UserId)
-                .HasConstraintName("FK__treatment_payments__users__user_id")
-                .OnDelete(DeleteBehavior.Restrict);
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });
@@ -334,6 +312,42 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasDatabaseName("UX__expense_photos__url");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
+        });
+        modelBuilder.Entity<Debt>(e =>
+        {
+            e.ToTable("debts");
+            e.HasOne(d => d.Customer)
+                .WithMany(c => c.Debts)
+                .HasForeignKey(d => d.CustomerId)
+                .HasConstraintName("FK__debts__customers__customer_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.User)
+                .WithMany(u => u.Debts)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK__debts__users__user_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(d => d.CreatedDateTime)
+                .HasDatabaseName("IX__debts__created_datetime");
+            e.HasIndex(d => d.IsDeleted)
+                .HasDatabaseName("IX__debts__is_deleted");
+        });
+        modelBuilder.Entity<DebtPayment>(e =>
+        {
+            e.ToTable("debt_payments");
+            e.HasOne(dp => dp.Customer)
+                .WithMany(c => c.DebtPayments)
+                .HasForeignKey(dp => dp.CustomerId)
+                .HasConstraintName("FK__debt_payments__customers__customer_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(dp => dp.User)
+                .WithMany(u => u.DebtPayments)
+                .HasForeignKey(dp => dp.UserId)
+                .HasConstraintName("FK__debt_payments__users__user_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(dp => dp.PaidDateTime)
+                .HasDatabaseName("IX__debt_payments__paid_datetime");
+            e.HasIndex(d => d.IsDeleted)
+                .HasDatabaseName("IX__debt_payments__is_deleted");
         });
         modelBuilder.Entity<Announcement>(e =>
         {
