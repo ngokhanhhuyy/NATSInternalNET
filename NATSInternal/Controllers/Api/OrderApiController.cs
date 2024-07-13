@@ -6,20 +6,17 @@
 public class OrderApiController : ControllerBase
 {
     private readonly IOrderService _orderService;
-    private readonly IOrderPaymentService _orderPaymentService;
     private readonly IValidator<OrderListRequestDto> _listValidator;
     private readonly IValidator<OrderUpsertRequestDto> _upsertValidator;
     private readonly IValidator<DebtPaymentRequestDto> _paymentValidator;
 
     public OrderApiController(
             IOrderService orderService,
-            IOrderPaymentService orderPaymentService,
             IValidator<OrderListRequestDto> listValidator,
             IValidator<OrderUpsertRequestDto> upsertValidator,
             IValidator<DebtPaymentRequestDto> paymentValidator)
     {
         _orderService = orderService;
-        _orderPaymentService = orderPaymentService;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
         _paymentValidator = paymentValidator;
@@ -148,130 +145,6 @@ public class OrderApiController : ControllerBase
         catch (AuthorizationException)
         {
             return Forbid();
-        }
-        catch (OperationException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(ModelState);
-        }
-    }
-
-    [HttpGet("{id:int}/Payment/{paymentId:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPaymentDetailAsync(int paymentId)
-    {
-        try
-        {
-            return Ok(await _orderPaymentService.GetDetailAsync(paymentId));
-        }
-        catch (ResourceNotFoundException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
-        }
-    }
-
-    [HttpPost("{id:int}/Payment")]
-    [Authorize(Policy = "CanCreateOrderPayment")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> OrderPaymentCreate(
-            int id,
-            [FromBody] DebtPaymentRequestDto requestDto)
-    {
-        ValidationResult validationResult = _paymentValidator.Validate(
-            requestDto.TransformValues(),
-            options =>
-            {
-                options.IncludeRuleSets("Create").IncludeRulesNotInRuleSet();
-            });
-        if (!validationResult.IsValid)
-        {
-            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
-            return BadRequest(ModelState);
-        }
-
-        try
-        {
-            DebtCreateResponseDto responseDto;
-            responseDto = await _orderPaymentService.CreateAsync(id, requestDto);
-            return Ok(responseDto);
-        }
-        catch (ResourceNotFoundException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
-        }
-        catch (OperationException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(ModelState);
-        }
-    }
-
-    [HttpPut("{id:int}/Payment/{paymentId:int}")]
-    [Authorize(Policy = "CanEditDebtPayment")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> OrderPaymentUpdate(
-            int paymentId,
-            [FromBody] DebtPaymentRequestDto requestDto)
-    {
-        ValidationResult validationResult = _paymentValidator.Validate(
-            requestDto.TransformValues(),
-            options =>
-            {
-                options.IncludeRuleSets("Update").IncludeRulesNotInRuleSet();
-            });
-        if (!validationResult.IsValid)
-        {
-            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
-            return BadRequest(ModelState);
-        }
-
-        try
-        {
-            await _orderPaymentService.UpdateAsync(paymentId, requestDto);
-            return Ok();
-        }
-        catch (AuthorizationException)
-        {
-            return Forbid();
-        }
-        catch (ResourceNotFoundException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
-        }
-        catch (OperationException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(ModelState);
-        }
-    }
-
-    [HttpDelete("{id:int}/Payment/{paymentId:int}")]
-    [Authorize(Policy = "CanDeleteDebtPayment")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> OrderPaymentDelete(int paymentId)
-    {
-        try
-        {
-            await _orderPaymentService.DeleteAsync(paymentId);
-            return Ok();
-        }
-        catch (ResourceNotFoundException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
         }
         catch (OperationException exception)
         {

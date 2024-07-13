@@ -54,6 +54,7 @@ public class DebtApiController : ControllerBase
     }
     
     [HttpPost]
+    [Authorize(Policy = "CanCreateDebt")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -88,6 +89,7 @@ public class DebtApiController : ControllerBase
     }
     
     [HttpPut("{id:int}")]
+    [Authorize(Policy = "CanEditDebt")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -132,6 +134,7 @@ public class DebtApiController : ControllerBase
     }
     
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "CanDeleteDebt")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

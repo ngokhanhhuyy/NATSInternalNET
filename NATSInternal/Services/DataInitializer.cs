@@ -126,11 +126,16 @@ public sealed class DataInitializer
                         PermissionConstants.EditClosedOrder,
                         PermissionConstants.SetOrderOrderedDateTime,
                         PermissionConstants.DeleteOrder,
-                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.CreateDebt,
                         PermissionConstants.EditDebt,
                         PermissionConstants.EditClosedDebt,
-                        PermissionConstants.SetDebtPaidDateTime,
                         PermissionConstants.DeleteDebt,
+                        PermissionConstants.SetDebtCreatedDateTime,
+                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.EditDebtPayment,
+                        PermissionConstants.EditClosedDebtPayment,
+                        PermissionConstants.DeleteDebtPayment,
+                        PermissionConstants.SetDebtPaymentPaidDateTime,
                     }
                 },
                 {
@@ -173,10 +178,16 @@ public sealed class DataInitializer
                         PermissionConstants.EditOrder,
                         PermissionConstants.SetOrderOrderedDateTime,
                         PermissionConstants.DeleteOrder,
-                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.CreateDebt,
                         PermissionConstants.EditDebt,
-                        PermissionConstants.SetDebtPaidDateTime,
+                        PermissionConstants.EditClosedDebt,
                         PermissionConstants.DeleteDebt,
+                        PermissionConstants.SetDebtCreatedDateTime,
+                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.EditDebtPayment,
+                        PermissionConstants.EditClosedDebtPayment,
+                        PermissionConstants.DeleteDebtPayment,
+                        PermissionConstants.SetDebtPaymentPaidDateTime,
                     }
                 },
                 {
@@ -199,8 +210,10 @@ public sealed class DataInitializer
                         PermissionConstants.EditExpense,
                         PermissionConstants.CreateOrder,
                         PermissionConstants.EditOrder,
-                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.CreateDebt,
                         PermissionConstants.EditDebt,
+                        PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.EditDebtPayment,
                     }
                 },
                 {
@@ -215,6 +228,7 @@ public sealed class DataInitializer
                         PermissionConstants.CreateSupply,
                         PermissionConstants.CreateExpense,
                         PermissionConstants.CreateOrder,
+                        PermissionConstants.CreateDebt,
                         PermissionConstants.CreateDebtPayment,
                     }
                 }
@@ -968,8 +982,7 @@ public sealed class DataInitializer
                     IsClosed = ShouldClose(currentDateTime),
                     CustomerId = customerIds.OrderBy(_ => Guid.NewGuid()).First(),
                     UserId = userIds.OrderBy(_ => Guid.NewGuid()).First(),
-                    Items = new List<OrderItem>(),
-                    Payments = new List<OrderPayment>()
+                    Items = new List<OrderItem>()
                 };
                 _context.Orders.Add(order);
 
@@ -994,19 +1007,6 @@ public sealed class DataInitializer
                     };
                     order.Items.Add(item);
                 }
-
-                // Initialize payments.
-                Func<OrderItem, long> itemAmountSelector = (OrderItem item) =>
-                {
-                    return (long)Math.Round((item.Amount + item.Amount * item.VatFactor) * item.Quantity);
-                };
-                OrderPayment payment = new OrderPayment
-                {
-                    Amount = order.Items.Sum(itemAmountSelector),
-                    PaidDateTime = currentDateTime,
-                    UserId = order.UserId
-                };
-                order.Payments.Add(payment);
             }
 
             _context.SaveChanges();
