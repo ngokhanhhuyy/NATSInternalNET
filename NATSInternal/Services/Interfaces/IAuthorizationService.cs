@@ -30,6 +30,8 @@ public interface IAuthorizationService
 
     DebtAuthorizationResponseDto GetDebtAuthorization(Debt debt);
 
+    DebtPaymentListAuthorizationResponseDto GetDebtPaymentListAuthorization();
+
     DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment);
 
     bool CanEditUserPersonalInformation(User targetUser);

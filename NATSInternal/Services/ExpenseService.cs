@@ -312,16 +312,15 @@ public class ExpenseService : IExpenseService
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
 
-            // The specified paid datetime is valid, adjusting the amount.
-            expense.Amount = requestDto.Amount;
-
+            // The specified paid datetime is valid, adjust the paid datetime, amount and stats.
             // Decrement previous stats.
             await _statsService.IncrementExpenseAsync(
                 -expense.Amount,
                 expense.Category,
                 DateOnly.FromDateTime(expense.PaidDateTime));
 
-            // Assign the specified paid datetime to the expense.
+            // Assign the specified paid datetime and amount to the expense.
+            expense.Amount = requestDto.Amount;
             expense.PaidDateTime = requestDto.PaidDateTime.Value;
 
             // Adjust new stats.

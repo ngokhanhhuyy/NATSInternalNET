@@ -56,7 +56,7 @@ public class StatsApiController : ControllerBase
         catch (ResourceNotFoundException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(exception);
+            return NotFound(ModelState);
         }
     }
 }

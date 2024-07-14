@@ -62,7 +62,10 @@ public class DebtService : IDebtService
         query = query.Where(o => !o.IsDeleted);
         
         // Initialize repsonse dto.
-        DebtListResponseDto responseDto = new DebtListResponseDto();
+        DebtListResponseDto responseDto = new DebtListResponseDto
+        {
+            Authorization = _authorizationService.GetDebtListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -76,6 +79,7 @@ public class DebtService : IDebtService
                 Id = d.Id,
                 Amount = d.Amount,
                 Note = d.Note,
+                CreatedDateTime = d.CreatedDateTime,
                 IsClosed = d.IsClosed,
                 Customer = new CustomerBasicResponseDto
                 {
@@ -91,7 +95,6 @@ public class DebtService : IDebtService
             .Take(requestDto.ResultsPerPage)
             .AsSplitQuery()
             .ToListAsync();
-        responseDto.Authorization = _authorizationService.GetDebtListAuthorization();
         
         return responseDto;
     }
@@ -101,7 +104,7 @@ public class DebtService : IDebtService
     {
         return await _context.Debts
             .Include(d => d.Customer)
-            .Include(d => d.User).ThenInclude(u => u.Role)
+            .Include(d => d.User).ThenInclude(u => u.Roles)
             .Where(d => d.Id == id && !d.IsDeleted)
             .Select(d => new DebtDetailResponseDto
             {
@@ -139,7 +142,11 @@ public class DebtService : IDebtService
                         PowerLevel = d.User.Role.PowerLevel
                     }
                 }
-            }).SingleOrDefaultAsync();
+            }).SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException(
+                nameof(Debt),
+                nameof(id),
+                id.ToString());
     }
     
     /// <inheritdoc />
@@ -270,7 +277,6 @@ public class DebtService : IDebtService
                 }
                 
                 // Change the created datetime.
-                debt.Amount = requestDto.Amount;
                 debt.CreatedDateTime = requestDto.CreatedDateTime.Value;
             }
         }
@@ -278,7 +284,6 @@ public class DebtService : IDebtService
         // Update other properties.
         debt.Amount = requestDto.Amount;
         debt.Note = requestDto.Note;
-        debt.CustomerId = requestDto.CustomerId;
                 
         // Undo the stats for the old debt.
         await _statsService.IncrementDebtAmountAsync(- oldAmount, oldCreatedDate);

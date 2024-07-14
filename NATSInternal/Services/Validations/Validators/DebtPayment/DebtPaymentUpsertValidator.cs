@@ -1,8 +1,8 @@
 namespace NATSInternal.Services.Validations.Validators;
 
-public class DebtValidator : Validator<DebtUpsertRequestDto>
+public class DebtPaymentUpsertValidator : Validator<DebtPaymentUpsertRequestDto>
 {
-    public DebtValidator(IStatsService statsService)
+    public DebtPaymentUpsertValidator(IStatsService statsService)
     {
         RuleFor(dto => dto.Amount)
             .NotEmpty()
@@ -11,10 +11,10 @@ public class DebtValidator : Validator<DebtUpsertRequestDto>
         RuleFor(dto => dto.Note)
             .MaximumLength(255)
             .WithName(DisplayNames.Note);
-        RuleFor(dto => dto.CreatedDateTime)
+        RuleFor(dto => dto.PaidDateTime)
             .LaterThanOrEqualToDateTime(statsService.GetResourceMinimumOpenedDateTime())
             .EarlierThanOrEqualToNow()
-            .WithName(DisplayNames.CreatedDateTime);
+            .WithName(DisplayNames.PaidDateTime);
         RuleFor(dto => dto.CustomerId)
             .NotEmpty()
             .WithName(DisplayNames.Customer);

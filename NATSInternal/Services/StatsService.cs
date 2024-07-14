@@ -17,16 +17,20 @@ public class StatsService : IStatsService
         IQueryable<MonthlyStats> query = _context.MonthlyStats.Include(m => m.DailyStats);
         int recordedMonth;
         int recordedYear;
-        if (requestDto != null)
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
+        if (requestDto == null)
         {
-            recordedMonth = requestDto.RecordedMonth;
-            recordedYear = requestDto.RecordedYear;
+            recordedMonth = today.Month;
+            recordedYear = today.Year;
         }
         else
         {
-            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
-            recordedMonth = today.Month;
-            recordedYear = today.Year;
+            recordedMonth = requestDto.RecordedMonth == 0
+                ? today.Month
+                : requestDto.RecordedMonth;
+            recordedYear = requestDto.RecordedYear == 0
+                ? today.Year
+                : requestDto.RecordedYear;
         }
 
         MonthlyStats stats = await _context.MonthlyStats
@@ -35,7 +39,7 @@ public class StatsService : IStatsService
             ?? throw new ResourceNotFoundException(
                 nameof(MonthlyStats),
                 nameof(DisplayNames.RecordedMonthAndYear),
-                $"Tháng {requestDto.RecordedMonth} năm {requestDto.RecordedYear}");
+                $"Tháng {recordedMonth} năm {recordedYear}");
         return ConvertToMonthlyDetailResponseDto(stats);
     }
 

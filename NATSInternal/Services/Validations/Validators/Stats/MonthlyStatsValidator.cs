@@ -5,7 +5,7 @@ public class MonthlyStatsValidator : Validator<MonthlyStatsRequestDto>
     public MonthlyStatsValidator()
     {
         RuleFor(dto => dto.RecordedYear)
-            .GreaterThanOrEqualTo(2024)
+            .GreaterThanOrEqualTo(0)
             .WithMessage(ErrorMessages.Invalid)
             .WithName(DisplayNames.RecordedYear);
         RuleFor(dto => dto.RecordedMonth)
@@ -16,7 +16,7 @@ public class MonthlyStatsValidator : Validator<MonthlyStatsRequestDto>
 
     private bool IsValidMonth(MonthlyStatsRequestDto requestDto, int recordedMonth)
     {
-        if (recordedMonth < 1 || recordedMonth > 12)
+        if (recordedMonth < 0 || recordedMonth > 12)
         {
             return false;
         }
