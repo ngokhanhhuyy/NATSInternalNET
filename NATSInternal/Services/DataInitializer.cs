@@ -24,6 +24,7 @@ public sealed class DataInitializer
         InitializeBrands();
         InitializeProductCategories();
         InitializeProducts();
+        InitializeStats();
         InitializeSupply();
         InitializeExpense();
         // InitializeOrders();
@@ -874,7 +875,7 @@ public sealed class DataInitializer
                     SuppliedDateTime = currentDateTime,
                     ShipmentFee = 0,
                     Note = faker.Lorem.Sentences(5),
-                    IsClosed = ShouldClose(currentDateTime),
+                    IsClosed = ShouldOfficiallyClose(currentDateTime),
                     CreatedDateTime = currentDateTime,
                     UserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
                     Items = supplyItems
@@ -930,7 +931,7 @@ public sealed class DataInitializer
                     PaidDateTime = currentDateTime,
                     Category = category,
                     Note = null,
-                    IsClosed = ShouldClose(currentDateTime),
+                    IsClosed = ShouldOfficiallyClose(currentDateTime),
                     UserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
                     Payee = payee
                 };
@@ -979,7 +980,7 @@ public sealed class DataInitializer
                 {
                     OrderedDateTime = currentDateTime,
                     Note = null,
-                    IsClosed = ShouldClose(currentDateTime),
+                    IsClosed = ShouldOfficiallyClose(currentDateTime),
                     CustomerId = customerIds.OrderBy(_ => Guid.NewGuid()).First(),
                     UserId = userIds.OrderBy(_ => Guid.NewGuid()).First(),
                     Items = new List<OrderItem>()
@@ -1011,6 +1012,91 @@ public sealed class DataInitializer
 
             _context.SaveChanges();
         }
+    }
+
+    private void InitializeStats()
+    {
+        Console.WriteLine("Initializing stats ...");
+        DateOnly minimumDate = DateOnly.FromDateTime(GetMinimumResourceDateTimeToBeOpened());
+        DateOnly maximumDate = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime().AddMonths(3));
+
+        // Generating a list of date to check if there is any date not existing in the database.
+        List<DateOnly> dateList = new List<DateOnly>();
+        DateOnly generatingDate = minimumDate;
+        while (generatingDate <= maximumDate)
+        {
+            dateList.Add(generatingDate);
+            generatingDate = generatingDate.AddDays(1);
+        }
+
+        // Fetch a list of existing dates in the database.
+        List<DateOnly> existingDates = _context.DailyStats.Select(ds => ds.RecordedDate).ToList();
+
+        // Check if there is any date which doesn't exist in the database.
+        IEnumerable<DateOnly> notExistingDates = dateList.Except(existingDates);
+
+        // Generating stats of dates which doesn't exist in the database.
+        foreach (DateOnly date in notExistingDates)
+        {
+            // Determining temporarily closed datetime.
+            DateTime? temporarilyClosedDateTime = null;
+            if (ShouldTemporarilyCloseStats(date))
+            {
+                temporarilyClosedDateTime = new DateTime(date, new TimeOnly(2, 30, 0));
+            }
+
+            // Determining officially closed datetime.
+            DateTime? officiallyClosedDateTime = null;
+            if (ShouldOfficiallyCloseStats(date))
+            {
+                officiallyClosedDateTime = new DateTime(date, new TimeOnly(2, 30, 0));
+            }
+
+            // Initialize daily stats.
+            DailyStats dailyStats = new DailyStats
+            {
+                RecordedDate = date,
+                TemporarilyClosedDateTime = temporarilyClosedDateTime,
+                OfficiallyClosedDateTime = officiallyClosedDateTime
+            };
+
+            // Initialize monthly stats if not exists.
+            MonthlyStats monthlyStats = _context.MonthlyStats
+                .Where(ms => ms.RecordedYear == date.Year)
+                .Where(ms => ms.RecordedMonth == date.Month)
+                .SingleOrDefault();
+            if (monthlyStats == null)
+            {
+                monthlyStats = new MonthlyStats
+                {
+                    RecordedYear = date.Year,
+                    RecordedMonth = date.Month,
+                    DailyStats = new List<DailyStats>()
+                };
+                _context.MonthlyStats.Add(monthlyStats);
+                _context.SaveChanges();
+            }
+
+            // Link the daily stats to the monthly stats.
+            if (monthlyStats.DailyStats == null)
+            {
+                monthlyStats.DailyStats = new List<DailyStats>();
+            }
+            monthlyStats.DailyStats.Add(dailyStats);
+
+            // Close the monthly stats if the daily stats is closed.
+            if (dailyStats.TemporarilyClosedDateTime.HasValue)
+            {
+                monthlyStats.TemporarilyClosedDateTime = dailyStats.TemporarilyClosedDateTime;
+            }
+
+            if (dailyStats.OfficiallyClosedDateTime.HasValue)
+            {
+                monthlyStats.OfficiallyClosedDateTime = dailyStats.OfficiallyClosedDateTime;
+            }
+        }
+
+        _context.SaveChanges();
     }
 
     private static T ValueOrNull<T>(T value)
@@ -1083,12 +1169,12 @@ public sealed class DataInitializer
         return value[..maxLength];
     }
 
-    private static bool ShouldClose(DateTime resouceDateTime)
+    private static DateTime GetMinimumResourceDateTimeToBeOpened()
     {
-        DateTime maxRangeToBeClosed;
+        DateTime minimumOpenedDateTime;
         if (DateTime.UtcNow.ToApplicationTime().Day >= 4 && DateTime.UtcNow.ToApplicationTime().Hour >= 1)
         {
-            maxRangeToBeClosed = new DateTime(
+            minimumOpenedDateTime = new DateTime(
                 DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Year,
                 DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Month,
                 1,
@@ -1096,17 +1182,114 @@ public sealed class DataInitializer
         }
         else
         {
-            maxRangeToBeClosed = new DateTime(
+            minimumOpenedDateTime = new DateTime(
                 DateTime.UtcNow.ToApplicationTime().AddMonths(-2).Year,
                 DateTime.UtcNow.ToApplicationTime().AddMonths(-2).Month,
                 1,
                 0, 0, 0);
         }
 
-        if (resouceDateTime < maxRangeToBeClosed)
+        return minimumOpenedDateTime;
+    }
+
+    private static DateTime GetMaximumTemporarilyClosedDateTime()
+    {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        DateTime closingDateTime = new DateTime(
+            currentDateTime.Year, currentDateTime.Month, 4,
+            2, 30, 0);
+        
+        return closingDateTime;
+    }
+
+    private static bool ShouldOfficiallyClose(DateTime resouceDateTime)
+    {
+        if (resouceDateTime < GetMinimumResourceDateTimeToBeOpened())
         {
             return true;
         }
+        return false;
+    }
+
+    private static bool ShouldTemporarilyCloseStats(DateOnly recordedDate)
+    {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        DateTime closingDateTime = new DateTime(
+            currentDateTime.Year, currentDateTime.Month, 4,
+            2, 30, 0);
+        
+        // Check if the closing operation in this month has been executed.
+        // If it HASN'T, closing all stats of the months which are equal to or earlier than 2 months ago.
+        if (currentDateTime < closingDateTime)
+        {
+            if (recordedDate.Year < currentDateTime.AddMonths(-2).Year)
+            {
+                return true;
+            }
+
+            if (recordedDate.Year == currentDateTime.AddMonths(-2).Year &&
+                recordedDate.Month <= currentDateTime.AddMonths(-2).Month)
+            {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // If the closing operation HAS been executed, closing all stats of the months which are
+        // equal to or earlier than 1 month ago.
+        if (recordedDate.Year < currentDateTime.AddMonths(-1).Year)
+        {
+            return true;
+        }
+
+        if (recordedDate.Year == currentDateTime.AddMonths(-1).Year &&
+            recordedDate.Month <= currentDateTime.AddMonths(-1).Month)
+        {
+            return true;
+        }
+        
+        return false;
+    }
+
+    private static bool ShouldOfficiallyCloseStats(DateOnly recordedDate)
+    {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        DateTime closingDateTime = new DateTime(
+            currentDateTime.Year, currentDateTime.Month, 4,
+            2, 30, 0);
+        
+        // Check if the closing operation in this month has been executed.
+        // If it HASN'T, closing all stats of the months which are equal to or earlier than 3 months ago.
+        if (currentDateTime < closingDateTime)
+        {
+            if (recordedDate.Year < currentDateTime.AddMonths(-3).Year)
+            {
+                return true;
+            }
+
+            if (recordedDate.Year == currentDateTime.AddMonths(-3).Year &&
+                recordedDate.Month <= currentDateTime.AddMonths(-3).Month)
+            {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // If the closing operation HAS been executed, closing all stats of the months which are
+        // equal to or earlier than 2 month ago.
+        if (recordedDate.Year < currentDateTime.AddMonths(-2).Year)
+        {
+            return true;
+        }
+
+        if (recordedDate.Year == currentDateTime.AddMonths(-2).Year &&
+            recordedDate.Month <= currentDateTime.AddMonths(-2).Month)
+        {
+            return true;
+        }
+        
         return false;
     }
 }

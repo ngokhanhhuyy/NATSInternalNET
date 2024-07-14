@@ -100,6 +100,13 @@ public static class DisplayNames
     public const string Reason = "Lý do";
     public const string Debt = "Khoản nợ";
     public const string DebtPayment = "Khoản thanh toán nợ";
+    public const string MonthlyStats = "Thống kê tháng";
+    public const string DailyStats = "Thống kê theo ngày";
+    public const string RecordedDate = "Ngày thống kê";
+    public const string RecordedMonth = "Tháng thống kê";
+    public const string RecordedYear = "Năm thống kê";
+    public const string RecordedMonthAndYear = "Tháng và năm thông kê";
+
 
     private static readonly Dictionary<string, string> names;
 

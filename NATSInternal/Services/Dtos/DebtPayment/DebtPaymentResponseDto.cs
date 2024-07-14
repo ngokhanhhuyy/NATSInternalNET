@@ -10,5 +10,5 @@ public class DebtPaymentResponseDto
     public string Note { get; set; }
     public bool IsClosed { get; set; }
     public UserBasicResponseDto UserInCharge { get; set; }
-    public DebtAuthorizationResponseDto Authorization { get; set; }
+    public DebtPaymentAuthorizationResponseDto Authorization { get; set; }
 }

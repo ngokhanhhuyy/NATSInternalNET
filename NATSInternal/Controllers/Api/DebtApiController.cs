@@ -59,7 +59,7 @@ public class DebtApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtCreate(DebtUpsertRequestDto requestDto)
+    public async Task<IActionResult> DebtCreate([FromBody] DebtUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -96,7 +96,7 @@ public class DebtApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtUpdate(int id, DebtUpsertRequestDto requestDto)
+    public async Task<IActionResult> DebtUpdate(int id, [FromBody] DebtUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;

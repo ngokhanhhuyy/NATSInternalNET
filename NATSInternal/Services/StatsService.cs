@@ -11,6 +11,50 @@ public class StatsService : IStatsService
     }
 
     /// <inheritdoc />
+    public async Task<MonthlyStatsDetailResponseDto> GetMonthlyStatsDetailAsync(
+            MonthlyStatsRequestDto requestDto)
+    {
+        IQueryable<MonthlyStats> query = _context.MonthlyStats.Include(m => m.DailyStats);
+        int recordedMonth;
+        int recordedYear;
+        if (requestDto != null)
+        {
+            recordedMonth = requestDto.RecordedMonth;
+            recordedYear = requestDto.RecordedYear;
+        }
+        else
+        {
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
+            recordedMonth = today.Month;
+            recordedYear = today.Year;
+        }
+
+        MonthlyStats stats = await _context.MonthlyStats
+            .Include(ms => ms.DailyStats)
+            .SingleOrDefaultAsync(ms => ms.RecordedYear == recordedYear && ms.RecordedMonth == recordedMonth)
+            ?? throw new ResourceNotFoundException(
+                nameof(MonthlyStats),
+                nameof(DisplayNames.RecordedMonthAndYear),
+                $"Tháng {requestDto.RecordedMonth} năm {requestDto.RecordedYear}");
+        return ConvertToMonthlyDetailResponseDto(stats);
+    }
+
+    /// <inheritdoc />
+    public async Task<DailyStatsDetailResponseDto> GetDailyStatsDetailAsync(DateOnly? recordedDate)
+    {
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        DateOnly date = recordedDate ?? DateOnly.FromDateTime(currentDateTime);
+        return await _context.DailyStats
+            .Where(d => d.RecordedDate == date)
+            .Select(d => ConvertToDailyDetailResponseDto(d))
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException(
+                nameof(DailyStats),
+                nameof(date),
+                date.ToVietnameseString());
+    }
+
+    /// <inheritdoc />
     public async Task IncrementRetailGrossRevenueAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
@@ -160,6 +204,14 @@ public class StatsService : IStatsService
             0, 0, 0);
     }
 
+    /// <summary>
+    /// Get the daily stats entity by the given recorded date. If the recorded date
+    /// is not specified, the date will be today's date value.
+    /// </summary>
+    /// <param name="date">
+    /// Optional - The date when the stats entity is recorded. If not specified,
+    /// the entity will be fetched based on today's date.</param>
+    /// <returns>The DailyStats entity.</returns>
     private async Task<DailyStats> FetchStatisticsEntitiesAsync(DateOnly? date = null)
     {
         DateOnly dateValue = date ?? DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
@@ -198,4 +250,120 @@ public class StatsService : IStatsService
         return dailyStats;
     }
 
+    /// <summary>
+    /// Convert a daily stats entity into a basic response dto object.
+    /// </summary>
+    /// <param name="stats">A DailyStats entity.</param>
+    /// <returns>A <c>DailyStatsDetailResponseDto</c> object.</returns>
+    private static DailyStatsBasicResponseDto ConvertToDailyBasicResponseDto(DailyStats stats)
+    {
+        return new DailyStatsBasicResponseDto
+        {
+            Cost = stats.Cost,
+            Expenses = stats.Expenses,
+            GrossRevenue = stats.GrossRevenue,
+            NetRevenue = stats.NetRevenue,
+            NetProfit = stats.NetProfit,
+            RecordedDate = stats.RecordedDate,
+            IsTemporarilyClosed = stats.IsTemporarilyClosed,
+            IsOfficiallyClosed = stats.IsOfficiallyClosed,
+        };
+    }
+
+    /// <summary>
+    /// Convert a daily stats entity into a detail response dto object.
+    /// </summary>
+    /// <param name="stats">A DailyStats entity.</param>
+    /// <returns>A <c>DailyStatsDetailResponseDto</c> object.</returns>
+    private static DailyStatsDetailResponseDto ConvertToDailyDetailResponseDto(DailyStats stats)
+    {
+        return new DailyStatsDetailResponseDto
+        {
+            RetailGrossRevenue = stats.RetailGrossRevenue,
+            TreatmentGrossRevenue = stats.TreatmentGrossRevenue,
+            ConsultantGrossRevenue = stats.ConsultantGrossRevenue,
+            VatCollectedAmount = stats.VatCollectedAmount,
+            DebtAmount = stats.DebtAmount,
+            DebtPaidAmount = stats.DebtPaidAmount,
+            ShipmentCost = stats.ShipmentCost,
+            SupplyCost = stats.SupplyCost,
+            UtilitiesExpenses = stats.UtilitiesExpenses,
+            EquipmentExpenses = stats.EquipmentExpenses,
+            OfficeExpense = stats.EquipmentExpenses,
+            StaffExpense = stats.StaffExpense,
+            Cost = stats.Cost,
+            Expenses = stats.Expenses,
+            GrossRevenue = stats.GrossRevenue,
+            NetRevenue = stats.NetRevenue,
+            RemainingDebtAmount = stats.RemainingDebtAmount,
+            GrossProfit = stats.GrossProfit,
+            NetProfit = stats.NetProfit,
+            OperatingProfit = stats.OperatingProfit,
+            RecordedDate = stats.RecordedDate,
+            TemporarilyClosedDateTime = stats.TemporarilyClosedDateTime,
+            OfficiallyClosedDateTime = stats.OfficiallyClosedDateTime,
+        };
+    }
+
+    /// <summary>
+    /// Convert a monthly stats entity into a basic response dto object.
+    /// </summary>
+    /// <param name="stats">A MonthlyStats entity.</param>
+    /// <returns>A <c>MonthlyStatsDetailResponseDto</c> object.</returns>
+    private static MonthlyStatsBasicResponseDto ConvertToMonthlyBasicResponseDto(MonthlyStats stats)
+    {
+        return new MonthlyStatsBasicResponseDto
+        {
+            Cost = stats.Cost,
+            Expenses = stats.Expenses,
+            GrossRevenue = stats.GrossRevenue,
+            NetRevenue = stats.NetRevenue,
+            NetProfit = stats.NetProfit,
+            RecordedMonth = stats.RecordedMonth,
+            RecordedYear = stats.RecordedYear,
+            IsTemporarilyClosed = stats.IsTemporarilyClosed,
+            IsOfficiallyClosed = stats.IsOfficiallyClosed,
+        };
+    }
+
+    /// <summary>
+    /// Convert a monthly stats entity into a detail response dto object.
+    /// </summary>
+    /// <param name="stats">A MonthlyStats entity.</param>
+    /// <returns>A <c>MonthlyStatsDetailResponseDto</c> object.</returns>
+    private static MonthlyStatsDetailResponseDto ConvertToMonthlyDetailResponseDto(MonthlyStats stats)
+    {
+        DateOnly currentDate = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
+        return new MonthlyStatsDetailResponseDto
+        {
+            RetailGrossRevenue = stats.RetailGrossRevenue,
+            TreatmentGrossRevenue = stats.TreatmentGrossRevenue,
+            ConsultantGrossRevenue = stats.ConsultantGrossRevenue,
+            VatCollectedAmount = stats.VatCollectedAmount,
+            DebtAmount = stats.DebtAmount,
+            DebtPaidAmount = stats.DebtPaidAmount,
+            ShipmentCost = stats.ShipmentCost,
+            SupplyCost = stats.SupplyCost,
+            UtilitiesExpenses = stats.UtilitiesExpenses,
+            EquipmentExpenses = stats.EquipmentExpenses,
+            OfficeExpense = stats.EquipmentExpenses,
+            StaffExpense = stats.StaffExpense,
+            Cost = stats.Cost,
+            Expenses = stats.Expenses,
+            GrossRevenue = stats.GrossRevenue,
+            NetRevenue = stats.NetRevenue,
+            RemainingDebtAmount = stats.RemainingDebtAmount,
+            GrossProfit = stats.GrossProfit,
+            NetProfit = stats.NetProfit,
+            OperatingProfit = stats.OperatingProfit,
+            RecordedMonth = stats.RecordedMonth,
+            RecordedYear = stats.RecordedYear,
+            TemporarilyClosedDateTime = stats.TemporarilyClosedDateTime,
+            OfficiallyClosedDateTime = stats.OfficiallyClosedDateTime,
+            DailyStats = stats.DailyStats
+                .Where(ds => ds.RecordedDate <= currentDate)
+                .Select(ds => ConvertToDailyBasicResponseDto(ds))
+                .ToList()
+        };
+    }
 }

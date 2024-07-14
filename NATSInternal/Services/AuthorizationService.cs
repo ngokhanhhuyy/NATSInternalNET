@@ -161,10 +161,28 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    // Authorization for debt payments.
-    public DebtAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment)
+    // Authorization for debts.
+    public DebtListAuthorizationResponseDto GetDebtListAuthorization()
+    {
+        return new DebtListAuthorizationResponseDto
+        {
+            CanCreate = CanCreateDebt()
+        };
+    }
+    
+    public DebtAuthorizationResponseDto GetDebtAuthorization(Debt debt)
     {
         return new DebtAuthorizationResponseDto
+        {
+            CanEdit = CanEditDebt(debt),
+            CanDelete = CanDeleteDebt()
+        };
+    }
+
+    // Authorization for debt payments.
+    public DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment)
+    {
+        return new DebtPaymentAuthorizationResponseDto
         {
             CanEdit = CanEditDebtPayment(debtPayment),
             CanDelete = CanDeleteDebtPayment()
@@ -354,6 +372,11 @@ public class AuthorizationService : IAuthorizationService
     }
     
     // Permisisons to interact with debts.
+    public bool CanCreateDebt()
+    {
+        return _user.HasPermission(PermissionConstants.CreateDebt);
+    }
+
     public bool CanEditDebt(Debt debt)
     {
         if (!_user.HasPermission(PermissionConstants.EditDebt))
@@ -380,6 +403,11 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Permissions to interact with debt payments.
+    public bool CanCreateDebtPayment()
+    {
+        return _user.HasPermission(PermissionConstants.CreateDebtPayment);
+    }
+
     public bool CanEditDebtPayment(DebtPayment debtPayment)
     {
         if (!_user.HasPermission(PermissionConstants.EditDebt))

@@ -6,8 +6,8 @@ public class DebtListRequestDto : IRequestDto<DebtListRequestDto>
     public string OrderByField { get; set; } = nameof(FieldOptions.CreatedDateTime);
     public DateOnly? RangeFrom { get; set; }
     public DateOnly? RangeTo { get; set; }
-    public int Page { get; set; }
-    public int ResultsPerPage { get; set; }
+    public int Page { get; set; } = 1;
+    public int ResultsPerPage { get; set; } = 15;
     
     public DebtListRequestDto TransformValues()
     {

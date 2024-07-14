@@ -85,11 +85,13 @@ public class DebtService : IDebtService
                     Gender = d.Customer.Gender,
                     Birthday = d.Customer.Birthday,
                     PhoneNumber = d.Customer.PhoneNumber
-                }
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page) - 1)
+                },
+                Authorization = _authorizationService.GetDebtAuthorization(d)
+            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .AsSplitQuery()
             .ToListAsync();
+        responseDto.Authorization = _authorizationService.GetDebtListAuthorization();
         
         return responseDto;
     }
@@ -224,6 +226,10 @@ public class DebtService : IDebtService
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
         
+        // Store the old data and create new data for stats adjustment.
+        DateOnly oldCreatedDate = DateOnly.FromDateTime(debt.CreatedDateTime);
+        long oldAmount = debt.Amount;
+
         // Update the created datetime and amount if specified.
         if (requestDto.CreatedDateTime.HasValue)
         {
@@ -234,9 +240,8 @@ public class DebtService : IDebtService
             }
             
             // Check if the amount or created datetime has been actually changed.
-            DateOnly oldCreatedDate = DateOnly.FromDateTime(debt.CreatedDateTime);
-            DateOnly newCreatedDate = DateOnly.FromDateTime(requestDto.CreatedDateTime.Value);
-            if (newCreatedDate != oldCreatedDate || requestDto.Amount != debt.Amount)
+            DateOnly createdDateFromRequest = DateOnly.FromDateTime(requestDto.CreatedDateTime.Value);
+            if (createdDateFromRequest != oldCreatedDate || requestDto.Amount != debt.Amount)
             {
             
                 // Verify if the amount has been changed, and with the new amount, the remaning debt amount
@@ -264,21 +269,23 @@ public class DebtService : IDebtService
                     throw new OperationException(nameof(requestDto.CreatedDateTime), errorMessage);
                 }
                 
-                // Undo the stats for the old debt.
-                await _statsService.IncrementDebtAmountAsync(debt.Amount, oldCreatedDate);
-                
-                // Change the amount and created datetime.
+                // Change the created datetime.
                 debt.Amount = requestDto.Amount;
                 debt.CreatedDateTime = requestDto.CreatedDateTime.Value;
-                
-                // Readjust the stats for the changed debt.
-                await _statsService.IncrementDebtAmountAsync(debt.Amount, newCreatedDate);
             }
         }
         
         // Update other properties.
+        debt.Amount = requestDto.Amount;
         debt.Note = requestDto.Note;
         debt.CustomerId = requestDto.CustomerId;
+                
+        // Undo the stats for the old debt.
+        await _statsService.IncrementDebtAmountAsync(- oldAmount, oldCreatedDate);
+
+        // Readjust the stats for the changed debt.
+        DateOnly newCreatedDate = DateOnly.FromDateTime(debt.CreatedDateTime);
+        await _statsService.IncrementDebtAmountAsync(debt.Amount, newCreatedDate);
         
         // Perform the update operations.
         try
@@ -331,7 +338,7 @@ public class DebtService : IDebtService
             
             // Debt has been deleted successfully, adjust the stats.
             DateOnly createdDate = DateOnly.FromDateTime(debt.CreatedDateTime);
-            await _statsService.IncrementDebtAmountAsync(debt.Amount, createdDate);
+            await _statsService.IncrementDebtAmountAsync(- debt.Amount, createdDate);
             
             // Commit the transaction, finish the operation.
             await transaction.CommitAsync();

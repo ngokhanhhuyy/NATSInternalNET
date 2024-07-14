@@ -4,7 +4,7 @@ public class DailyStats
 {
     [Column("id")]
     [Key]
-    public long Id { get; set; }
+    public int Id { get; set; }
 
     [Column("retail_gross_revenue")]
     [Required]
@@ -93,10 +93,10 @@ public class DailyStats
     public long RemainingDebtAmount => DebtAmount - DebtPaidAmount;
 
     [NotMapped]
-    public long NetProfit => GrossRevenue - (Cost + Expenses);
+    public long GrossProfit => NetRevenue - Cost;
 
     [NotMapped]
-    public long GrossProfit => NetRevenue - Cost;
+    public long NetProfit => NetRevenue - (Cost + Expenses);
 
     [NotMapped]
     public long OperatingProfit => NetRevenue - Expenses;

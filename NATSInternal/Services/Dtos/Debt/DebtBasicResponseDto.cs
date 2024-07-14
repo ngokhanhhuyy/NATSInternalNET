@@ -7,4 +7,5 @@ public class DebtBasicResponseDto
     public string Note { get; set; }
     public bool IsClosed { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
+    public DebtAuthorizationResponseDto Authorization { get; set; }
 }

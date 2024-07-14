@@ -4,7 +4,7 @@ public class MonthlyStats
 {
     [Column("id")]
     [Key]
-    public long Id { get; set; }
+    public int Id { get; set; }
 
     [Column("retail_gross_revenue")]
     [Required]
@@ -56,11 +56,11 @@ public class MonthlyStats
 
     [Column("recorded_month")]
     [Required]
-    public long RecordedMonth { get; set; }
+    public int RecordedMonth { get; set; }
 
     [Column("recoreded_year")]
     [Required]
-    public long RecordedYear { get; set; }
+    public int RecordedYear { get; set; }
 
     [Column("created_datetime")]
     [Required]
@@ -71,11 +71,6 @@ public class MonthlyStats
 
     [Column("officially_closed_datetime")]
     public DateTime? OfficiallyClosedDateTime { get; set; }
-
-    // Foreign key.
-    [Column("monthly_id")]
-    [Required]
-    public long MonthlyId { get; set; }
 
     // Navigation properties.
     public virtual List<DailyStats> DailyStats { get; set; }
@@ -97,7 +92,7 @@ public class MonthlyStats
     public long RemainingDebtAmount => DebtAmount - DebtPaidAmount;
 
     [NotMapped]
-    public long NetProfit => GrossRevenue - (Cost + Expenses);
+    public long NetProfit => NetRevenue - (Cost + Expenses);
 
     [NotMapped]
     public long GrossProfit => NetRevenue - Cost;
