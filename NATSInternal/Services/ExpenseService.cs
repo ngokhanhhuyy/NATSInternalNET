@@ -484,6 +484,14 @@ public class ExpenseService : IExpenseService
         try
         {
             await _context.SaveChangesAsync();
+
+            // The expense can be deleted sucessfully without any error, adjust the stats.
+            await _statsService.IncrementExpenseAsync(
+                - expense.Amount,
+                expense.Category,
+                DateOnly.FromDateTime(expense.PaidDateTime));
+
+            // Remove all expense photos.
             foreach (string url in photoUrlsToBeDeletedWhenSucceeded)
             {
                 _photoService.Delete(url);
