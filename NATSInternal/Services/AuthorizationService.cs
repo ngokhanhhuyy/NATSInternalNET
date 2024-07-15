@@ -175,7 +175,8 @@ public class AuthorizationService : IAuthorizationService
         return new DebtAuthorizationResponseDto
         {
             CanEdit = CanEditDebt(debt),
-            CanDelete = CanDeleteDebt()
+            CanDelete = CanDeleteDebt(),
+            CanSetCreatedDateTime = CanSetDebtCreatedDateTime()
         };
     }
 
