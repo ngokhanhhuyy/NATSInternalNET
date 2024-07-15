@@ -34,6 +34,10 @@ public interface IAuthorizationService
 
     DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment);
 
+    ConsultantListAuthorizationResponseDto GetConsultantListAuthorization();
+
+    ConsultantAuthorizationResponseDto GetConsultantAuthorization(Consultant consultant);
+
     bool CanEditUserPersonalInformation(User targetUser);
 
     bool CanEditUserUserInformation(User targetUser);
@@ -83,4 +87,12 @@ public interface IAuthorizationService
     bool CanDeleteDebtPayment();
 
     bool CanSetDebtPaymentPaidDateTime();
+
+    bool CanCreateConsultant();
+
+    bool CanEditConsultant(Consultant consultant);
+
+    bool CanDeleteConsultant();
+
+    bool CanSetConsultantPaidDateTime();
 }

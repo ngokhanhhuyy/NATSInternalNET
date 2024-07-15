@@ -75,6 +75,7 @@ public static class DateTimeExtensions
 
     public static string ToVietnameseString(this DateTime dateTime)
     {
-        return $"{dateTime.Hour}g{dateTime.Minute}, {dateTime.Day} tháng {dateTime.Month}, {dateTime.Year}";
+        return $"{dateTime.Hour:D2}g{dateTime.Minute:D2}, " +
+            $"{dateTime.Day:D2} tháng {dateTime.Month:D2}, {dateTime.Year}";
     }
 }

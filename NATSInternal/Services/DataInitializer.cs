@@ -137,6 +137,11 @@ public sealed class DataInitializer
                         PermissionConstants.EditClosedDebtPayment,
                         PermissionConstants.DeleteDebtPayment,
                         PermissionConstants.SetDebtPaymentPaidDateTime,
+                        PermissionConstants.CreateConsultant,
+                        PermissionConstants.EditConsultant,
+                        PermissionConstants.EditClosedConsultant,
+                        PermissionConstants.DeleteConsultant,
+                        PermissionConstants.SetConsultantPaidDateTime,
                     }
                 },
                 {
@@ -189,6 +194,11 @@ public sealed class DataInitializer
                         PermissionConstants.EditClosedDebtPayment,
                         PermissionConstants.DeleteDebtPayment,
                         PermissionConstants.SetDebtPaymentPaidDateTime,
+                        PermissionConstants.CreateConsultant,
+                        PermissionConstants.EditConsultant,
+                        PermissionConstants.EditClosedConsultant,
+                        PermissionConstants.DeleteConsultant,
+                        PermissionConstants.SetConsultantPaidDateTime,
                     }
                 },
                 {
@@ -215,6 +225,8 @@ public sealed class DataInitializer
                         PermissionConstants.EditDebt,
                         PermissionConstants.CreateDebtPayment,
                         PermissionConstants.EditDebtPayment,
+                        PermissionConstants.CreateConsultant,
+                        PermissionConstants.EditConsultant,
                     }
                 },
                 {
@@ -231,6 +243,7 @@ public sealed class DataInitializer
                         PermissionConstants.CreateOrder,
                         PermissionConstants.CreateDebt,
                         PermissionConstants.CreateDebtPayment,
+                        PermissionConstants.CreateConsultant
                     }
                 }
             };

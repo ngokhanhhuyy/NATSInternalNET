@@ -17,6 +17,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<Treatment> Treatments { get; set; }
     public DbSet<TreatmentSession> TreatmentSessions { get; set; }
     public DbSet<TreatmentItem> TreatmentItems { get; set; }
+    public DbSet<Consultant> Consultants { get; set; }
     public DbSet<Expense> Expenses { get; set; }
     public DbSet<ExpensePayee> ExpensePayees { get; set; }
     public DbSet<ExpensePhoto> ExpensePhotos { get; set; }
@@ -273,6 +274,22 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasDatabaseName("UX__treatment_photos__url");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
+        });
+        modelBuilder.Entity<Consultant>(e =>
+        {
+            e.ToTable("consultants");
+            e.HasOne(cst => cst.Customer)
+                .WithMany(ctm => ctm.Consultants)
+                .HasForeignKey(cst => cst.CustomerId)
+                .HasConstraintName("FK__consultants__customers__customer_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(cst => cst.User)
+                .WithMany(u => u.Consultants)
+                .HasForeignKey(cst => cst.UserId)
+                .HasConstraintName("FK__consultants__users__user_id")
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(cst => cst.IsDeleted)
+                .HasDatabaseName("IX__consultants__is_deleted");
         });
         modelBuilder.Entity<Expense>(e =>
         {

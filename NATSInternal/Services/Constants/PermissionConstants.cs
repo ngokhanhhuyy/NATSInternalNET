@@ -78,4 +78,11 @@ public static class PermissionConstants
     public const string EditClosedDebtPayment = "EditClosedDebtPayment";
     public const string SetDebtPaymentPaidDateTime = "SetDebtPaymentPaidDateTime";
     public const string DeleteDebtPayment = "DeleteDebtPayment";
+
+    // Permissions to interact with consultants.
+    public const string CreateConsultant = "CreateConsultant";
+    public const string EditConsultant = "EditConsultant";
+    public const string EditClosedConsultant = "EditClosedConsultant";
+    public const string DeleteConsultant = "DeleteConsultant";
+    public const string SetConsultantPaidDateTime = "SetConsultantPaidDateTime";
 }

@@ -171,10 +171,9 @@ public class StatsService : IStatsService
     /// <inheritdoc />
     public bool VerifyResourceDateTimeToBeCreated(DateTime dateTime)
     {
-        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
         DateTime resourceMinimumOpenedDateTime = GetResourceMinimumOpenedDateTime();
 
-        return currentDateTime > resourceMinimumOpenedDateTime;
+        return dateTime > resourceMinimumOpenedDateTime;
     }
 
     /// <inheritdoc />

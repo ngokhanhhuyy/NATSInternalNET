@@ -143,7 +143,10 @@ public class ExpenseService : IExpenseService
                     }).ToList(),
                 Authorization = _authorizationService.GetExpenseAuthorization(e)
             }).SingleOrDefaultAsync()
-            ?? throw new ResourceNotFoundException(nameof(Expense), nameof(id), id.ToString());
+            ?? throw new ResourceNotFoundException(
+                nameof(Expense),
+                nameof(id),
+                id.ToString());
     }
 
     /// <inheritdoc/>
@@ -183,8 +186,10 @@ public class ExpenseService : IExpenseService
             PaidDateTime = paidDateTime,
             Category = requestDto.Category,
             Note = requestDto.Note,
+            UserId = _authorizationService.GetUserId(),
             Photos = new List<ExpensePhoto>()
         };
+        _context.Expenses.Add(expense);
         
         // Set expense payee
         ExpensePayee payee = await _context.ExpensePayees
@@ -215,17 +220,16 @@ public class ExpenseService : IExpenseService
             }
         }
         
-        // Set user.
-        expense.UserId = _authorizationService.GetUserId();
-        
-        // Adjust stats.
-        await _statsService.IncrementExpenseAsync(expense.Amount, expense.Category);
-        
-        // Save changes and commit.
+        // Perform the creating operation.
         try
         {
-            _context.Expenses.Add(expense);
             await _context.SaveChangesAsync();
+
+            // Expense can be created successfully, adjust the stats.
+            DateOnly paidDate = DateOnly.FromDateTime(paidDateTime);
+            await _statsService.IncrementExpenseAsync(expense.Amount, expense.Category, paidDate);
+
+            // Commit the transaction, finishing the operation.
             await transaction.CommitAsync();
             return expense.Id;
         }

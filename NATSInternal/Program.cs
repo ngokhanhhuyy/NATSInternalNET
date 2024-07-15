@@ -250,6 +250,7 @@ builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IDebtPaymentService, DebtPaymentService>();
+builder.Services.AddScoped<IConsultantService, ConsultantService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
 

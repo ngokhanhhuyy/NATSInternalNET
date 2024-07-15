@@ -1,8 +1,8 @@
 ﻿namespace NATSInternal.Services.Validations;
 
-public class ExpenseValidator : Validator<ExpenseUpsertRequestDto>
+public class ExpenseUpsertValidator : Validator<ExpenseUpsertRequestDto>
 {
-    public ExpenseValidator()
+    public ExpenseUpsertValidator()
     {
         RuleFor(dto => dto.Amount)
             .GreaterThan(0)

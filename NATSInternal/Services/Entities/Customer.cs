@@ -109,6 +109,7 @@ public class Customer
     public virtual Customer Introducer { get; set; }
     public virtual List<Order> Orders { get; set; }
     public virtual List<Treatment> Treatments { get; set; }
+    public virtual List<Consultant> Consultants { get; set; }
     public virtual List<Debt> Debts { get; set; }
     public virtual List<DebtPayment> DebtPayments { get; set; }
 

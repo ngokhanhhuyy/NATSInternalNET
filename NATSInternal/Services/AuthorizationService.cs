@@ -197,6 +197,25 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
+    // Authorization for consultants.
+    public ConsultantListAuthorizationResponseDto GetConsultantListAuthorization()
+    {
+        return new ConsultantListAuthorizationResponseDto
+        {
+            CanCreate = CanCreateConsultant()
+        };
+    }
+
+    public ConsultantAuthorizationResponseDto GetConsultantAuthorization(Consultant consultant)
+    {
+        return new ConsultantAuthorizationResponseDto
+        {
+            CanEdit = CanEditConsultant(consultant),
+            CanDelete = CanDeleteConsultant(),
+            CanSetPaidDateTime = CanSetConsultantPaidDateTime()
+        };
+    }
+
     // Permissions to interact with users.
     public bool CanEditUserPersonalInformation(User targetUser)
     {
@@ -439,5 +458,37 @@ public class AuthorizationService : IAuthorizationService
     public bool CanSetDebtPaymentPaidDateTime()
     {
         return _user.HasPermission(PermissionConstants.SetDebtPaymentPaidDateTime);
+    }
+
+    // Permissions to interact with consultant.
+    public bool CanCreateConsultant()
+    {
+        return _user.HasPermission(PermissionConstants.CreateConsultant);
+    }
+
+    public bool CanEditConsultant(Consultant consultant)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditConsultant))
+        {
+            return false;
+        }
+
+        if (consultant.IsClosed &&
+            !_user.HasPermission(PermissionConstants.EditClosedConsultant))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool CanDeleteConsultant()
+    {
+        return _user.HasPermission(PermissionConstants.DeleteConsultant);
+    }
+    
+    public bool CanSetConsultantPaidDateTime()
+    {
+        return _user.HasPermission(PermissionConstants.SetConsultantPaidDateTime);
     }
 }
