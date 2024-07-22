@@ -11,7 +11,7 @@ public interface IStatsService
     /// Get daily stats by a given recorded date. If the date is not
     /// specified, the returned stats will be today stats.
     /// </summary>
-    /// <param name="date">
+    /// <param name="recordedDate">
     /// The date when the daily stats was recorded.
     /// </param>
     /// <returns>
@@ -26,8 +26,9 @@ public interface IStatsService
     /// Get monthly stats by a given recorded month and year. If the date
     /// is not specified, the returned stats will be this month stats.
     /// </summary>
-    /// <param name="date">
-    /// The date when the monthly stats was recorded.
+    /// <param name="requestDto">
+    /// An object containing expected recorded year and month when the monthly stats
+    /// was recorded.
     /// </param>
     /// <returns>
     /// An object containing the detail information of the monthly stats.
@@ -132,7 +133,7 @@ public interface IStatsService
     /// Increases the debt paid amount statistics for a specific date 
     /// or today if not specified.
     /// </summary>
-    /// <param name="value">
+    /// <param name="amount">
     /// The amount by which to increment the debt paid amount.
     /// </param>
     /// <param name="date">
@@ -154,7 +155,7 @@ public interface IStatsService
     /// Increases the vat collected amount statistics for a specific date 
     /// or today if not specified.
     /// </summary>
-    /// <param name="value">
+    /// <param name="amount">
     /// The amount by which to increment the vat collected amount.
     /// </param>
     /// <param name="date">
@@ -259,7 +260,9 @@ public interface IStatsService
     /// that the resource will not be considered
     /// as closed.
     /// </summary>
-    /// <param name="dateTime">The datetime of the new resource.</param>
+    /// <param name="dateTime">
+    /// The <c>DateTime</c> of the new resource which is used to calculate the stats.
+    /// </param>
     /// <returns>
     /// <c>True</c> if the datetime is later than the minimum opened datetime. Otherwise, <c>False</c>.
     /// </returns>
@@ -272,10 +275,14 @@ public interface IStatsService
     /// also earler than the minimum opened datetime and vice versa. Both of them must be in the same
     /// status.
     /// </summary>
-    /// <param name="originalDateTime"></param>
-    /// <param name="newDateTime"></param>
+    /// <param name="originalDateTime">
+    /// A <c>DateTime</c> object representing the original time of the resource before modification.
+    /// </param>
+    /// <param name="dateTime">
+    /// A <c>DateTime</c> object representing the time used to calculate the stats.
+    /// </param>
     /// <returns></returns>
-    bool VerifyResourceDateTimeToBeUpdated(DateTime originalDateTime, DateTime newDateTime);
+    bool VerifyResourceDateTimeToBeUpdated(DateTime originalDateTime, DateTime dateTime);
 
     /// <summary>
     /// Get the minimum datetime that if a resource is assigned to, it will be considered <c>opened</c>.

@@ -78,15 +78,10 @@ public class ExpenseService : IExpenseService
         }
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
-            .Select(e => new ExpenseBasicResponseDto
-            {
-                Id = e.Id,
-                Amount = e.Amount,
-                PaidDateTime = e.PaidDateTime,
-                Category = e.Category,
-                IsClosed = e.IsClosed,
-                Authorization = _authorizationService.GetExpenseAuthorization(e)
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Select(e => new ExpenseBasicResponseDto(
+                e,
+                _authorizationService.GetExpenseAuthorization(e)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .ToListAsync();
         
@@ -97,52 +92,14 @@ public class ExpenseService : IExpenseService
     public async Task<ExpenseDetailResponseDto> GetDetailAsync(int id)
     {
         return await _context.Expenses
-            .Include(e => e.User).ThenInclude(u => u.Roles)
+            .Include(e => e.CreatedUser).ThenInclude(u => u.Roles)
             .Include(e => e.Payee)
             .Include(e => e.Photos)
             .Where(e => e.Id == id)
-            .Select(e => new ExpenseDetailResponseDto
-            {
-                Id = e.Id,
-                Amount = e.Amount,
-                PaidDateTime = e.PaidDateTime,
-                Category = e.Category,
-                Note = e.Note,
-                IsClosed = e.IsClosed,
-                User = new UserBasicResponseDto
-                {
-                    Id = e.User.Id,
-                    UserName = e.User.UserName,
-                    FirstName = e.User.FirstName,
-                    MiddleName = e.User.MiddleName,
-                    LastName = e.User.LastName,
-                    FullName = e.User.FullName,
-                    Gender = e.User.Gender,
-                    Birthday = e.User.Birthday,
-                    JoiningDate = e.User.JoiningDate,
-                    AvatarUrl = e.User.AvatarUrl,
-                    Role = new RoleBasicResponseDto
-                    {
-                        Id = e.User.Role.Id,
-                        Name = e.User.Role.Name,
-                        DisplayName = e.User.Role.DisplayName,
-                        PowerLevel = e.User.Role.PowerLevel
-                    }
-                },
-                Payee = new ExpensePayeeResponseDto
-                {
-                    Id = e.Payee.Id,
-                    Name = e.Payee.Name
-                },
-                Photos = e.Photos
-                    .OrderBy(ep => ep.Id)
-                    .Select(ep => new ExpensePhotoResponseDto
-                    {
-                        Id = ep.Id,
-                        Url = ep.Url
-                    }).ToList(),
-                Authorization = _authorizationService.GetExpenseAuthorization(e)
-            }).SingleOrDefaultAsync()
+            .Select(e => new ExpenseDetailResponseDto(
+                e,
+                _authorizationService.GetExpenseAuthorization(e)))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Expense),
                 nameof(id),
@@ -186,7 +143,7 @@ public class ExpenseService : IExpenseService
             PaidDateTime = paidDateTime,
             Category = requestDto.Category,
             Note = requestDto.Note,
-            UserId = _authorizationService.GetUserId(),
+            CreatedUserId = _authorizationService.GetUserId(),
             Photos = new List<ExpensePhoto>()
         };
         _context.Expenses.Add(expense);
@@ -252,7 +209,7 @@ public class ExpenseService : IExpenseService
                 switch (exceptionHandler.ViolatedFieldName)
                 {
                     case "user_id":
-                        propertyName = nameof(expense.UserId);
+                        propertyName = nameof(expense.CreatedUserId);
                         errorMessage = errorMessage.ReplaceResourceName(DisplayNames.User);
                         break;
                     case "payee_id":
@@ -275,7 +232,7 @@ public class ExpenseService : IExpenseService
     {
         // Fetch the entity from the database and ensure it exists.
         Expense expense = await _context.Expenses
-            .Include(e => e.User)
+            .Include(e => e.CreatedUser)
             .Include(e => e.Payee)
             .Include(e => e.Photos)
             .Where(e => e.Id == id)
@@ -430,7 +387,7 @@ public class ExpenseService : IExpenseService
                 switch (exceptionHandler.ViolatedFieldName)
                 {
                     case "user_id":
-                        propertyName = nameof(expense.UserId);
+                        propertyName = nameof(expense.CreatedUserId);
                         errorMessage = errorMessage.ReplaceResourceName(DisplayNames.User);
                         break;
                     case "payee_id":

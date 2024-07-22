@@ -20,11 +20,8 @@ public class ProductCategoryService : IProductCategoryService
         {
             Items = await _context.ProductCategories
                 .OrderBy(pc => pc.Id)
-                .Select(pc => new ProductCategoryResponseDto
-                {
-                    Id = pc.Id,
-                    Name = pc.Name
-                }).ToListAsync(),
+                .Select(pc => new ProductCategoryResponseDto(pc))
+                .ToListAsync(),
             Authorization = _authorizationService.GetProductCategoryAuthorization()
         };
     }
@@ -33,11 +30,8 @@ public class ProductCategoryService : IProductCategoryService
     {
         return await _context.ProductCategories
             .Where(p => p.Id == id)
-            .Select(p => new ProductCategoryResponseDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-            }).SingleOrDefaultAsync()
+            .Select(p => new ProductCategoryResponseDto(p))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(ProductCategory),
                 nameof(id),

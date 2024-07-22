@@ -74,24 +74,10 @@ public class DebtService : IDebtService
         }
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
-            .Select(d => new DebtBasicResponseDto
-            {
-                Id = d.Id,
-                Amount = d.Amount,
-                Note = d.Note,
-                CreatedDateTime = d.CreatedDateTime,
-                IsClosed = d.IsClosed,
-                Customer = new CustomerBasicResponseDto
-                {
-                    Id = d.Customer.Id,
-                    FullName = d.Customer.FullName,
-                    NickName = d.Customer.NickName,
-                    Gender = d.Customer.Gender,
-                    Birthday = d.Customer.Birthday,
-                    PhoneNumber = d.Customer.PhoneNumber
-                },
-                Authorization = _authorizationService.GetDebtAuthorization(d)
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Select(d => new DebtBasicResponseDto(
+                d,
+                _authorizationService.GetDebtAuthorization(d)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .AsSplitQuery()
             .ToListAsync();
@@ -104,45 +90,12 @@ public class DebtService : IDebtService
     {
         return await _context.Debts
             .Include(d => d.Customer)
-            .Include(d => d.User).ThenInclude(u => u.Roles)
+            .Include(d => d.CreatedUser).ThenInclude(u => u.Roles)
             .Where(d => d.Id == id && !d.IsDeleted)
-            .Select(d => new DebtDetailResponseDto
-            {
-                Id = d.Id,
-                Amount = d.Amount,
-                Note = d.Note,
-                CreatedDateTime = d.CreatedDateTime,
-                IsClosed = d.IsClosed,
-                Customer = new CustomerBasicResponseDto
-                {
-                    Id = d.Customer.Id,
-                    FullName = d.Customer.FullName,
-                    NickName = d.Customer.NickName,
-                    Gender = d.Customer.Gender,
-                    Birthday = d.Customer.Birthday,
-                    PhoneNumber = d.Customer.PhoneNumber
-                },
-                User = new UserBasicResponseDto
-                {
-                    Id = d.User.Id,
-                    UserName = d.User.UserName,
-                    FirstName = d.User.FirstName,
-                    MiddleName = d.User.MiddleName,
-                    LastName = d.User.LastName,
-                    FullName = d.User.FullName,
-                    Gender = d.User.Gender,
-                    Birthday = d.User.Birthday,
-                    JoiningDate = d.User.JoiningDate,
-                    AvatarUrl = d.User.AvatarUrl,
-                    Role = new RoleBasicResponseDto
-                    {
-                        Id = d.User.Role.Id,
-                        Name = d.User.Role.Name,
-                        DisplayName = d.User.Role.DisplayName,
-                        PowerLevel = d.User.Role.PowerLevel
-                    }
-                }
-            }).SingleOrDefaultAsync()
+            .Select(d => new DebtDetailResponseDto(
+                d,
+                _authorizationService.GetDebtAuthorization(d)))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Debt),
                 nameof(id),
@@ -182,7 +135,7 @@ public class DebtService : IDebtService
             Note = requestDto.Note,
             CreatedDateTime = createdDateTime,
             CustomerId = requestDto.CustomerId,
-            UserId = _authorizationService.GetUserId()
+            CreatedUserId = _authorizationService.GetUserId()
         };
         _context.Debts.Add(debt);
         
@@ -208,7 +161,7 @@ public class DebtService : IDebtService
         catch (DbUpdateException exception)
         when (exception.InnerException is MySqlException sqlException)
         {
-            HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debt.UserId);
+            HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debt.CreatedUserId);
             throw;
         }
     }
@@ -219,7 +172,7 @@ public class DebtService : IDebtService
         // Fetch and ensure the entity with the given id exists in the database.
         Debt debt = await _context.Debts
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
-            .Include(d => d.User)
+            .Include(d => d.CreatedUser)
             .SingleOrDefaultAsync(d => d.Id == id && !d.IsDeleted)
             ?? throw new ResourceNotFoundException(nameof(Debt), nameof(id), id.ToString());
         
@@ -309,7 +262,7 @@ public class DebtService : IDebtService
             // Handling data exception.
             if (exception.InnerException is MySqlException sqlException)
             {
-                HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debt.UserId);
+                HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debt.CreatedUserId);
             }
             
             throw;

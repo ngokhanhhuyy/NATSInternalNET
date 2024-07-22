@@ -189,12 +189,12 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditOrder))
     .AddPolicy("CanDeleteOrder", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteOrder))
-    .AddPolicy("CanCreateOrder", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.CreateOrder))
-    .AddPolicy("CanEditOrder", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.EditOrder))
-    .AddPolicy("CanDeleteOrder", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteOrder))
+    .AddPolicy("CanCreateTreatment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateTreatment))
+    .AddPolicy("CanEditTreatment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditTreatment))
+    .AddPolicy("CanDeleteTreatment", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteTreatment))
     .AddPolicy("CanCreateDebt", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateDebt))
     .AddPolicy("CanEditDebt", policy =>
@@ -248,6 +248,7 @@ builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
 builder.Services.AddScoped<ISupplyService, SupplyService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ITreatmentService, TreatmentService>();
 builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IDebtPaymentService, DebtPaymentService>();
 builder.Services.AddScoped<IConsultantService, ConsultantService>();

@@ -1,7 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
-using System.Text.Json;
-
-namespace NATSInternal.Services;
+﻿namespace NATSInternal.Services;
 
 /// <inheritdoc />
 public class SupplyService : ISupplyService
@@ -28,7 +25,7 @@ public class SupplyService : ISupplyService
     {
         // Query initialization.
         IQueryable<Supply> query = _context.Supplies
-            .Include(s => s.User).ThenInclude(u => u.Roles)
+            .Include(s => s.CreatedUser).ThenInclude(u => u.Roles)
             .Include(s => s.Items)
             .Include(s => s.Photos);
 
@@ -84,7 +81,7 @@ public class SupplyService : ISupplyService
         // Filter by user id if specified.
         if (requestDto.UserId.HasValue)
         {
-            query = query.Where(s => s.UserId == requestDto.UserId.Value);
+            query = query.Where(s => s.CreatedUserId == requestDto.UserId.Value);
         }
 
         // Initialize response dto.
@@ -97,37 +94,8 @@ public class SupplyService : ISupplyService
         }
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
-            .Select(s => new SupplyBasicResponseDto
-            {
-                Id = s.Id,
-                SuppliedDateTime = s.SuppliedDateTime,
-                TotalAmount = s.Items.Sum(i => i.Amount) + s.ShipmentFee,
-                IsClosed = s.IsClosed,
-                User = new UserBasicResponseDto
-                {
-                    Id = s.User.Id,
-                    UserName = s.User.UserName,
-                    FirstName = s.User.FirstName,
-                    MiddleName = s.User.MiddleName,
-                    LastName = s.User.LastName,
-                    FullName = s.User.FullName,
-                    Gender = s.User.Gender,
-                    Birthday = s.User.Birthday,
-                    JoiningDate = s.User.JoiningDate,
-                    AvatarUrl = s.User.AvatarUrl,
-                    Role = new RoleBasicResponseDto
-                    {
-                        Id = s.User.Role.Id,
-                        Name = s.User.Role.Name,
-                        DisplayName = s.User.Role.DisplayName,
-                        PowerLevel = s.User.Role.PowerLevel
-                    }
-                },
-                FirstPhotoUrl = s.Photos
-                    .OrderBy(p => p.Id)
-                    .Select(p => p.Url)
-                    .FirstOrDefault()
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Select(s => new SupplyBasicResponseDto(s))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .ToListAsync();
 
@@ -140,65 +108,11 @@ public class SupplyService : ISupplyService
         return await _context.Supplies
             .Include(s => s.Items).ThenInclude(si => si.Product)
             .Include(s => s.Photos)
-            .Include(s => s.User).ThenInclude(u => u.Roles)
+            .Include(s => s.CreatedUser).ThenInclude(u => u.Roles)
             .Include(s => s.UpdateHistories)
             .Where(s => s.Id == id)
-            .Select(s => new SupplyDetailResponseDto
-            {
-                Id = s.Id,
-                SuppliedDateTime = s.SuppliedDateTime,
-                ShipmentFee = s.ShipmentFee,
-                ItemAmount = s.ItemAmount,
-                TotalAmount = s.TotalAmount,
-                Note = s.Note,
-                IsClosed = s.IsClosed,
-                CreatedDateTime = s.CreatedDateTime,
-                UpdatedDateTime = s.UpdatedDateTime,
-                Items = s.Items
-                    .OrderBy(i => i.Id)
-                    .Select(i => new SupplyItemResponseDto
-                    {
-                        Id = i.Id,
-                        Amount = i.Amount,
-                        SuppliedQuantity = i.SuppliedQuantity,
-                        Product = new ProductBasicResponseDto
-                        {
-                            Id = i.Product.Id,
-                            Name = i.Product.Name,
-                            Unit = i.Product.Unit,
-                            Price = i.Product.Price,
-                            ThumbnailUrl = i.Product.ThumbnailUrl
-                        }
-                    }).ToList(),
-                Photos = s.Photos
-                    .OrderBy(p => p.Id)
-                    .Select(p => new SupplyPhotoResponseDto
-                    {
-                        Id = p.Id,
-                        Url = p.Url
-                    }).ToList(),
-                User = new UserBasicResponseDto
-                {
-                    Id = s.User.Id,
-                    UserName = s.User.UserName,
-                    FirstName = s.User.FirstName,
-                    MiddleName = s.User.MiddleName,
-                    LastName = s.User.LastName,
-                    FullName = s.User.FullName,
-                    Gender = s.User.Gender,
-                    Birthday = s.User.Birthday,
-                    JoiningDate = s.User.JoiningDate,
-                    AvatarUrl = s.User.AvatarUrl,
-                    Role = new RoleBasicResponseDto
-                    {
-                        Id = s.User.Role.Id,
-                        Name = s.User.Role.Name,
-                        DisplayName = s.User.Role.DisplayName,
-                        PowerLevel = s.User.Role.PowerLevel
-                    }
-                },
-                Authorization = _authorizationService.GetSupplyDetailAuthorization(s),
-            }).AsSplitQuery()
+            .Select(s => new SupplyDetailResponseDto(s, _authorizationService.GetSupplyAuthorization(s)))
+            .AsSplitQuery()
             .SingleOrDefaultAsync()
         ?? throw new ResourceNotFoundException(
             nameof(Supply),
@@ -209,8 +123,9 @@ public class SupplyService : ISupplyService
     /// <inheritdoc />
     public async Task<int> CreateAsync(SupplyUpsertRequestDto requestDto)
     {
-        // Use a transaction for data integrity.
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        // Use a transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
 
         // Fetch a list of products given by id in the request, ensure all of the products exists.
         List<int> productIdsInRequest = requestDto.Items
@@ -235,15 +150,15 @@ public class SupplyService : ISupplyService
         }
 
         // Initialize supply.
-        Supply supply = new()
+        Supply supply = new Supply
         {
             SuppliedDateTime = requestDto.SuppliedDateTime ?? DateTime.UtcNow.ToApplicationTime(),
             ShipmentFee = requestDto.ShipmentFee,
             Note = requestDto.Note,
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
-            UserId = _authorizationService.GetUserId(),
-            Items = [],
-            Photos = []
+            CreatedUserId = _authorizationService.GetUserId(),
+            Items = new List<SupplyItem>(),
+            Photos = new List<SupplyPhoto>()
         };
 
         // Initialize items
@@ -270,7 +185,7 @@ public class SupplyService : ISupplyService
                 SupplyPhoto supplyPhoto = new()
                 {
                     Url = url
-                }; ;
+                };
                 supply.Photos.Add(supplyPhoto);
             }
         }
@@ -315,126 +230,71 @@ public class SupplyService : ISupplyService
                 nameof(id),
                 id.ToString());
 
+        // Ensure the user has permission to edit the supply.
         if (!_authorizationService.CanEditSupply(supply))
         {
             throw new AuthorizationException();
         }
 
-        string oldDataJson = GenerateSupplyUpdateHistoryJson(supply);
+        // Use transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
 
-        // Use transaction to ensure data integrity.
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        // Update supply properties.
+        // Storing the old data for update history logging and stats adjustments.
+        SupplyUpdateHistoryDataDto oldData = new SupplyUpdateHistoryDataDto(supply);
         long originalItemAmount = supply.ItemAmount;
         long originalShipmentFee = supply.ShipmentFee;
+
+        // Update supply properties.
         supply.SuppliedDateTime = requestDto.SuppliedDateTime ?? DateTime.UtcNow.ToApplicationTime();
         supply.ShipmentFee = requestDto.ShipmentFee;
         supply.Note = requestDto.Note;
 
         // Update supply items.
-        if (_authorizationService.CanEditSupplyItems())
-        {
-            supply.Items ??= [];
-            for (int i = 0; i < requestDto.Items.Count; i++)
-            {
-                SupplyItemRequestDto itemRequestDto = requestDto.Items[i];
-                if (itemRequestDto.HasBeenChanged)
-                {
-                    SupplyItem supplyItem = supply.Items
-                        .SingleOrDefault(i => i.Id == itemRequestDto.Id);
-                    if (supplyItem == null)
-                    {
-                        string errorMessage = ErrorMessages.NotFoundByProperty
-                            .ReplaceResourceName(DisplayNames.SupplyItem)
-                            .ReplacePropertyName(DisplayNames.Id)
-                            .ReplaceAttemptedValue(itemRequestDto.Id.ToString());
-                        throw new OperationException($"items[{i}].id", errorMessage);
-                    }
-                    if (itemRequestDto.HasBeenDeleted)
-                    {
-                        supply.Items.Remove(supplyItem);
-                        continue;
-                    }
-
-                    supplyItem.Amount = itemRequestDto.Amount;
-
-                    int suppliedQuantityDifference = itemRequestDto.SuppliedQuantity - supplyItem.SuppliedQuantity;
-                    supplyItem.SuppliedQuantity = itemRequestDto.SuppliedQuantity;
-                    supplyItem.Product.StockingQuantity += suppliedQuantityDifference;
-                }
-            }
-        }
+        UpdateItems(supply, requestDto.Items);
 
         // Update photos.
-        supply.Photos ??= [];
-        List<string> shouldDeleteWhenSucceedUrls = [];
-        List<string> shouldDeleteWhenFailUrls = [];
-        if (_authorizationService.CanEditSupplyPhotos())
+        List<string> urlsToBeDeletedWhenSucceed = new List<string>();
+        List<string> urlsToBeDeletedWhenFails = new List<string>();
+        if (requestDto.Photos != null)
         {
-            for (int i = 0; i < requestDto.Photos.Count; i++)
-            {
-                SupplyPhotoRequestDto photoRequestDto = requestDto.Photos[i];
-                if (photoRequestDto.HasBeenChanged)
-                {
-                    SupplyPhoto supplyPhoto = supply.Photos.SingleOrDefault(p => p.Id == photoRequestDto.Id);
-                    if (supplyPhoto == null)
-                    {
-                        string errorMessage = ErrorMessages.NotFoundByProperty
-                            .ReplaceResourceName(DisplayNames.SupplyPhoto)
-                            .ReplacePropertyName(DisplayNames.Id)
-                            .ReplaceAttemptedValue(photoRequestDto.Id.ToString());
-                        throw new OperationException($"photos[{i}].id", errorMessage);
-                    }
-                    // Add to list to be deleted later if the transaction succeeds.
-                    shouldDeleteWhenSucceedUrls.Add(supplyPhoto.Url);
-                    supply.Photos.Remove(supplyPhoto);
-
-                    if (photoRequestDto.HasBeenChanged)
-                    {
-                        string url = await _photoService
-                            .CreateAsync(photoRequestDto.File, "supplies", false);
-                        // Add to list to be deleted later if the transaction fails.
-                        shouldDeleteWhenFailUrls.Add(url);
-                        supplyPhoto.Url = url;
-                    }
-                }
-            }
+            (List<string>, List<string>) photoUpdateResults;
+            photoUpdateResults = await UpdatePhotosAsync(supply, requestDto.Photos);
+            urlsToBeDeletedWhenSucceed.AddRange(photoUpdateResults.Item1);
+            urlsToBeDeletedWhenFails.AddRange(photoUpdateResults.Item2);
         }
+        
+        // Storing new data for update history logging.
+        SupplyUpdateHistoryDataDto newData = new SupplyUpdateHistoryDataDto(supply);
 
         // Create update history.
-        supply.UpdateHistories ??= [];
-        string newDataJson = GenerateSupplyUpdateHistoryJson(supply);
-        SupplyUpdateHistories supplyHistory = new()
-        {
-            UpdatedDateTime = DateTime.UtcNow.ToApplicationTime(),
-            Reason = requestDto.UpdateReason,
-            OldData = oldDataJson,
-            NewData = newDataJson,
-            UserId = _authorizationService.GetUserId()
-        };
-        supply.UpdateHistories.Add(supplyHistory);
+        CreateUpdateHistory(supply, oldData, newData, requestDto.UpdateReason);
 
-        // Save changes.
+        // Perform the updating operation.
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The supply can be saved without any error, adjust the stats.
             await _statsService.IncrementSupplyCostAsync(supply.ItemAmount - originalItemAmount);
             await _statsService.IncrementShipmentCostAsync(supply.ShipmentFee - originalShipmentFee);
+            
+            // Commit the transaction and finish the operation.
             await transaction.CommitAsync();
-            foreach (string url in shouldDeleteWhenSucceedUrls)
+            foreach (string url in urlsToBeDeletedWhenSucceed)
             {
                 _photoService.Delete(url);
             }
         }
-        catch (DbUpdateException exception) when (exception.InnerException is MySqlException)
+        catch (DbUpdateException exception)
+        when (exception.InnerException is MySqlException sqlException)
         {
             await transaction.RollbackAsync();
-            foreach (string url in shouldDeleteWhenFailUrls)
+            foreach (string url in urlsToBeDeletedWhenFails)
             {
                 _photoService.Delete(url);
             }
-            HandleCreateOrUpdateException(exception.InnerException as MySqlException);
+            HandleCreateOrUpdateException(sqlException);
             throw;
         }
         
@@ -517,8 +377,8 @@ public class SupplyService : ISupplyService
     }
 
     /// <summary>
-    /// Convert all the exceptions those are thrown by the database during the deleting
-    /// operation into the appropriate exceptions.
+    /// Convert all the exceptions those are thrown by the database during
+    /// the deleting operation into the appropriate exceptions.
     /// </summary>
     /// <param name="exception">The exception thrown by the database.</param>
     /// <exception cref="OperationException"></exception>
@@ -533,33 +393,159 @@ public class SupplyService : ISupplyService
             throw new OperationException(errorMessage);
         }
     }
-
+    
     /// <summary>
-    /// Generate a json string containing the important data of the given supply for supply update history.
+    /// Update the specified supply's items with the data provided in the request.
     /// </summary>
-    /// <param name="supply">The supply entity to be converted into json.</param>
-    /// <returns>A json string containing the supply data.</returns>
-    private static string GenerateSupplyUpdateHistoryJson(Supply supply)
+    /// <param name="supply">
+    /// The supply associated to the items to be updated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// An object containing data for the items to be updated.
+    /// </param>
+    private static void UpdateItems(
+            Supply supply,
+            List<SupplyItemRequestDto> requestDtos)
     {
-        var payload = new
+        supply.Items ??= new List<SupplyItem>();
+        for (int i = 0; i < requestDtos.Count; i++)
         {
-            supply.Id,
-            supply.SuppliedDateTime,
-            supply.ShipmentFee,
-            supply.Note,
-            supply.CreatedDateTime,
-            supply.UserId,
-            Items = supply.Items
-                .Select(supplyItem => new
+            SupplyItemRequestDto itemRequestDto = requestDtos[i];
+            if (itemRequestDto.HasBeenChanged)
+            {
+                SupplyItem item;
+                
+                // Initialize a new entity when the request doesn't have id.
+                if (itemRequestDto.Id.HasValue)
                 {
-                    supplyItem.Id,
-                    supplyItem.Amount,
-                    supplyItem.SuppliedQuantity,
-                    supplyItem.ProductId,
-                }).ToList(),
-            PhotoCount = supply.Photos.Count
-        };
+                    // Get the entity by the given id and ensure it exists.
+                    item = supply.Items.SingleOrDefault(si => si.Id == itemRequestDto.Id);
+                    if (item == null)
+                    {
+                        string errorMessage = ErrorMessages.NotFoundByProperty
+                            .ReplaceResourceName(DisplayNames.SupplyItem)
+                            .ReplacePropertyName(DisplayNames.Id)
+                            .ReplaceAttemptedValue(itemRequestDto.Id.ToString());
+                        throw new OperationException($"items[{i}].id", errorMessage);
+                    }
+                    
+                    // Delete the entity if specified.
+                    if (itemRequestDto.HasBeenDeleted)
+                    {
+                        supply.Items.Remove(item);
+                        continue;
+                    }
 
-        return JsonSerializer.Serialize(payload);
+                    item.Amount = itemRequestDto.Amount;
+                    item.Product.StockingQuantity -= item.SuppliedQuantity;
+                    item.SuppliedQuantity = itemRequestDto.SuppliedQuantity;
+                }
+                else
+                {
+                    // Initialize new supply item.
+                    item = new SupplyItem
+                    {
+                        Amount = itemRequestDto.Amount,
+                        SuppliedQuantity = itemRequestDto.SuppliedQuantity,
+                        ProductId = itemRequestDto.ProductId
+                    };
+                    supply.Items.Add(item);
+                }
+                
+                // Adjust product stocking quantity.
+                item.Product.StockingQuantity += itemRequestDto.SuppliedQuantity;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Update the specified supply's photos with the data provided in the request.
+    /// </summary>
+    /// <param name="supply">
+    /// The supply associated to the items to be updated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// An object containing the data for the photos to be updated.
+    /// </param>
+    /// <returns>
+    /// A <c>Tuple</c> containing 2 lists of strings. The first one contains the urls
+    /// of the photos which must be deleted when the update operation succeeded. The
+    /// other one contains the urls of the photos which must be deleted when the
+    /// updating operation failed.
+    /// </returns>
+    /// <exception cref="OperationException">
+    /// Thrown when the photo with the given id which is associated to the specified
+    /// supply in the request cannot be found.
+    /// </exception>
+    private async Task<(List<string>, List<string>)> UpdatePhotosAsync(
+            Supply supply,
+            List<SupplyPhotoRequestDto> requestDtos)
+    {
+        supply.Photos ??= new List<SupplyPhoto>();
+        List<string> urlsToBeDeletedWhenSucceeded = new List<string>();
+        List<string> urlsToBeDeletedWhenFailed = new List<string>();
+        for (int i = 0; i < requestDtos.Count; i++)
+        {
+            SupplyPhotoRequestDto photoRequestDto = requestDtos[i];
+            if (photoRequestDto.HasBeenChanged)
+            {
+                // Fetch the photo entity and ensure it exists.
+                SupplyPhoto supplyPhoto = supply.Photos
+                    .SingleOrDefault(p => p.Id == photoRequestDto.Id);
+                if (supplyPhoto == null)
+                {
+                    string errorMessage = ErrorMessages.NotFoundByProperty
+                        .ReplaceResourceName(DisplayNames.SupplyPhoto)
+                        .ReplacePropertyName(DisplayNames.Id)
+                        .ReplaceAttemptedValue(photoRequestDto.Id.ToString());
+                    throw new OperationException($"photos[{i}].id", errorMessage);
+                }
+                
+                // Add to list to be deleted later if the transaction succeeds.
+                urlsToBeDeletedWhenSucceeded.Add(supplyPhoto.Url);
+                supply.Photos.Remove(supplyPhoto);
+
+                if (photoRequestDto.HasBeenChanged)
+                {
+                    string url = await _photoService
+                        .CreateAsync(photoRequestDto.File, "supplies", false);
+                    // Add to list to be deleted later if the transaction fails.
+                    urlsToBeDeletedWhenFailed.Add(url);
+                    supplyPhoto.Url = url;
+                }
+            }
+        }
+        
+        return (urlsToBeDeletedWhenSucceeded, urlsToBeDeletedWhenFailed);
+    }
+    
+    /// <summary>
+    /// Create and add update history for the specified supply.
+    /// </summary>
+    /// <param name="supply">
+    /// The supply entity which the new update history is associated.
+    /// </param>
+    /// <param name="oldData">
+    /// An object containing the old data of the supply before modification.
+    /// </param>
+    /// <param name="newData">
+    /// An object containing the new data of the supply after modification. 
+    /// </param>
+    /// <param name="reason">The reason of the modification.</param>
+    private static void CreateUpdateHistory(
+            Supply supply,
+            SupplyUpdateHistoryDataDto oldData,
+            SupplyUpdateHistoryDataDto newData,
+            string reason)
+    {
+        SupplyUpdateHistory updateHistory = new SupplyUpdateHistory
+        {
+            Reason = reason,
+            OldData = JsonSerializer.Serialize(oldData),
+            NewData = JsonSerializer.Serialize(newData)
+        };
+        
+        supply.UpdateHistories ??= new List<SupplyUpdateHistory>();
+        supply.UpdateHistories.Add(updateHistory);
     }
 }

@@ -127,6 +127,11 @@ public sealed class DataInitializer
                         PermissionConstants.EditClosedOrder,
                         PermissionConstants.SetOrderOrderedDateTime,
                         PermissionConstants.DeleteOrder,
+                        PermissionConstants.CreateTreatment,
+                        PermissionConstants.EditTreatment,
+                        PermissionConstants.EditClosedTreatment,
+                        PermissionConstants.DeleteTreatment,
+                        PermissionConstants.SetTreatmentOrderedDateTime,
                         PermissionConstants.CreateDebt,
                         PermissionConstants.EditDebt,
                         PermissionConstants.EditClosedDebt,
@@ -184,19 +189,20 @@ public sealed class DataInitializer
                         PermissionConstants.EditOrder,
                         PermissionConstants.SetOrderOrderedDateTime,
                         PermissionConstants.DeleteOrder,
+                        PermissionConstants.CreateTreatment,
+                        PermissionConstants.EditTreatment,
+                        PermissionConstants.DeleteTreatment,
+                        PermissionConstants.SetTreatmentOrderedDateTime,
                         PermissionConstants.CreateDebt,
                         PermissionConstants.EditDebt,
-                        PermissionConstants.EditClosedDebt,
                         PermissionConstants.DeleteDebt,
                         PermissionConstants.SetDebtCreatedDateTime,
                         PermissionConstants.CreateDebtPayment,
                         PermissionConstants.EditDebtPayment,
-                        PermissionConstants.EditClosedDebtPayment,
                         PermissionConstants.DeleteDebtPayment,
                         PermissionConstants.SetDebtPaymentPaidDateTime,
                         PermissionConstants.CreateConsultant,
                         PermissionConstants.EditConsultant,
-                        PermissionConstants.EditClosedConsultant,
                         PermissionConstants.DeleteConsultant,
                         PermissionConstants.SetConsultantPaidDateTime,
                     }
@@ -221,6 +227,8 @@ public sealed class DataInitializer
                         PermissionConstants.EditExpense,
                         PermissionConstants.CreateOrder,
                         PermissionConstants.EditOrder,
+                        PermissionConstants.CreateTreatment,
+                        PermissionConstants.EditTreatment,
                         PermissionConstants.CreateDebt,
                         PermissionConstants.EditDebt,
                         PermissionConstants.CreateDebtPayment,
@@ -241,6 +249,7 @@ public sealed class DataInitializer
                         PermissionConstants.CreateSupply,
                         PermissionConstants.CreateExpense,
                         PermissionConstants.CreateOrder,
+                        PermissionConstants.CreateTreatment,
                         PermissionConstants.CreateDebt,
                         PermissionConstants.CreateDebtPayment,
                         PermissionConstants.CreateConsultant
@@ -890,7 +899,7 @@ public sealed class DataInitializer
                     Note = faker.Lorem.Sentences(5),
                     IsClosed = ShouldOfficiallyClose(currentDateTime),
                     CreatedDateTime = currentDateTime,
-                    UserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
+                    CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
                     Items = supplyItems
                 };
 
@@ -945,7 +954,7 @@ public sealed class DataInitializer
                     Category = category,
                     Note = null,
                     IsClosed = ShouldOfficiallyClose(currentDateTime),
-                    UserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
+                    CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
                     Payee = payee
                 };
                 _context.Expenses.Add(expense);
@@ -995,7 +1004,7 @@ public sealed class DataInitializer
                     Note = null,
                     IsClosed = ShouldOfficiallyClose(currentDateTime),
                     CustomerId = customerIds.OrderBy(_ => Guid.NewGuid()).First(),
-                    UserId = userIds.OrderBy(_ => Guid.NewGuid()).First(),
+                    CreatedUserId = userIds.OrderBy(_ => Guid.NewGuid()).First(),
                     Items = new List<OrderItem>()
                 };
                 _context.Orders.Add(order);

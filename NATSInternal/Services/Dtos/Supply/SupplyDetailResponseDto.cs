@@ -14,5 +14,26 @@ public class SupplyDetailResponseDto
     public List<SupplyItemResponseDto> Items { get; set; }
     public List<SupplyPhotoResponseDto> Photos { get; set; }
     public UserBasicResponseDto User { get; set; }
-    public SupplyDetailAuthorizationResponseDto Authorization { get; set; }
+    public SupplyAuthorizationResponseDto Authorization { get; set; }
+
+    public SupplyDetailResponseDto(Supply supply, SupplyAuthorizationResponseDto authorization)
+    {
+        Id = supply.Id;
+        SuppliedDateTime = supply.SuppliedDateTime;
+        ShipmentFee = supply.ShipmentFee;
+        ItemAmount = supply.ItemAmount;
+        TotalAmount = supply.TotalAmount;
+        Note = supply.Note;
+        IsClosed = supply.IsClosed;
+        CreatedDateTime = supply.CreatedDateTime;
+        UpdatedDateTime = supply.UpdatedDateTime;
+        Items = supply.Items?
+            .OrderBy(i => i.Id)
+            .Select(i => new SupplyItemResponseDto(i)).ToList();
+        Photos = supply.Photos?
+            .OrderBy(p => p.Id)
+            .Select(p => new SupplyPhotoResponseDto(p)).ToList();
+        User = new UserBasicResponseDto(supply.CreatedUser);
+        Authorization = authorization;
+    }
 }

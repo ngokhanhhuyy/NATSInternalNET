@@ -12,4 +12,20 @@ public class ExpenseDetailResponseDto
     public ExpensePayeeResponseDto Payee { get; set; }
     public List<ExpensePhotoResponseDto> Photos { get; set; }
     public ExpenseAuthorizationResponseDto Authorization { get; set; }
+
+    public ExpenseDetailResponseDto(
+            Expense expense,
+            ExpenseAuthorizationResponseDto authorization)
+    {
+        Id = expense.Id;
+        Amount = expense.Amount;
+        PaidDateTime = expense.PaidDateTime;
+        Category = expense.Category;
+        Note = expense.Note;
+        IsClosed = expense.IsClosed;
+        User = new UserBasicResponseDto(expense.CreatedUser);
+        Payee = new ExpensePayeeResponseDto(expense.Payee);
+        Photos = expense.Photos?.Select(p => new ExpensePhotoResponseDto(p)).ToList();
+        Authorization = authorization;
+    }
 }

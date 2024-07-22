@@ -19,4 +19,31 @@ public record CustomerDetailResponseDto
     public DateTime CreatedDateTime { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
     public CustomerBasicResponseDto Introducer { get; set; }
+
+    public CustomerDetailResponseDto(
+            Customer customer,
+            CustomerAuthorizationResponseDto authorization)
+    {
+        Id = customer.Id;
+        FirstName = customer.FirstName;
+        MiddleName = customer.MiddleName;
+        LastName = customer.LastName;
+        FullName = customer.FullName;
+        NickName = customer.NickName;
+        Gender = customer.Gender;
+        Birthday = customer.Birthday;
+        PhoneNumber = customer.PhoneNumber;
+        ZaloNumber = customer.ZaloNumber;
+        FacebookUrl = customer.FacebookUrl;
+        Email = customer.Email;
+        Address = customer.Address;
+        Note = customer.Note;
+        CreatedDateTime = customer.CreatedDateTime;
+        UpdatedDateTime = customer.UpdatedDateTime;
+
+        if (customer.Introducer != null)
+        {
+            Introducer = new CustomerBasicResponseDto(customer.Introducer);
+        }
+    }
 }

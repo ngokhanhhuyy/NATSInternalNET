@@ -20,9 +20,9 @@ public class TreatmentItem
     public int Quantity { get; set; }
 
     // Foreign keys
-    [Column("session_id")]
+    [Column("treatment_id")]
     [Required]
-    public int SessionId { get; set; }
+    public int TreatmentId { get; set; }
 
     [Column("product_id")]
     [Required]
@@ -33,6 +33,6 @@ public class TreatmentItem
     public byte[] RowVersion { get; set; }
 
     // Relationship
-    public virtual TreatmentSession Session { get; set; }
+    public virtual Treatment Treatment { get; set; }
     public virtual Product Product { get; set; }
 }

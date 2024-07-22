@@ -17,50 +17,38 @@ public class BrandService : IBrandService
         _authorizationService = authorizationService;
     }
 
+    /// <inheritdoc />
     public async Task<BrandListResponseDto> GetListAsync()
     {
         return new BrandListResponseDto
         {
             Items = await _context.Brands
                 .OrderBy(b => b.Id)
-                .Select(b => new BrandBasicResponseDto
-                {
-                    Id = b.Id,
-                    Name = b.Name
-                }).ToListAsync(),
+                .Select(b => new BrandBasicResponseDto(
+                    b,
+                    _authorizationService.GetBrandAuthorization()))
+                .ToListAsync(),
             Authorization = _authorizationService.GetBrandAuthorization()
         };
     }
 
+    /// <inheritdoc />
     public async Task<BrandDetailResponseDto> GetDetailAsync(int id)
     {
         return await _context.Brands
             .Include(b => b.Country)
             .Where(b => b.Id == id)
-            .Select(b => new BrandDetailResponseDto
-            {
-                Id = b.Id,
-                Name = b.Name,
-                Website = b.Website,
-                SocialMediaUrl = b.SocialMediaUrl,
-                PhoneNumber = b.PhoneNumber,
-                Email = b.Email,
-                Address = b.Address,
-                ThumbnailUrl = b.ThumbnailUrl,
-                Country = b.Country == null ? null : new CountryResponseDto
-                {
-                    Id = b.Country.Id,
-                    Name = b.Country.Name,
-                    Code = b.Country.Code
-                },
-                Authorization = _authorizationService.GetBrandAuthorization()
-            }).SingleOrDefaultAsync()
+            .Select(b => new BrandDetailResponseDto(
+                b,
+                _authorizationService.GetBrandAuthorization()))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Brand),
                 nameof(id),
                 id.ToString());
     }
 
+    /// <inheritdoc />
     public async Task<int> CreateAsync(BrandRequestDto requestDto)
     {
         string thumbnailUrl = null;
@@ -100,6 +88,7 @@ public class BrandService : IBrandService
         }
     }
 
+    /// <inheritdoc />
     public async Task UpdateAsync(int id, BrandRequestDto requestDto)
     {
         // Fetch the entity from the database and ensure it exists.
@@ -151,6 +140,7 @@ public class BrandService : IBrandService
         }
     }
 
+    /// <inheritdoc />
     public async Task DeleteAsync(int id)
     {
         Brand brand = await _context.Brands.FindAsync(id)
@@ -169,6 +159,7 @@ public class BrandService : IBrandService
 
     }
 
+    /// <inheritdoc />
     private void HandleDbUpdateException(MySqlException exception)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();

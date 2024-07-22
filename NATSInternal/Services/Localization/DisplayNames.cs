@@ -18,10 +18,12 @@ public static class DisplayNames
     public const string OrderPayment = "Thanh toán đơn hàng";
     public const string OrderPhoto = "Hình ảnh đơn hàng";
     public const string Treatment = "Liệu trình";
+    public const string TreatmentItem = "Mục sản phẩm liệu trình";
     public const string Expense = "Chi phí";
     public const string ExpenseCategory = "Phân loại chi phí";
     public const string ExpensePayee = "Người/tổ chức nhận thanh toán";
     public const string ExpensePhoto = "Hình ảnh chi phí";
+    public const string Consultant = "Dịch vụ tư vấn";
     public const string Photo = "Hình ảnh";
     public const string Announcement = "Thông báo";
     public const string Id = "Mã số";
@@ -51,6 +53,8 @@ public static class DisplayNames
     public const string Status = "Trạng thái";
     public const string CreatedDateTime = "Ngày tạo";
     public const string UpdatedDateTime = "Ngày cập nhật";
+    public const string CreatedUser = "Nhân viên tạo";
+    public const string Therapist = "Nhân viên đảm nhận";
     public const string Note = "Ghi chú";
     public const string Introducer = "Người giới thiệu";
     public const string Description = "Mô tả";
@@ -65,6 +69,7 @@ public static class DisplayNames
     public const string ShipmentFee = "Phí vận chuyển";
     public const string Amount = "Số tiền";
     public const string Quatity = "Số lượng";
+    public const string ServiceAmount = "Tiền công";
     public const string PayeeName = "Tên người nhận thanh toán";
     public const string PaidAmount = "Số tiền đã thanh toán";
     public const string PaidDateTime = "Ngày giờ đã thanh toán";

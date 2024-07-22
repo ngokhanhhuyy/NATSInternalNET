@@ -10,18 +10,15 @@ public class CountryService : ICountryService
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<CountryListResponseDto> GetListAsync()
     {
         return new CountryListResponseDto
         {
             Items = await _context.Countries
                 .OrderBy(c => c.Id)
-                .Select(c => new CountryResponseDto
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Code = c.Code
-                }).ToListAsync()
+                .Select(c => new CountryResponseDto(c))
+                .ToListAsync()
         };
     }
 }

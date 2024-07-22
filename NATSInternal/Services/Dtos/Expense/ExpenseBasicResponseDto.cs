@@ -8,4 +8,26 @@ public class ExpenseBasicResponseDto
     public ExpenseCategory Category { get; set; }
     public bool IsClosed { get; set; }
     public ExpenseAuthorizationResponseDto Authorization { get; set; }
+
+    public ExpenseBasicResponseDto(Expense expense)
+    {
+        MapFromEntity(expense);
+    }
+
+    public ExpenseBasicResponseDto(
+            Expense expense,
+            ExpenseAuthorizationResponseDto authorization)
+    {
+        MapFromEntity(expense);
+        Authorization = authorization;
+    }
+
+    private void MapFromEntity(Expense expense)
+    {
+        Id = expense.Id;
+        Amount = expense.Amount;
+        PaidDateTime = expense.PaidDateTime;
+        Category = expense.Category;
+        IsClosed = expense.IsClosed;
+    }
 }

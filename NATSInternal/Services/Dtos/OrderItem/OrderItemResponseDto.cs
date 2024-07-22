@@ -7,4 +7,13 @@ public class OrderItemResponseDto
     public decimal VatFactor { get; set; }
     public int Quantity { get; set; }
     public ProductBasicResponseDto Product { get; set; }
+
+    public OrderItemResponseDto(OrderItem item)
+    {
+        Id = item.Id;
+        Amount = item.Amount;
+        VatFactor = item.VatFactor;
+        Quantity = item.Quantity;
+        Product = new ProductBasicResponseDto(item.Product);
+    }
 }

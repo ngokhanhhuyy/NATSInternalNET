@@ -8,4 +8,26 @@ public class ConsultantBasicResponseDto
     public bool IsClosed { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public ConsultantAuthorizationResponseDto Authorization { get; set; }
+
+    public ConsultantBasicResponseDto(Consultant consultant)
+    {
+        MapFromEntity(consultant);
+    }
+
+    public ConsultantBasicResponseDto(
+            Consultant consultant,
+            ConsultantAuthorizationResponseDto authorization)
+    {
+        MapFromEntity(consultant);
+        Authorization = authorization;
+    }
+
+    private void MapFromEntity(Consultant consultant)
+    {
+        Id = consultant.Id;
+        Amount = consultant.Amount;
+        PaidDateTime = consultant.PaidDateTime;
+        IsClosed = consultant.IsClosed;
+        Customer = new CustomerBasicResponseDto(consultant.Customer);
+    }
 }

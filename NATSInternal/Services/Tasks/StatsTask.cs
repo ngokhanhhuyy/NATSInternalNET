@@ -136,10 +136,6 @@ public class StatsTask : BackgroundService
                 .Where(t => t.OrderedDateTime >= minDateTime)
                 .Where(t => t.OrderedDateTime < maxDateTime)
                 .ExecuteUpdateAsync(setter => setter.SetProperty(t => t.IsClosed, true));
-            await context.TreatmentSessions
-                .Where(ts => ts.StartingDateTime >= minDateTime)
-                .Where(ts => ts.StartingDateTime < maxDateTime)
-                .ExecuteUpdateAsync(setter => setter.SetProperty(ts => ts.IsClosed, true));
 
             // Close debts and debt payments.
             await context.Debts

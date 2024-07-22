@@ -1,3 +1,5 @@
+using FluentValidation;
+
 namespace NATSInternal.Services.Validations.Rules;
 
 public static class RuleValidators
@@ -45,5 +47,22 @@ public static class RuleValidators
         string errorMessage = ErrorMessages.EarlierThanOrEqualToNow
             .ReplaceComparisonValue(currentDateTime.ToVietnameseString());
         return ruleBuilder.LessThanOrEqualTo(currentDateTime).WithMessage(errorMessage);
+    }
+
+    public static IRuleBuilderOptions<T, byte[]> IsValidImage<T>(
+            this IRuleBuilder<T, byte[]> ruleBuilder)
+    {
+        return ruleBuilder.Must(file =>
+        {
+            try
+            {
+                MagickImage image = new MagickImage(file);
+                return true;
+            }
+            catch (MagickMissingDelegateErrorException)
+            {
+                return false;
+            }
+        }).WithMessage(ErrorMessages.Invalid);
     }
 }

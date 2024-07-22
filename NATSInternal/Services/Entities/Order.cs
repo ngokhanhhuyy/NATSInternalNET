@@ -28,19 +28,20 @@ public class Order
     [Required]
     public int CustomerId { get; set; }
 
-    [Column("user_id")]
+    [Column("created_user_id")]
     [Required]
-    public int UserId { get; set; }
+    public int CreatedUserId { get; set; }
 
     // Concurrency operation tracking field
     [Timestamp]
     public byte[] RowVersion { get; set; }
 
     // Relationships
-    public virtual User User { get; set; }
+    public virtual User CreatedUser { get; set; }
     public virtual Customer Customer { get; set; }
     public virtual List<OrderItem> Items { get; set; }
     public virtual List<OrderPhoto> Photos { get; set; }
+    public virtual List<OrderUpdateHistory> UpdateHistories { get; set; }
     
     // Property for convinience.
     [NotMapped]
@@ -48,4 +49,16 @@ public class Order
 
     [NotMapped]
     public long VatAmount => Items.Sum(i => (long)Math.Round(i.Amount * i.VatFactor * i.Quantity));
+
+    [NotMapped]
+    public DateTime? LastUpdatedDateTime => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.UpdatedDateTime)
+        .LastOrDefault();
+
+    [NotMapped]
+    public User LastUpdatedUser => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.User)
+        .LastOrDefault();
 }

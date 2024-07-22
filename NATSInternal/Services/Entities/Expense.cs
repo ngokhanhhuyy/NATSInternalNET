@@ -28,9 +28,9 @@ public class Expense
     public bool IsClosed { get; set; }
 
     // Foreign keys
-    [Column("user_id")]
+    [Column("created_user_id")]
     [Required]
-    public int UserId { get; set; }
+    public int CreatedUserId { get; set; }
 
     [Column("payee_id")]
     [Required]
@@ -41,7 +41,21 @@ public class Expense
     public byte[] RowVersion { get; set; }
 
     // Navigation properties
-    public virtual User User { get; set; }
+    public virtual User CreatedUser { get; set; }
     public virtual ExpensePayee Payee { get; set; }
     public virtual List<ExpensePhoto> Photos { get; set; }
+    public virtual List<ExpenseUpdateHistory> UpdateHistories { get; set; }
+
+    // Properties for convinience.
+    [NotMapped]
+    public DateTime? LastUpdatedDateTime => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.UpdatedDateTime)
+        .LastOrDefault();
+
+    [NotMapped]
+    public User LastUpdatedUser => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.User)
+        .LastOrDefault();
 }

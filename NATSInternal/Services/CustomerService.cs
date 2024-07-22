@@ -20,8 +20,6 @@ public class CustomerService : ICustomerService
     /// <returns>An object containing the results and page count (for pagination calculation).</returns>
     public async Task<CustomerListResponseDto> GetListAsync(CustomerListRequestDto requestDto)
     {
-        CustomerListResponseDto responseDto = new CustomerListResponseDto();
-
         // Initialize query.
         IQueryable<Customer> query = _context.Customers
             .Where(c => !c.IsDeleted);
@@ -62,6 +60,11 @@ public class CustomerService : ICustomerService
                 (isValidBirthday && c.Birthday.HasValue && c.Birthday.Value == birthday));
         }
 
+        // Initialize response dto.
+        CustomerListResponseDto responseDto = new CustomerListResponseDto
+        {
+            Authorization = _authorizationService.GetCustomerListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -72,15 +75,10 @@ public class CustomerService : ICustomerService
         responseDto.Results = await query
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
-            .Select(c => new CustomerBasicResponseDto
-            {
-                Id = c.Id,
-                FullName = c.FullName,
-                NickName = c.NickName,
-                Gender = c.Gender,
-                Birthday = c.Birthday,
-                PhoneNumber = c.PhoneNumber
-            }).ToListAsync();
+            .Select(c => new CustomerBasicResponseDto(
+                c,
+                _authorizationService.GetCustomerAuthorization(c)))
+            .ToListAsync();
 
         return responseDto;
     }
@@ -97,15 +95,10 @@ public class CustomerService : ICustomerService
     {
         return await _context.Customers
             .Where(c => c.Id == id)
-            .Select(c => new CustomerBasicResponseDto
-            {
-                Id = c.Id,
-                FullName = c.FullName,
-                NickName = c.NickName,
-                Gender = c.Gender,
-                Birthday = c.Birthday,
-                PhoneNumber = c.PhoneNumber
-            }).SingleOrDefaultAsync()
+            .Select(c => new CustomerBasicResponseDto(
+                c,
+                _authorizationService.GetCustomerAuthorization(c)))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Customer),
                 nameof(id),
@@ -125,35 +118,10 @@ public class CustomerService : ICustomerService
         return await _context.Customers
             .Include(c => c.Introducer)
             .Where(c => !c.IsDeleted && c.Id == id)
-            .Select(c => new CustomerDetailResponseDto
-            {
-                Id = c.Id,
-                FirstName = c.FirstName,
-                MiddleName = c.MiddleName,
-                LastName = c.LastName,
-                FullName = c.FullName,
-                NickName = c.NickName,
-                Gender = c.Gender,
-                Birthday = c.Birthday,
-                PhoneNumber = c.PhoneNumber,
-                ZaloNumber = c.ZaloNumber,
-                FacebookUrl = c.FacebookUrl,
-                Email = c.Email,
-                Address = c.Address,
-                Note = c.Note,
-                CreatedDateTime = c.CreatedDateTime,
-                UpdatedDateTime = c.UpdatedDateTime,
-                Introducer = c.Introducer != null
-                    ? new CustomerBasicResponseDto
-                    {
-                        Id = c.Introducer.Id,
-                        FullName = c.Introducer.FullName,
-                        NickName = c.Introducer.NickName,
-                        Gender = c.Introducer.Gender,
-                        Birthday = c.Introducer.Birthday,
-                        PhoneNumber = c.Introducer.PhoneNumber
-                    } : null
-            }).SingleOrDefaultAsync()
+            .Select(c => new CustomerDetailResponseDto(
+                c,
+                _authorizationService.GetCustomerAuthorization(c)))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Customer),
                 nameof(id),

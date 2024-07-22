@@ -75,23 +75,10 @@ public class DebtPaymentService : IDebtPaymentService
         }
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
-            .Select(dp => new DebtPaymentBasicResponseDto
-            {
-                Id = dp.Id,
-                Amount = dp.Amount,
-                Note = dp.Note,
-                IsClosed = dp.IsClosed,
-                Customer = new CustomerBasicResponseDto
-                {
-                    Id = dp.Customer.Id,
-                    FullName = dp.Customer.FullName,
-                    NickName = dp.Customer.NickName,
-                    Gender = dp.Customer.Gender,
-                    Birthday = dp.Customer.Birthday,
-                    PhoneNumber = dp.Customer.PhoneNumber
-                },
-                Authorization = _authorizationService.GetDebtPaymentAuthorization(dp)
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Select(dp => new DebtPaymentBasicResponseDto(
+                dp,
+                _authorizationService.GetDebtPaymentAuthorization(dp)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .AsSplitQuery()
             .ToListAsync();
@@ -104,49 +91,16 @@ public class DebtPaymentService : IDebtPaymentService
     {
         return await _context.DebtPayments
             .Include(d => d.Customer)
-            .Include(d => d.User).ThenInclude(u => u.Role)
+            .Include(d => d.CreatedUser).ThenInclude(u => u.Role)
             .Where(d => d.Id == id && !d.IsDeleted)
-            .Select(d => new DebtPaymentDetailResponseDto
-            {
-                Id = d.Id,
-                Amount = d.Amount,
-                Note = d.Note,
-                PaidDateTime = d.PaidDateTime,
-                IsClosed = d.IsClosed,
-                Customer = new CustomerBasicResponseDto
-                {
-                    Id = d.Customer.Id,
-                    FullName = d.Customer.FullName,
-                    NickName = d.Customer.NickName,
-                    Gender = d.Customer.Gender,
-                    Birthday = d.Customer.Birthday,
-                    PhoneNumber = d.Customer.PhoneNumber
-                },
-                User = new UserBasicResponseDto
-                {
-                    Id = d.User.Id,
-                    UserName = d.User.UserName,
-                    FirstName = d.User.FirstName,
-                    MiddleName = d.User.MiddleName,
-                    LastName = d.User.LastName,
-                    FullName = d.User.FullName,
-                    Gender = d.User.Gender,
-                    Birthday = d.User.Birthday,
-                    JoiningDate = d.User.JoiningDate,
-                    AvatarUrl = d.User.AvatarUrl,
-                    Role = new RoleBasicResponseDto
-                    {
-                        Id = d.User.Role.Id,
-                        Name = d.User.Role.Name,
-                        DisplayName = d.User.Role.DisplayName,
-                        PowerLevel = d.User.Role.PowerLevel
-                    }
-                }
-            }).SingleOrDefaultAsync()
+            .Select(d => new DebtPaymentDetailResponseDto(
+                d,
+                _authorizationService.GetDebtPaymentAuthorization(d)))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(DebtPayment),
                 nameof(id),
-                id.ToString());;
+                id.ToString());
     }
 
     /// <inheritdoc />
@@ -202,7 +156,7 @@ public class DebtPaymentService : IDebtPaymentService
             Note = requestDto.Note,
             PaidDateTime = paidDateTime,
             CustomerId = requestDto.CustomerId,
-            UserId = _authorizationService.GetUserId()
+            CreatedUserId = _authorizationService.GetUserId()
         };
         _context.DebtPayments.Add(debtPayment);
         
@@ -228,7 +182,7 @@ public class DebtPaymentService : IDebtPaymentService
         catch (DbUpdateException exception)
         when (exception.InnerException is MySqlException sqlException)
         {
-            HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debtPayment.UserId);
+            HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debtPayment.CreatedUserId);
             throw;
         }
     }
@@ -239,7 +193,7 @@ public class DebtPaymentService : IDebtPaymentService
         // Fetch and ensure the entity with the given id exists in the database.
         DebtPayment debtPayment = await _context.DebtPayments
             .Include(d => d.Customer).ThenInclude(c => c.Debts)
-            .Include(d => d.User)
+            .Include(d => d.CreatedUser)
             .SingleOrDefaultAsync(d => d.Id == id && !d.IsDeleted)
             ?? throw new ResourceNotFoundException(nameof(Debt), nameof(id), id.ToString());
         
@@ -338,7 +292,7 @@ public class DebtPaymentService : IDebtPaymentService
             // Handling data exception.
             if (exception.InnerException is MySqlException sqlException)
             {
-                HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debtPayment.UserId);
+                HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debtPayment.CreatedUserId);
             }
             
             throw;

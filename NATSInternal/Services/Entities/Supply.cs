@@ -32,9 +32,9 @@ public class Supply
     public bool IsDeleted { get; set; }
 
     // Foreign keys
-    [Column("user_id")]
+    [Column("created_user_id")]
     [Required]
-    public int UserId { get; set; }
+    public int CreatedUserId { get; set; }
 
     // Concurrency operation tracking field
     [Column("row_version")]
@@ -42,10 +42,10 @@ public class Supply
     public byte[] RowVersion { get; set; }
 
     // Relationships
-    public virtual User User { get; set; }
+    public virtual User CreatedUser { get; set; }
     public virtual List<SupplyItem> Items { get; set; }
     public virtual List<SupplyPhoto> Photos { get; set; }
-    public virtual List<SupplyUpdateHistories> UpdateHistories { get; set; }
+    public virtual List<SupplyUpdateHistory> UpdateHistories { get; set; }
 
     // Properties for convinience.
     [NotMapped]
@@ -60,4 +60,22 @@ public class Supply
         .Select(uh => uh.UpdatedDateTime)
         .Cast<DateTime?>()
         .FirstOrDefault();
+
+    [NotMapped]
+    public string FirstPhotoUrl => Photos
+        .OrderBy(p => p.Id)
+        .Select(p => p.Url)
+        .FirstOrDefault();
+
+    [NotMapped]
+    public DateTime? LastUpdatedDateTime => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.UpdatedDateTime)
+        .LastOrDefault();
+
+    [NotMapped]
+    public User LastUpdatedUser => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.User)
+        .LastOrDefault();
 }

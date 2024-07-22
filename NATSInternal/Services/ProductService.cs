@@ -5,11 +5,16 @@ public class ProductService : IProductService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public ProductService(DatabaseContext context, IPhotoService photoService)
+    public ProductService(
+            DatabaseContext context,
+            IPhotoService photoService,
+            IAuthorizationService authorizationService)
     {
         _context = context;
         _photoService = photoService;
+        _authorizationService = authorizationService;
     }
 
     /// <inheritdoc />
@@ -37,7 +42,10 @@ public class ProductService : IProductService
             query = query.Where(p => p.Name.ToLower().Contains(productNonDiacriticsName.ToLower()));
         }
 
-        ProductListResponseDto responseDto = new ProductListResponseDto();
+        ProductListResponseDto responseDto = new ProductListResponseDto
+        {
+            Authorization = _authorizationService.GetProductListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -46,15 +54,10 @@ public class ProductService : IProductService
         }
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
-            .Select(p => new ProductBasicResponseDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Unit = p.Unit,
-                Price = p.Price,
-                StockingQuantity = p.StockingQuantity,
-                ThumbnailUrl = p.ThumbnailUrl
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Select(p => new ProductBasicResponseDto(
+                p,
+                _authorizationService.GetProductAuthorization(p)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .ToListAsync();
 
@@ -68,31 +71,10 @@ public class ProductService : IProductService
             .Include(p => p.Brand)
             .Include(p => p.Category)
             .Where(p => p.Id == id)
-            .Select(p => new ProductDetailResponseDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Description = p.Description,
-                Unit = p.Unit,
-                Price = p.Price,
-                VatFactor = p.VatFactor,
-                StockingQuantity = p.StockingQuantity,
-                IsForRetail = p.IsForRetail,
-                IsDiscontinued = p.IsDiscontinued,
-                CreatedDateTime = p.CreatedDateTime,
-                UpdatedDateTime = p.UpdatedDateTime,
-                ThumbnailUrl = p.ThumbnailUrl,
-                Category = p.Category == null ? null : new ProductCategoryResponseDto
-                {
-                    Id = p.Category.Id,
-                    Name = p.Category.Name
-                },
-                Brand = p.Brand == null ? null : new BrandBasicResponseDto
-                {
-                    Id = p.Brand.Id,
-                    Name = p.Brand.Name
-                }
-            }).SingleOrDefaultAsync()
+            .Select(p => new ProductDetailResponseDto(
+                p,
+                _authorizationService.GetProductAuthorization(p)))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Product),
                 nameof(id),

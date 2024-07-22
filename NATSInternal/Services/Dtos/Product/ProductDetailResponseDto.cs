@@ -16,4 +16,32 @@ public class ProductDetailResponseDto
     public string ThumbnailUrl { get; set; }
     public ProductCategoryResponseDto Category { get; set; }
     public BrandBasicResponseDto Brand { get; set; }
+
+    public ProductDetailResponseDto(
+            Product product,
+            ProductAuthorizationResponseDto authorization)
+    {
+        Id = product.Id;
+        Name = product.Name;
+        Description = product.Description;
+        Unit = product.Unit;
+        Price = product.Price;
+        VatFactor = product.VatFactor;
+        StockingQuantity = product.StockingQuantity;
+        IsForRetail = product.IsForRetail;
+        IsDiscontinued = product.IsDiscontinued;
+        CreatedDateTime = product.CreatedDateTime;
+        UpdatedDateTime = product.UpdatedDateTime;
+        ThumbnailUrl = product.ThumbnailUrl;
+        
+        if (product.Category != null)
+        {
+            Category = new ProductCategoryResponseDto(product.Category);
+        }
+
+        if (product.Brand != null)
+        {
+            Brand = new BrandBasicResponseDto(product.Brand);
+        }
+    }
 }

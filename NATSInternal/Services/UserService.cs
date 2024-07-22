@@ -34,8 +34,6 @@ public class UserService : IUserService
     /// <returns>An object containing the results and page count (for pagination calculation).</returns>
     public async Task<UserListResponseDto> GetListAsync(UserListRequestDto requestDto)
     {
-        UserListResponseDto responseDto = new UserListResponseDto();
-
         // Initialize query.
         IQueryable<User> query = _context.Users
             .Include(u => u.Roles)
@@ -97,6 +95,11 @@ public class UserService : IUserService
                         StringComparison.CurrentCultureIgnoreCase));
         }
 
+        // Initialize response dto.
+        UserListResponseDto responseDto = new UserListResponseDto
+        {
+            Authorization = _authorizationService.GetUserListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -107,27 +110,10 @@ public class UserService : IUserService
         responseDto.Results = await query
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
-            .Select(u => new UserBasicResponseDto
-            {
-                Id = u.Id,
-                UserName = u.UserName,
-                FirstName = u.FirstName,
-                MiddleName = u.MiddleName,
-                LastName = u.LastName,
-                FullName = u.FullName,
-                Gender = u.Gender,
-                Birthday = u.Birthday,
-                JoiningDate = u.JoiningDate,
-                AvatarUrl = u.AvatarUrl,
-                Role = new RoleBasicResponseDto
-                {
-                    Id = u.Role.Id,
-                    Name = u.Role.Name,
-                    DisplayName = u.Role.DisplayName
-                },
-                Authorization = _authorizationService.GetUserBasicAuthorization(u)
-            }).ToListAsync();
-        responseDto.Authorization = _authorizationService.GetUserAuthorization();
+            .Select(u => new UserBasicResponseDto(
+                u,
+                _authorizationService.GetUserBasicAuthorization(u)))
+            .ToListAsync();
 
         return responseDto;
     }

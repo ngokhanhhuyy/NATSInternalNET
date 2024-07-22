@@ -12,4 +12,22 @@ public class BrandDetailResponseDto
     public string ThumbnailUrl { get; set; }
     public CountryResponseDto Country { get; set; }
     public BrandAuthorizationResponseDto Authorization { get; set; }
+
+    public BrandDetailResponseDto(Brand brand, BrandAuthorizationResponseDto authorization)
+    {
+        Id = brand.Id;
+        Name = brand.Name;
+        Website = brand.Website;
+        SocialMediaUrl = brand.SocialMediaUrl;
+        PhoneNumber = brand.PhoneNumber;
+        Email = brand.Email;
+        Address = brand.Address;
+        ThumbnailUrl = brand.ThumbnailUrl;
+        Authorization = authorization;
+
+        if (brand.Country != null)
+        {
+            Country = new CountryResponseDto(brand.Country);
+        }
+    }
 }

@@ -33,14 +33,16 @@ public class StatsService : IStatsService
                 : requestDto.RecordedYear;
         }
 
-        MonthlyStats stats = await _context.MonthlyStats
+        return await _context.MonthlyStats
             .Include(ms => ms.DailyStats)
-            .SingleOrDefaultAsync(ms => ms.RecordedYear == recordedYear && ms.RecordedMonth == recordedMonth)
+            .Where(ms => ms.RecordedYear == recordedYear)
+            .Where(ms => ms.RecordedMonth == recordedMonth)
+            .Select(ms => new MonthlyStatsDetailResponseDto(ms))
+            .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(MonthlyStats),
                 nameof(DisplayNames.RecordedMonthAndYear),
                 $"Tháng {recordedMonth} năm {recordedYear}");
-        return ConvertToMonthlyDetailResponseDto(stats);
     }
 
     /// <inheritdoc />
@@ -50,7 +52,7 @@ public class StatsService : IStatsService
         DateOnly date = recordedDate ?? DateOnly.FromDateTime(currentDateTime);
         return await _context.DailyStats
             .Where(d => d.RecordedDate == date)
-            .Select(d => ConvertToDailyDetailResponseDto(d))
+            .Select(d => new DailyStatsDetailResponseDto(d))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(DailyStats),
@@ -251,122 +253,5 @@ public class StatsService : IStatsService
         }
 
         return dailyStats;
-    }
-
-    /// <summary>
-    /// Convert a daily stats entity into a basic response dto object.
-    /// </summary>
-    /// <param name="stats">A DailyStats entity.</param>
-    /// <returns>A <c>DailyStatsDetailResponseDto</c> object.</returns>
-    private static DailyStatsBasicResponseDto ConvertToDailyBasicResponseDto(DailyStats stats)
-    {
-        return new DailyStatsBasicResponseDto
-        {
-            Cost = stats.Cost,
-            Expenses = stats.Expenses,
-            GrossRevenue = stats.GrossRevenue,
-            NetRevenue = stats.NetRevenue,
-            NetProfit = stats.NetProfit,
-            RecordedDate = stats.RecordedDate,
-            IsTemporarilyClosed = stats.IsTemporarilyClosed,
-            IsOfficiallyClosed = stats.IsOfficiallyClosed,
-        };
-    }
-
-    /// <summary>
-    /// Convert a daily stats entity into a detail response dto object.
-    /// </summary>
-    /// <param name="stats">A DailyStats entity.</param>
-    /// <returns>A <c>DailyStatsDetailResponseDto</c> object.</returns>
-    private static DailyStatsDetailResponseDto ConvertToDailyDetailResponseDto(DailyStats stats)
-    {
-        return new DailyStatsDetailResponseDto
-        {
-            RetailGrossRevenue = stats.RetailGrossRevenue,
-            TreatmentGrossRevenue = stats.TreatmentGrossRevenue,
-            ConsultantGrossRevenue = stats.ConsultantGrossRevenue,
-            VatCollectedAmount = stats.VatCollectedAmount,
-            DebtAmount = stats.DebtAmount,
-            DebtPaidAmount = stats.DebtPaidAmount,
-            ShipmentCost = stats.ShipmentCost,
-            SupplyCost = stats.SupplyCost,
-            UtilitiesExpenses = stats.UtilitiesExpenses,
-            EquipmentExpenses = stats.EquipmentExpenses,
-            OfficeExpense = stats.EquipmentExpenses,
-            StaffExpense = stats.StaffExpense,
-            Cost = stats.Cost,
-            Expenses = stats.Expenses,
-            GrossRevenue = stats.GrossRevenue,
-            NetRevenue = stats.NetRevenue,
-            RemainingDebtAmount = stats.RemainingDebtAmount,
-            GrossProfit = stats.GrossProfit,
-            NetProfit = stats.NetProfit,
-            OperatingProfit = stats.OperatingProfit,
-            RecordedDate = stats.RecordedDate,
-            TemporarilyClosedDateTime = stats.TemporarilyClosedDateTime,
-            OfficiallyClosedDateTime = stats.OfficiallyClosedDateTime,
-        };
-    }
-
-    /// <summary>
-    /// Convert a monthly stats entity into a basic response dto object.
-    /// </summary>
-    /// <param name="stats">A MonthlyStats entity.</param>
-    /// <returns>A <c>MonthlyStatsDetailResponseDto</c> object.</returns>
-    private static MonthlyStatsBasicResponseDto ConvertToMonthlyBasicResponseDto(MonthlyStats stats)
-    {
-        return new MonthlyStatsBasicResponseDto
-        {
-            Cost = stats.Cost,
-            Expenses = stats.Expenses,
-            GrossRevenue = stats.GrossRevenue,
-            NetRevenue = stats.NetRevenue,
-            NetProfit = stats.NetProfit,
-            RecordedMonth = stats.RecordedMonth,
-            RecordedYear = stats.RecordedYear,
-            IsTemporarilyClosed = stats.IsTemporarilyClosed,
-            IsOfficiallyClosed = stats.IsOfficiallyClosed,
-        };
-    }
-
-    /// <summary>
-    /// Convert a monthly stats entity into a detail response dto object.
-    /// </summary>
-    /// <param name="stats">A MonthlyStats entity.</param>
-    /// <returns>A <c>MonthlyStatsDetailResponseDto</c> object.</returns>
-    private static MonthlyStatsDetailResponseDto ConvertToMonthlyDetailResponseDto(MonthlyStats stats)
-    {
-        DateOnly currentDate = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime());
-        return new MonthlyStatsDetailResponseDto
-        {
-            RetailGrossRevenue = stats.RetailGrossRevenue,
-            TreatmentGrossRevenue = stats.TreatmentGrossRevenue,
-            ConsultantGrossRevenue = stats.ConsultantGrossRevenue,
-            VatCollectedAmount = stats.VatCollectedAmount,
-            DebtAmount = stats.DebtAmount,
-            DebtPaidAmount = stats.DebtPaidAmount,
-            ShipmentCost = stats.ShipmentCost,
-            SupplyCost = stats.SupplyCost,
-            UtilitiesExpenses = stats.UtilitiesExpenses,
-            EquipmentExpenses = stats.EquipmentExpenses,
-            OfficeExpense = stats.EquipmentExpenses,
-            StaffExpense = stats.StaffExpense,
-            Cost = stats.Cost,
-            Expenses = stats.Expenses,
-            GrossRevenue = stats.GrossRevenue,
-            NetRevenue = stats.NetRevenue,
-            RemainingDebtAmount = stats.RemainingDebtAmount,
-            GrossProfit = stats.GrossProfit,
-            NetProfit = stats.NetProfit,
-            OperatingProfit = stats.OperatingProfit,
-            RecordedMonth = stats.RecordedMonth,
-            RecordedYear = stats.RecordedYear,
-            TemporarilyClosedDateTime = stats.TemporarilyClosedDateTime,
-            OfficiallyClosedDateTime = stats.OfficiallyClosedDateTime,
-            DailyStats = stats.DailyStats
-                .Where(ds => ds.RecordedDate <= currentDate)
-                .Select(ds => ConvertToDailyBasicResponseDto(ds))
-                .ToList()
-        };
     }
 }

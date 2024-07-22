@@ -11,4 +11,17 @@ public class UserPersonalInformationResponseDto
     public string PhoneNumber { get; set; }
     public string Email { get; set; }
     public string AvatarUrl { get; set; }
+
+    public UserPersonalInformationResponseDto(User user)
+    {
+        FirstName = user.FirstName;
+        MiddleName = user.MiddleName;
+        LastName = user.LastName;
+        FullName = user.FullName;
+        Gender = user.Gender;
+        Birthday = user.Birthday;
+        PhoneNumber = user.PhoneNumber;
+        Email = user.Email;
+        AvatarUrl = user.AvatarUrl;
+    }
 }

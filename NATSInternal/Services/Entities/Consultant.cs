@@ -15,6 +15,10 @@ public class Consultant
     [StringLength(255)]
     public string Note { get; set; }
 
+    [Column("created_datetime")]
+    [Required]
+    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
+
     [Column("paid_datetime")]
     [Required]
     public DateTime PaidDateTime { get; set; }
@@ -32,14 +36,25 @@ public class Consultant
     [Required]
     public int CustomerId { get; set; }
 
-    [Column("user_id")]
+    [Column("created_user_id")]
     [Required]
-    public int UserId { get; set; }
+    public int CreatedUserId { get; set; }
 
     // Navigation properties.
-    [NotMapped]
     public virtual Customer Customer { get; set; }
+    public virtual User CreatedUser { get; set; }
+    public virtual List<ConsultantUpdateHistory> UpdateHistories { get; set; }
+
+    // Properties for convinience.
+    [NotMapped]
+    public DateTime? LastUpdatedDateTime => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.UpdatedDateTime)
+        .LastOrDefault();
 
     [NotMapped]
-    public virtual User User { get; set; }
+    public User LastUpdatedUser => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.User)
+        .LastOrDefault();
 }

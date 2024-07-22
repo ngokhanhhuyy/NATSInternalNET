@@ -79,13 +79,20 @@ public class User : IdentityUser<int>
     public virtual List<UserRefreshToken> RefreshTokens { get; set; }
     public virtual List<Customer> CreatedCustomers { get; set; }
     public virtual List<Supply> Supplies { get; set; }
+    public virtual List<SupplyUpdateHistory> SupplyUpdateHistories { get; set; }
     public virtual List<Order> Orders { get; set; }
-    public virtual List<Treatment> Treatments { get; set; }
-    public virtual List<TreatmentSession> TreatmentSessions { get; set; }
+    public virtual List<OrderUpdateHistory> OrderUpdateHistories { get; set; }
+    public virtual List<Treatment> CreatedTreatments { get; set; }
+    public virtual List<Treatment> TreatmentsInCharge { get; set; }
+    public virtual List<TreatmentUpdateHistory> TreatmentUpdateHistories { get; set; }
     public virtual List<Consultant> Consultants { get; set; }
+    public virtual List<ConsultantUpdateHistory> ConsultantUpdateHistories { get; set; }
     public virtual List<Expense> Expenses { get; set; }
+    public virtual List<ExpenseUpdateHistory> ExpenseUpdateHistories { get; set; }
     public virtual List<Debt> Debts { get; set; }
+    public virtual List<DebtUpdateHistory> DebtUpdateHistories { get; set; }
     public virtual List<DebtPayment> DebtPayments { get; set; }
+    public virtual List<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
     public virtual List<Announcement> Announcements { get; set; }
 
     // Properties for convinience.
@@ -94,6 +101,26 @@ public class User : IdentityUser<int>
 
     [NotMapped]
     public int PowerLevel => Role.PowerLevel;
+
+    [NotMapped]
+    public List<Supply> UpdatedSupplies => SupplyUpdateHistories.Select(suh => suh.Supply).ToList();
+
+    [NotMapped]
+    public List<Expense> UpdatedExpenses => ExpenseUpdateHistories.Select(euh => euh.Expense).ToList();
+
+    [NotMapped]
+    public List<Order> UpdatedOrders => OrderUpdateHistories.Select(ouh => ouh.Order).ToList();
+
+    [NotMapped]
+    public List<Treatment> UpdatedTreatments => TreatmentUpdateHistories.Select(tuh => tuh.Treatment).ToList();
+
+    [NotMapped]
+    public List<Debt> UpdatedDebts => DebtUpdateHistories.Select(duh => duh.Debt).ToList();
+
+    [NotMapped]
+    public List<DebtPayment> UpdatedDebtPayments => DebtPaymentUpdateHistories
+        .Select(dpuh => dpuh.DebtPayment)
+        .ToList();
 
     public bool HasPermission(string permissionName)
     {

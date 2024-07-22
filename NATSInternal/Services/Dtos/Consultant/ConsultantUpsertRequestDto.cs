@@ -7,6 +7,7 @@ public class ConsultantUpsertRequestDto : IRequestDto<ConsultantUpsertRequestDto
     public DateTime? PaidDateTime { get; set; }
     public int CustomerId { get; set; }
     public CustomerUpsertRequestDto Customer { get; set; }
+    public string UpdatingReason { get; set; }
 
     public ConsultantUpsertRequestDto TransformValues()
     {

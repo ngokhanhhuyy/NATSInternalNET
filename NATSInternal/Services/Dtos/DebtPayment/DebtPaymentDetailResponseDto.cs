@@ -9,4 +9,19 @@ public class DebtPaymentDetailResponseDto
     public bool IsClosed { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public UserBasicResponseDto User { get; set; }
+    public DebtPaymentAuthorizationResponseDto Authorization { get; set; }
+
+    public DebtPaymentDetailResponseDto(
+            DebtPayment payment,
+            DebtPaymentAuthorizationResponseDto authorization)
+    {
+        Id = payment.Id;
+        Amount = payment.Amount;
+        Note = payment.Note;
+        PaidDateTime = payment.PaidDateTime;
+        IsClosed = payment.IsClosed;
+        Customer = new CustomerBasicResponseDto(payment.Customer);
+        User = new UserBasicResponseDto(payment.CreatedUser);
+        Authorization = authorization;
+    }
 }

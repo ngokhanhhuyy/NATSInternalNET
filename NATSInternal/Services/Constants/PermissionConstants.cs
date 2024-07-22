@@ -42,6 +42,7 @@ public static class PermissionConstants
     public const string EditSupply = "EditSupply";
     public const string EditClosedSupply = "EditClosedSupply";
     public const string DeleteSupply = "DeleteSupply";
+    public const string SetSupplySuppliedDateTime = "SetSupplySuppliedDateTime";
 
     // Permissions to interact with supply items.
     public const string EditSupplyItem = "EditSupplyItem";
@@ -64,6 +65,13 @@ public static class PermissionConstants
     public const string EditClosedOrder = "EditClosedOrder";
     public const string SetOrderOrderedDateTime = "SetOrderOrderedDateTime";
     public const string DeleteOrder = "DeleteOrder";
+    
+    // Permissions to interact with treatments.
+    public const string CreateTreatment = "CreateTreatment";
+    public const string EditTreatment = "EditTreatment";
+    public const string EditClosedTreatment = "EditClosedTreatment";
+    public const string DeleteTreatment = "DeleteTreatment";
+    public const string SetTreatmentOrderedDateTime = "SetTreatmentOrderedDateTime";
 
     // Permissions to interact with debts.
     public const string CreateDebt = "CreateDebt";

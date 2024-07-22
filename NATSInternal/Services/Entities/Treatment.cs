@@ -15,16 +15,13 @@ public class Treatment
     [Required]
     public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
-    [Column("updated_datetime")]
-    public DateTime? UpdatedDateTime { get; set; }
-
     [Column("service_amount")]
     [Required]
     public long ServiceAmount { get; set; } = 0;
 
-    [Column("vat_factor")]
+    [Column("service_vat_factor")]
     [Required]
-    public decimal VatFactor { get; set; } = 0.1M;
+    public decimal ServiceVatFactor { get; set; } = 0.1M;
 
     [Column("note")]
     [StringLength(255)]
@@ -39,8 +36,13 @@ public class Treatment
     public bool IsDeleted { get; set; } = false;
 
     // Foreign keys
-    [Column("user_id")]
-    public int UserId { get; set; }
+    [Column("created_user_id")]
+    [Required]
+    public int CreatedUserId { get; set; }
+
+    [Column("therapist_id")]
+    [Required]
+    public int TherapistId { get; set; }
     
     [Column("customer_id")]
     public int CustomerId { get; set; }
@@ -50,10 +52,12 @@ public class Treatment
     public byte[] RowVersion { get; set; }
 
     // Navigation properties
-    public virtual User User { get; set; }
+    public virtual User CreatedUser { get; set; }
+    public virtual User Therapist { get; set; }
     public virtual Customer Customer { get; set; }
-    public virtual List<TreatmentSession> Sessions { get; set; }
+    public virtual List<TreatmentItem> Items { get; set; }
     public virtual List<TreatmentPhoto> Photos { get; set; }
+    public virtual List<TreatmentUpdateHistory> UpdateHistories { get; set; }
 
     // Properties for convinience
     [NotMapped]
@@ -69,5 +73,20 @@ public class Treatment
         .ToList();
 
     [NotMapped]
-    public long Amount => Sessions.Sum(ts => ts.Amount);
+    public long ProductAmount => Items.Sum(ts => ts.Amount + ts.Amount * ts.Quantity);
+
+    [NotMapped]
+    public long ProductVatAmount => Items.Sum(ts => (long)Math.Round(ts.Amount * ts.VatFactor * ts.Quantity));
+
+    [NotMapped]
+    public long Amount => ProductAmount + ServiceAmount;
+
+    [NotMapped]
+    public long VatAmount => (long)Math.Round(ProductVatAmount + (ServiceAmount * ServiceVatFactor));
+
+    [NotMapped]
+    public DateTime? LastUpdatedDateTime => UpdateHistories.Select(uh => uh.UpdatedDateTime).FirstOrDefault();
+
+    [NotMapped]
+    public User LastUpdatedUser => UpdateHistories.Select(uh => uh.User).FirstOrDefault();
 }

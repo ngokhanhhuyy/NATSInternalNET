@@ -1,4 +1,6 @@
-﻿namespace NATSInternal.Services;
+﻿using NATSInternal.Services.Dtos;
+
+namespace NATSInternal.Services;
 
 public class AuthorizationService : IAuthorizationService
 {
@@ -64,7 +66,7 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Authorization for users.
-    public UserAuthorizationResponseDto GetUserAuthorization()
+    public UserListAuthorizationResponseDto GetUserListAuthorization()
     {
         return new()
         {
@@ -101,14 +103,57 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
+    // Authorization for customers.
+    public CustomerListAuthorizationResponseDto GetCustomerListAuthorization()
+    {
+        return new CustomerListAuthorizationResponseDto
+        {
+            CanCreate = _user.HasPermission(PermissionConstants.CreateCustomer)
+        };
+    }
+
+    public CustomerAuthorizationResponseDto GetCustomerAuthorization(Customer customer)
+    {
+        return new CustomerAuthorizationResponseDto
+        {
+            CanEdit = _user.HasPermission(PermissionConstants.EditCustomer),
+            CanDelete = _user.HasPermission(PermissionConstants.DeleteCustomer)
+        };
+    }
+
     // Authorization for brands.
+    public BrandListAuthorizationResponseDto GetBrandListAuthorization()
+    {
+        return new BrandListAuthorizationResponseDto
+        {
+            CanCreate = _user.HasPermission(PermissionConstants.CreateBrand)
+        };
+    }
+
     public BrandAuthorizationResponseDto GetBrandAuthorization()
     {
         return new()
         {
-            CanCreate = _user.HasPermission(PermissionConstants.CreateBrand),
             CanEdit = _user.HasPermission(PermissionConstants.EditBrand),
             CanDelete = _user.HasPermission(PermissionConstants.DeleteBrand)
+        };
+    }
+
+    // Authorization for products.
+    public ProductListAuthorizationResponseDto GetProductListAuthorization()
+    {
+        return new ProductListAuthorizationResponseDto
+        {
+            CanCreate = _user.HasPermission(PermissionConstants.CreateProduct)
+        };
+    }
+
+    public ProductAuthorizationResponseDto GetProductAuthorization(Product product)
+    {
+        return new ProductAuthorizationResponseDto
+        {
+            CanEdit = _user.HasPermission(PermissionConstants.EditProduct),
+            CanDelete = _user.HasPermission(PermissionConstants.DeleteProduct)
         };
     }
 
@@ -124,7 +169,15 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Authorization for supplies.
-    public SupplyDetailAuthorizationResponseDto GetSupplyDetailAuthorization(Supply supply)
+    public SupplyListAuthorizationResponseDto GetSupplyListAuthorization()
+    {
+        return new SupplyListAuthorizationResponseDto
+        {
+            CanCreate = CanCreateSupply()
+        };
+    }
+
+    public SupplyAuthorizationResponseDto GetSupplyAuthorization(Supply supply)
     {
         return new()
         {
@@ -134,12 +187,21 @@ public class AuthorizationService : IAuthorizationService
     }
     
     // Authorization for expenses.
+    public ExpenseListAuthorizationResponseDto GetExpenseListAuthorization()
+    {
+        return new ExpenseListAuthorizationResponseDto
+        {
+            CanCreate = _user.HasPermission(PermissionConstants.CreateExpense)
+        };
+    }
+
     public ExpenseAuthorizationResponseDto GetExpenseAuthorization(Expense expense)
     {
         return new ExpenseAuthorizationResponseDto
         {
             CanEdit = CanEditExpense(expense),
-            CanDelete = CanDeleteExpense(expense)
+            CanDelete = CanDeleteExpense(expense),
+            CanSetPaidDateTime = CanSetExpensePaidDateTime()
         };
     }
 
@@ -148,7 +210,7 @@ public class AuthorizationService : IAuthorizationService
     {
         return new OrderListAuthorizationResponseDto
         {
-            CanCreate = _user.HasPermission(PermissionConstants.CreateOrder)
+            CanCreate = CanCreateOrder()
         };
     }
 
@@ -158,6 +220,25 @@ public class AuthorizationService : IAuthorizationService
         {
             CanEdit = CanEditOrder(order),
             CanDelete = CanDeleteOrder(order)
+        };
+    }
+    
+    // Authorization for treatments.
+    public TreatmentListAuthorizationResponseDto GetTreatmentListAuthorization()
+    {
+        return new TreatmentListAuthorizationResponseDto
+        {
+            CanCreate = CanCreateTreatment()
+        };
+    }
+    
+    public TreatmentAuthorizationResponseDto GetTreatmentAuthorization(Treatment treatment)
+    {
+        return new TreatmentAuthorizationResponseDto
+        {
+            CanEdit = CanEditTreatment(treatment),
+            CanDelete = CanDeleteTreatment(),
+            CanSetOrderedDateTime = CanSetTreatmentOrderedDateTime()
         };
     }
 
@@ -302,6 +383,11 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Permissions to interact with supplies.
+    public bool CanCreateSupply()
+    {
+        return _user.HasPermission(PermissionConstants.CreateSupply);
+    }
+
     public bool CanEditSupply(Supply supply)
     {
         if (!_user.HasPermission(PermissionConstants.EditSupply))
@@ -330,6 +416,11 @@ public class AuthorizationService : IAuthorizationService
         }
 
         return true;
+    }
+
+    public bool CanSetSupplySuppliedDateTime()
+    {
+        return _user.HasPermission(PermissionConstants.SetSupplySuppliedDateTime);
     }
 
     public bool CanEditSupplyItems()
@@ -397,6 +488,37 @@ public class AuthorizationService : IAuthorizationService
     public bool CanSetOrderOrderedDateTime()
     {
         return _user.HasPermission(PermissionConstants.SetOrderOrderedDateTime);
+    }
+    
+    // Permissions to interact with treatments.
+    public bool CanCreateTreatment()
+    {
+        return _user.HasPermission(PermissionConstants.CreateTreatment);
+    }
+    
+    public bool CanEditTreatment(Treatment treatment)
+    {
+        if (!_user.HasPermission(PermissionConstants.EditTreatment))
+        {
+            return false;
+        }
+        
+        if (treatment.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedTreatment))
+        {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public bool CanDeleteTreatment()
+    {
+        return _user.HasPermission(PermissionConstants.DeleteTreatment);
+    }
+
+    public bool CanSetTreatmentOrderedDateTime()
+    {
+        return _user.HasPermission(PermissionConstants.SetTreatmentOrderedDateTime);
     }
     
     // Permisisons to interact with debts.

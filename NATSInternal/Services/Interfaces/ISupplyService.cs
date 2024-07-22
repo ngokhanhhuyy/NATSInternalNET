@@ -1,5 +1,8 @@
 ﻿namespace NATSInternal.Services.Interfaces;
 
+/// <summary>
+/// A service to handle supplies.
+/// </summary>
 public interface ISupplyService
 {
     /// <summary>
@@ -38,7 +41,7 @@ public interface ISupplyService
     /// Delete the supply with given id.
     /// </summary>
     /// <param name="id">The id of the supply to be deleted.</param>
-    /// <exception cref="ResourceNotFoundException"></exception
+    /// <exception cref="ResourceNotFoundException"></exception>
     /// <exception cref="OperationException"></exception>
     Task DeleteAsync(int id);
 }

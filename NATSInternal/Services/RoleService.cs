@@ -14,13 +14,8 @@ public class RoleService : IRoleService
         RoleListResponseDto responseDto = new RoleListResponseDto
         {
             Items = await _context.Roles
-                .Select(r => new RoleBasicResponseDto
-                {
-                    Id = r.Id,
-                    Name = r.Name,
-                    DisplayName = r.DisplayName,
-                    PowerLevel = r.PowerLevel
-                }).ToListAsync()
+                .Select(r => new RoleBasicResponseDto(r))
+                .ToListAsync()
         };
 
         return responseDto;

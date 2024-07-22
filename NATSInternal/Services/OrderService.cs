@@ -26,7 +26,7 @@ public class OrderService : IOrderService
         // Initialize query.
         IQueryable<Order> query = _context.Orders
             .Include(o => o.Customer)
-            .Include(o => o.User).ThenInclude(u => u.Roles)
+            .Include(o => o.CreatedUser).ThenInclude(u => u.Roles)
             .Include(o => o.Items)
             .Include(o => o.Photos);
             
@@ -69,7 +69,10 @@ public class OrderService : IOrderService
         query = query.Where(o => !o.IsDeleted);
             
         // Initialize response dto.
-        OrderListResponseDto responseDto = new OrderListResponseDto();
+        OrderListResponseDto responseDto = new OrderListResponseDto
+        {
+            Authorization = _authorizationService.GetOrderListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -78,27 +81,14 @@ public class OrderService : IOrderService
         }
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
-            .Select(o => new OrderBasicResponseDto
-            {
-                Id = o.Id,
-                OrderedDateTime = o.OrderedDateTime,
-                Amount = o.ItemAmount,
-                IsClosed = o.IsClosed,
-                Customer = new CustomerBasicResponseDto
-                {
-                    Id = o.Customer.Id,
-                    FullName = o.Customer.FullName,
-                    NickName = o.Customer.NickName,
-                    Gender = o.Customer.Gender,
-                    Birthday = o.Customer.Birthday,
-                    PhoneNumber = o.Customer.PhoneNumber
-                },
-                Authorization = _authorizationService.GetOrderAuthorization(o)
-            }).Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Select(o => new OrderBasicResponseDto(
+                o,
+                _authorizationService.GetOrderAuthorization(o)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
             .AsSplitQuery()
             .ToListAsync();
-        responseDto.Authorization = _authorizationService.GetOrderListAuthorization();
+        
         return responseDto;
     }
 
@@ -109,69 +99,12 @@ public class OrderService : IOrderService
             .Include(o => o.Items).ThenInclude(oi => oi.Product)
             .Include(o => o.Photos)
             .Include(o => o.Customer)
-            .Include(o => o.User)
+            .Include(o => o.CreatedUser)
             .Where(o => o.Id == id && !o.IsDeleted)
-            .Select(o => new OrderDetailResponseDto
-            {
-                Id = o.Id,
-                OrderedDateTime = o.OrderedDateTime,
-                Amount = o.ItemAmount,
-                Note = o.Note,
-                IsClosed = o.IsClosed,
-                Items = o.Items
-                    .Select(oi => new OrderItemResponseDto
-                    {
-                        Id = oi.Id,
-                        Amount = oi.Amount,
-                        VatFactor = oi.VatFactor,
-                        Quantity = oi.Quantity,
-                        Product = new ProductBasicResponseDto
-                        {
-                            Id = oi.Product.Id,
-                            Name = oi.Product.Name,
-                            Unit = oi.Product.Unit,
-                            Price = oi.Product.Price,
-                            StockingQuantity = oi.Product.StockingQuantity,
-                            ThumbnailUrl = oi.Product.ThumbnailUrl
-                        }
-                    }).ToList(),
-                Customer = new CustomerBasicResponseDto
-                {
-                    Id = o.Customer.Id,
-                    FullName = o.Customer.FullName,
-                    NickName = o.Customer.NickName,
-                    Gender = o.Customer.Gender,
-                    Birthday = o.Customer.Birthday,
-                    PhoneNumber = o.Customer.PhoneNumber
-                },
-                User = new UserBasicResponseDto
-                {
-                    Id = o.User.Id,
-                    UserName = o.User.UserName,
-                    FirstName = o.User.FirstName,
-                    MiddleName = o.User.MiddleName,
-                    LastName = o.User.LastName,
-                    FullName = o.User.FullName,
-                    Gender = o.User.Gender,
-                    Birthday = o.User.Birthday,
-                    JoiningDate = o.User.JoiningDate,
-                    AvatarUrl = o.User.AvatarUrl,
-                    Role = new RoleBasicResponseDto
-                    {
-                        Id = o.User.Role.Id,
-                        Name = o.User.Role.Name,
-                        DisplayName = o.User.Role.DisplayName,
-                        PowerLevel = o.User.Role.PowerLevel
-                    },
-                },
-                Photos = o.Photos
-                    .Select(op => new OrderPhotoResponseDto
-                    {
-                        Id = op.Id,
-                        Url = op.Url
-                    }).ToList(),
-                Authorization = _authorizationService.GetOrderAuthorization(o)
-            }).AsSplitQuery()
+            .Select(o => new OrderDetailResponseDto(
+                o,
+                _authorizationService.GetOrderAuthorization(o)))
+            .AsSplitQuery()
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(User),
@@ -199,9 +132,11 @@ public class OrderService : IOrderService
             // Check if that with the specified ordered datetime, the new order will not be closed.
             if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.OrderedDateTime.Value))
             {
+                DateTime minimumAllowedDateTime = _statsService
+                    .GetResourceMinimumOpenedDateTime();
                 string errorMessage = ErrorMessages.GreaterThanOrEqual
                     .ReplacePropertyName(DisplayNames.Order)
-                    .ReplaceComparisonValue(requestDto.OrderedDateTime.Value.ToVietnameseString());
+                    .ReplaceComparisonValue(minimumAllowedDateTime.ToVietnameseString());
                 throw new OperationException(nameof(requestDto.OrderedDateTime), errorMessage);
             }
 
@@ -215,7 +150,7 @@ public class OrderService : IOrderService
             OrderedDateTime = orderedDateTime,
             Note = requestDto.Note,
             CustomerId = requestDto.CustomerId,
-            UserId = _authorizationService.GetUserId(),
+            CreatedUserId = _authorizationService.GetUserId(),
             Items = new List<OrderItem>(),
             Photos = new List<OrderPhoto>()
         };
@@ -296,12 +231,15 @@ public class OrderService : IOrderService
     {
         // Fetch the entity from the database and ensure it exists.
         Order order = await _context.Orders
-            .Include(o => o.User)
+            .Include(o => o.CreatedUser)
             .Include(o => o.Customer)
             .Include(o => o.Items).ThenInclude(oi => oi.Product)
             .Include(o => o.Photos)
-            .SingleOrDefaultAsync(o => o.Id == id)
-            ?? throw new ResourceNotFoundException(nameof(Order), nameof(id), id.ToString());
+            .SingleOrDefaultAsync(o => o.Id == id && !o.IsDeleted)
+            ?? throw new ResourceNotFoundException(
+                nameof(Order),
+                nameof(id),
+                id.ToString());
 
         // Check if the current user has permission to edit this order.
         if (!_authorizationService.CanEditOrder(order))
@@ -314,7 +252,7 @@ public class OrderService : IOrderService
         await _statsService.IncrementRetailGrossRevenueAsync(-order.ItemAmount, oldOrderedDate);
         await _statsService.IncrementVatCollectedAmountAsync(-order.VatAmount, oldOrderedDate);
 
-        // Handle the new ordered datetime when the request specify it.
+        // Handle the new ordered datetime when the request specifies it.
         if (requestDto.OrderedDateTime.HasValue)
         {
             // Check if the current user has permission to specify a new ordered datetime.
@@ -353,7 +291,7 @@ public class OrderService : IOrderService
             urlsToBeDeletedWhenFails.AddRange(photoUpdateResults.Item2);
         }
 
-        // Save changes and catch errors.
+        // Save changes and handle errors.
         try
         {
             // Save all modifications.
@@ -408,8 +346,7 @@ public class OrderService : IOrderService
     {
         // Fetch the entity from the database and ensure it exists.
         Order order = await _context.Orders
-            .Where(o => !o.IsDeleted)
-            .SingleOrDefaultAsync(o => o.Id == id)
+            .SingleOrDefaultAsync(o => o.Id == id && !o.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(Order),
                 nameof(id),
@@ -453,9 +390,13 @@ public class OrderService : IOrderService
                     await _context.SaveChangesAsync();
 
                     // Order has been deleted successfully, adjust the stats.
+                    DateOnly orderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
                     await _statsService.IncrementRetailGrossRevenueAsync(
                         order.ItemAmount,
-                        DateOnly.FromDateTime(order.OrderedDateTime));
+                        orderedDate);
+                    await _statsService.IncrementVatCollectedAmountAsync(
+                        order.VatAmount,
+                        orderedDate);
 
                     // Commit the transaction and finishing the operations.
                     await transaction.CommitAsync();
@@ -492,8 +433,12 @@ public class OrderService : IOrderService
     /// Create order items associated to the given order with the data provided
     /// in the request. This method must only be called during the order creating operation.
     /// </summary>
-    /// <param name="order">The order which items are to be created.</param>
-    /// <param name="requestDtos">A list of objects containing the new data for the creating operation</param>
+    /// <param name="order">
+    /// The order which items are to be created.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the new data for the creating operation.
+    /// </param>
     private void CreateItems(Order order, List<OrderItemRequestDto> requestDtos)
     {
         foreach (OrderItemRequestDto itemRequestDto in requestDtos)
