@@ -255,7 +255,7 @@ public interface IStatsService
     Task TemporarilyCloseAsync(DateOnly date);
 
     /// <summary>
-    /// Verify the datetime of the resource to be created (OrderedDateTime, CreatedDateTime,
+    /// Verify the datetime of the resource to be created (PaidDateTime, PaidDateTime,
     /// PaidDateTime, ...). The datetime must be later than the minimum opened datetime so
     /// that the resource will not be considered
     /// as closed.
@@ -270,7 +270,7 @@ public interface IStatsService
 
     /// <summary>
     /// Verify the datetime of the resource to be updated, based on the original datetime of
-    /// the resource (OrderedDateTime, CreatedDateTime, PaidDateTime, ...). If the original datetime
+    /// the resource (PaidDateTime, PaidDateTime, PaidDateTime, ...). If the original datetime
     /// is earlier than the minimum opened datetime and considered closed, the new datetime must be
     /// also earler than the minimum opened datetime and vice versa. Both of them must be in the same
     /// status.

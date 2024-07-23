@@ -229,7 +229,7 @@ public class ConsultantService : IConsultantService
             // Prevent the consultant's PaidDateTime to be modified when the consultant is closed.
             if (consultant.IsClosed)
             {
-                string errorMessage = ErrorMessages.CannotSetDateTimeAfterClosed
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
                     .ReplaceResourceName(DisplayNames.Consultant)
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);

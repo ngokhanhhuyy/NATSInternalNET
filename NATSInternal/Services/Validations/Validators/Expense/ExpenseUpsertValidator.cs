@@ -4,6 +4,9 @@ public class ExpenseUpsertValidator : Validator<ExpenseUpsertRequestDto>
 {
     public ExpenseUpsertValidator()
     {
+        RuleFor(dto => dto.PaidDateTime)
+            .IsValidStatsDateTime()
+            .WithName(DisplayNames.PaidDateTime);
         RuleFor(dto => dto.Amount)
             .GreaterThan(0)
             .WithName(DisplayNames.Amount);
@@ -19,10 +22,6 @@ public class ExpenseUpsertValidator : Validator<ExpenseUpsertRequestDto>
             .WithName(DisplayNames.PayeeName);
 
         RuleSet("Create", () => {
-            RuleFor(dto => dto.PaidDateTime)
-                .GreaterThanOrEqualTo(GetMinimumPaidDateTime())
-                .When(dto => dto.PaidDateTime.HasValue)
-                .WithName(DisplayNames.PaidDateTime);
             RuleForEach(dto => dto.Photos)
                 .SetValidator(new ExpensePhotoValidator(), ruleSets: "Create");
         });
@@ -30,14 +29,10 @@ public class ExpenseUpsertValidator : Validator<ExpenseUpsertRequestDto>
         RuleSet("Update", () => {
             RuleForEach(dto => dto.Photos)
                 .SetValidator(new ExpensePhotoValidator(), ruleSets: "Update");
+            RuleFor(dto => dto.UpdateReason)
+                .NotEmpty()
+                .MaximumLength(255)
+                .WithName(DisplayNames.Reason);
         });
-    }
-
-    private static DateTime GetMinimumPaidDateTime()
-    {
-        return new DateTime(
-            DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Year,
-            DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Month,
-            1, 0, 0, 0);
     }
 }

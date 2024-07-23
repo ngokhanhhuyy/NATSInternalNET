@@ -24,7 +24,7 @@ public class SupplyBasicResponseDto
     private void MapFromEntity(Supply supply)
     {
         Id = supply.Id;
-        SuppliedDateTime = supply.SuppliedDateTime;
+        SuppliedDateTime = supply.PaidDateTime;
         TotalAmount = supply.TotalAmount;
         IsClosed = supply.IsClosed;
         User = new UserBasicResponseDto(supply.CreatedUser);

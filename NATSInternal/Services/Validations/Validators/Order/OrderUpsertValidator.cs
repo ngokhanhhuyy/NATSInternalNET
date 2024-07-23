@@ -17,10 +17,10 @@ public class OrderUpsertValidator : Validator<OrderUpsertRequestDto>
             .SetValidator(new OrderItemValidator());
         RuleSet("Create", () =>
         {
-            RuleFor(dto => dto.OrderedDateTime)
+            RuleFor(dto => dto.PaidDateTime)
                 .GreaterThanOrEqualTo(MinimumOrderedDateTime)
                 .LessThanOrEqualTo(MaximumOrderedDateTime)
-                .When(dto => dto.OrderedDateTime.HasValue)
+                .When(dto => dto.PaidDateTime.HasValue)
                 .WithName(DisplayNames.OrderedDateTime);
         });
     }

@@ -40,57 +40,56 @@ public static class PermissionConstants
     // Permissions to interact with supplies.
     public const string CreateSupply = "CreateSupply";
     public const string EditSupply = "EditSupply";
-    public const string EditClosedSupply = "EditClosedSupply";
+    public const string EditLockedSupply = "EditLockedSupply";
     public const string DeleteSupply = "DeleteSupply";
-    public const string SetSupplySuppliedDateTime = "SetSupplySuppliedDateTime";
-
-    // Permissions to interact with supply items.
-    public const string EditSupplyItem = "EditSupplyItem";
-    public const string DeleteSupplyItem = "DeleteSupplyItem";
-
-    // Permissions to interact with supply photos.
-    public const string EditSupplyPhoto = "EditSupplyPhoto";
-    public const string DeleteSupplyPhoto = "DeleteSupplyPhoto";
+    public const string SetSupplyPaidDateTime = "SetSupplyPaidDateTime";
+    public const string AccessSupplyUpdateHistories = "AccessSupplyUpdateHistories";
     
     // Permissions to interact with expenses.
     public const string CreateExpense = "CreateExpense";
     public const string EditExpense = "EditExpense";
-    public const string EditClosedExpense = "EditClosedExpense";
+    public const string EditLockedExpense = "EditLockedExpense";
     public const string DeleteExpense = "DeleteExpense";
     public const string SetExpensePaidDateTime = "SetExpensePaidDateTime";
+    public const string AccessExpenseUpdateHistories = "AccessExpenseUpdateHistories";
     
     // Permissions to interact with orders.
     public const string CreateOrder = "CreateOrder";
     public const string EditOrder = "EditOrder";
-    public const string EditClosedOrder = "EditClosedOrder";
-    public const string SetOrderOrderedDateTime = "SetOrderOrderedDateTime";
+    public const string EditLockedOrder = "EditLockedOrder";
+    public const string SetOrderPaidDateTime = "SetOrderPaidDateTime";
     public const string DeleteOrder = "DeleteOrder";
+    public const string AccessOrderUpdateHistories = "AccessOrderUpdateHistories";
     
     // Permissions to interact with treatments.
     public const string CreateTreatment = "CreateTreatment";
     public const string EditTreatment = "EditTreatment";
-    public const string EditClosedTreatment = "EditClosedTreatment";
+    public const string EditLockedTreatment = "EditLockedTreatment";
     public const string DeleteTreatment = "DeleteTreatment";
-    public const string SetTreatmentOrderedDateTime = "SetTreatmentOrderedDateTime";
+    public const string SetTreatmentPaidDateTime = "SetTreatmentPaidDateTime";
+    public const string AccessTreatmentUpdateHistories = "AccessTreatmentUpdateHistories";
 
     // Permissions to interact with debts.
     public const string CreateDebt = "CreateDebt";
     public const string EditDebt = "EditDebt";
-    public const string EditClosedDebt = "EditClosedDebt";
-    public const string SetDebtCreatedDateTime = "SetDebtCreatedDateTime";
+    public const string EditLockedDebt = "EditLockedDebt";
+    public const string SetDebtIncurredDateTime = "SetDebtIncurredDateTime";
     public const string DeleteDebt = "DeleteDebt";
+    public const string AccessDebtUpdateHistories = "AccessDebtUpdateHistories";
 
     // Permissions to interact with debt payments.
     public const string CreateDebtPayment = "CreateDebtPayment";
     public const string EditDebtPayment = "EditDebtPayment";
-    public const string EditClosedDebtPayment = "EditClosedDebtPayment";
+    public const string EditLockedDebtPayment = "EditLockedDebtPayment";
     public const string SetDebtPaymentPaidDateTime = "SetDebtPaymentPaidDateTime";
     public const string DeleteDebtPayment = "DeleteDebtPayment";
+    public const string AccessDebtPaymentUpdateHistories = "AccessDebtPaymentUpdateHistories";
 
     // Permissions to interact with consultants.
     public const string CreateConsultant = "CreateConsultant";
     public const string EditConsultant = "EditConsultant";
-    public const string EditClosedConsultant = "EditClosedConsultant";
+    public const string EditLockedConsultant = "EditLockedConsultant";
     public const string DeleteConsultant = "DeleteConsultant";
     public const string SetConsultantPaidDateTime = "SetConsultantPaidDateTime";
+    public const string AccessConsultantUpdateHistories = "AccessConsultantUpdateHistories";
 }

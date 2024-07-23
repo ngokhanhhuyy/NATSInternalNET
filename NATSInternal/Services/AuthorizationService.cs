@@ -1,6 +1,4 @@
-﻿using NATSInternal.Services.Dtos;
-
-namespace NATSInternal.Services;
+﻿namespace NATSInternal.Services;
 
 public class AuthorizationService : IAuthorizationService
 {
@@ -25,43 +23,7 @@ public class AuthorizationService : IAuthorizationService
 
     public UserDetailResponseDto GetUserDetail()
     {
-        UserDetailResponseDto responseDto = new UserDetailResponseDto
-        {
-            Id = _user.Id,
-            UserName = _user.UserName,
-            PersonalInformation = new UserPersonalInformationResponseDto
-            {
-
-                FirstName = _user.FirstName,
-                MiddleName = _user.MiddleName,
-                LastName = _user.LastName,
-                FullName = _user.FullName,
-                Gender = _user.Gender,
-                Birthday = _user.Birthday,
-                PhoneNumber = _user.PhoneNumber,
-                Email = _user.Email,
-                AvatarUrl = _user.AvatarUrl,
-            },
-            UserInformation = new UserUserInformationResponseDto
-            {
-                JoiningDate = _user.JoiningDate,
-                CreatedDateTime = _user.CreatedDateTime,
-                UpdatedDateTime = _user.UpdatedDateTime,
-                Note = _user.Note,
-                Role = new RoleDetailResponseDto
-                {
-                    Id = _user.Role.Id,
-                    Name = _user.Role.Name,
-                    DisplayName = _user.Role.DisplayName,
-                    PowerLevel = _user.Role.PowerLevel,
-                    Permissions = _user.Role.Claims
-                    .Where(c => c.ClaimType == "Permission")
-                    .Select(c => c.ClaimValue)
-                    .ToList()
-                }
-            }
-        };
-
+        UserDetailResponseDto responseDto = new UserDetailResponseDto(_user);
         return responseDto;
     }
 
@@ -238,7 +200,7 @@ public class AuthorizationService : IAuthorizationService
         {
             CanEdit = CanEditTreatment(treatment),
             CanDelete = CanDeleteTreatment(),
-            CanSetOrderedDateTime = CanSetTreatmentOrderedDateTime()
+            CanSetOrderedDateTime = CanSetTreatmentPaidDateTime()
         };
     }
 
@@ -395,7 +357,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
 
-        if (supply.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedSupply))
+        if (supply.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedSupply))
         {
             return false;
         }
@@ -410,7 +372,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
 
-        if (supply.IsClosed)
+        if (supply.IsLocked)
         {
             return false;
         }
@@ -418,22 +380,22 @@ public class AuthorizationService : IAuthorizationService
         return true;
     }
 
-    public bool CanSetSupplySuppliedDateTime()
+    public bool CanSetSupplyPaidDateTime()
     {
-        return _user.HasPermission(PermissionConstants.SetSupplySuppliedDateTime);
+        return _user.HasPermission(PermissionConstants.SetSupplyPaidDateTime);
     }
-
-    public bool CanEditSupplyItems()
+    
+    public bool CanAccessSupplyUpdateHistories()
     {
-        return _user.HasPermission(PermissionConstants.EditSupplyItem);
-    }
-
-    public bool CanEditSupplyPhotos()
-    {
-        return _user.HasPermission(PermissionConstants.EditSupplyPhoto);
+        return _user.HasPermission(PermissionConstants.AccessSupplyUpdateHistories);
     }
     
     // Permissions to interact with expenses.
+    public bool CanCreateExpense()
+    {
+        return _user.HasPermission(PermissionConstants.CreateExpense);
+    }
+    
     public bool CanEditExpense(Expense expense)
     {
         if (!_user.HasPermission(PermissionConstants.EditExpense))
@@ -441,7 +403,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (expense.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedExpense))
+        if (expense.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedExpense))
         {
             return false;
         }
@@ -459,6 +421,11 @@ public class AuthorizationService : IAuthorizationService
         return _user.HasPermission(PermissionConstants.SetExpensePaidDateTime);
     }
     
+    public bool CanAccessExpenseUpdateHistories()
+    {
+        return _user.HasPermission(PermissionConstants.AccessExpenseUpdateHistories);
+    }
+    
     // Permissions to interact with orders.
     public bool CanCreateOrder()
     {
@@ -472,7 +439,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (order.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedOrder))
+        if (order.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedOrder))
         {
             return false;
         }
@@ -485,9 +452,14 @@ public class AuthorizationService : IAuthorizationService
         return !order.IsClosed && _user.HasPermission(PermissionConstants.DeleteOrder);
     }
 
-    public bool CanSetOrderOrderedDateTime()
+    public bool CanSetOrderPaidDateTime()
     {
-        return _user.HasPermission(PermissionConstants.SetOrderOrderedDateTime);
+        return _user.HasPermission(PermissionConstants.SetOrderPaidDateTime);
+    }
+    
+    public bool CanAccessOrderUpdateHistories()
+    {
+        return _user.HasPermission(PermissionConstants.AccessOrderUpdateHistories);
     }
     
     // Permissions to interact with treatments.
@@ -503,7 +475,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (treatment.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedTreatment))
+        if (treatment.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedTreatment))
         {
             return false;
         }
@@ -516,9 +488,14 @@ public class AuthorizationService : IAuthorizationService
         return _user.HasPermission(PermissionConstants.DeleteTreatment);
     }
 
-    public bool CanSetTreatmentOrderedDateTime()
+    public bool CanSetTreatmentPaidDateTime()
     {
-        return _user.HasPermission(PermissionConstants.SetTreatmentOrderedDateTime);
+        return _user.HasPermission(PermissionConstants.SetTreatmentPaidDateTime);
+    }
+    
+    public bool CanAccessTreatmentUpdateHistories()
+    {
+        return _user.HasPermission(PermissionConstants.AccessTreatmentUpdateHistories);
     }
     
     // Permisisons to interact with debts.
@@ -534,7 +511,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (debt.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedDebt))
+        if (debt.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedDebt))
         {
             return false;
         }
@@ -549,7 +526,12 @@ public class AuthorizationService : IAuthorizationService
     
     public bool CanSetDebtCreatedDateTime()
     {
-        return _user.HasPermission(PermissionConstants.SetDebtCreatedDateTime);
+        return _user.HasPermission(PermissionConstants.SetDebtIncurredDateTime);
+    }
+    
+    public bool CanAccessDebtUpdateHistories()
+    {
+        return _user.HasPermission(PermissionConstants.AccessDebtUpdateHistories);
     }
 
     // Permissions to interact with debt payments.
@@ -565,7 +547,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
 
-        if (debtPayment.IsClosed && !_user.HasPermission(PermissionConstants.EditClosedDebt))
+        if (debtPayment.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedDebt))
         {
             return false;
         }
@@ -582,6 +564,11 @@ public class AuthorizationService : IAuthorizationService
     {
         return _user.HasPermission(PermissionConstants.SetDebtPaymentPaidDateTime);
     }
+    
+    public bool CanAccessDebtPaymentUpdateHistories()
+    {
+        return _user.HasPermission(PermissionConstants.AccessDebtPaymentUpdateHistories);
+    }
 
     // Permissions to interact with consultant.
     public bool CanCreateConsultant()
@@ -597,7 +584,7 @@ public class AuthorizationService : IAuthorizationService
         }
 
         if (consultant.IsClosed &&
-            !_user.HasPermission(PermissionConstants.EditClosedConsultant))
+            !_user.HasPermission(PermissionConstants.EditLockedConsultant))
         {
             return false;
         }
@@ -613,5 +600,10 @@ public class AuthorizationService : IAuthorizationService
     public bool CanSetConsultantPaidDateTime()
     {
         return _user.HasPermission(PermissionConstants.SetConsultantPaidDateTime);
+    }
+    
+    public bool CanAccessConsultantUpdateHistories()
+    {
+        return _user.HasPermission(PermissionConstants.AccessConsultantUpdateHistories);
     }
 }

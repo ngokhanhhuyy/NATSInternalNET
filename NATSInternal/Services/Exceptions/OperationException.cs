@@ -9,6 +9,12 @@ public class OperationException : Exception
     {
         PropertyName = propertyName;
     }
+    
+    public OperationException(string propertyName, Exception exception)
+        : base(exception.Message)
+    {
+        PropertyName = propertyName;
+    }
 
     public string PropertyName { get; set; }
 }

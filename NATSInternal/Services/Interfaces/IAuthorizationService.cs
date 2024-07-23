@@ -1,6 +1,4 @@
-﻿using NATSInternal.Services.Dtos;
-
-namespace NATSInternal.Services.Interfaces;
+﻿namespace NATSInternal.Services.Interfaces;
 
 public interface IAuthorizationService
 {
@@ -70,41 +68,48 @@ public interface IAuthorizationService
     bool CanCreateSupply();
     bool CanEditSupply(Supply supply);
     bool CanDeleteSupply(Supply supply);
-    bool CanSetSupplySuppliedDateTime();
-    bool CanEditSupplyItems();
-    bool CanEditSupplyPhotos();
+    bool CanSetSupplyPaidDateTime();
+    bool CanAccessSupplyUpdateHistories();
 
     // Permissions to interact with expenses.
+    bool CanCreateExpense();
     bool CanEditExpense(Expense expense);
     bool CanDeleteExpense(Expense expense);
     bool CanSetExpensePaidDateTime();
+    bool CanAccessExpenseUpdateHistories();
 
     // Permissions to interact with orders.
+    bool CanCreateOrder();
     bool CanEditOrder(Order order);
     bool CanDeleteOrder(Order order);
-    bool CanSetOrderOrderedDateTime();
+    bool CanSetOrderPaidDateTime();
+    bool CanAccessOrderUpdateHistories();
 
     // Permissions to interact with treatments.
     bool CanCreateTreatment();
     bool CanEditTreatment(Treatment treatment);
     bool CanDeleteTreatment();
-    bool CanSetTreatmentOrderedDateTime();
+    bool CanSetTreatmentPaidDateTime();
+    bool CanAccessTreatmentUpdateHistories();
 
     // Permisisons to interact with debts.
     bool CanCreateDebt();
     bool CanEditDebt(Debt debt);
     bool CanDeleteDebt();
     bool CanSetDebtCreatedDateTime();
+    bool CanAccessDebtUpdateHistories();
 
     // Permissions to interact with debt payments.
     bool CanCreateDebtPayment();
     bool CanEditDebtPayment(DebtPayment debtPayment);
     bool CanDeleteDebtPayment();
     bool CanSetDebtPaymentPaidDateTime();
+    bool CanAccessDebtPaymentUpdateHistories();
 
     // Permissions to interact with consultant.
     bool CanCreateConsultant();
     bool CanEditConsultant(Consultant consultant);
     bool CanDeleteConsultant();
     bool CanSetConsultantPaidDateTime();
+    bool CanAccessConsultantUpdateHistories();
 }

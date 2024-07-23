@@ -35,30 +35,30 @@ public class SupplyService : ISupplyService
             case nameof(SupplyListRequestDto.FieldOptions.TotalAmount):
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(s => s.TotalAmount)
-                        .ThenBy(s => s.SuppliedDateTime)
+                        .ThenBy(s => s.PaidDateTime)
                     : query.OrderByDescending(s => s.Items.Sum(i => i.Amount))
-                        .ThenByDescending(s => s.SuppliedDateTime);
+                        .ThenByDescending(s => s.PaidDateTime);
                 break;
             case nameof(SupplyListRequestDto.FieldOptions.SuppliedDateTime):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(s => s.SuppliedDateTime)
+                    ? query.OrderBy(s => s.PaidDateTime)
                         .ThenBy(s => s.Items.Sum(i => i.Amount))
-                    : query.OrderByDescending(s => s.SuppliedDateTime)
+                    : query.OrderByDescending(s => s.PaidDateTime)
                         .ThenByDescending(s => s.Items.Sum(i => i.Amount));
                 break;
             case nameof(SupplyListRequestDto.FieldOptions.ItemAmount):
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(s => s.ItemAmount)
-                        .ThenBy(s => s.SuppliedDateTime)
+                        .ThenBy(s => s.PaidDateTime)
                     : query.OrderByDescending(s => s.ItemAmount)
-                        .ThenByDescending(s => s.SuppliedDateTime);
+                        .ThenByDescending(s => s.PaidDateTime);
                 break;
             case nameof(SupplyListRequestDto.FieldOptions.ShipmentFee):
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(s => s.ShipmentFee)
-                        .ThenBy(s => s.SuppliedDateTime)
+                        .ThenBy(s => s.PaidDateTime)
                     : query.OrderByDescending(s => s.ShipmentFee)
-                        .ThenByDescending(s => s.SuppliedDateTime);
+                        .ThenByDescending(s => s.PaidDateTime);
                 break;
         }
 
@@ -67,7 +67,7 @@ public class SupplyService : ISupplyService
         {
             DateTime rangeFromDateTime;
             rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.SuppliedDateTime >= rangeFromDateTime);
+            query = query.Where(s => s.PaidDateTime >= rangeFromDateTime);
         }
 
         // Filter to range if specified.
@@ -75,7 +75,7 @@ public class SupplyService : ISupplyService
         {
             DateTime rangeToDateTime;
             rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.SuppliedDateTime <= rangeToDateTime);
+            query = query.Where(s => s.PaidDateTime <= rangeToDateTime);
         }
 
         // Filter by user id if specified.
@@ -105,19 +105,22 @@ public class SupplyService : ISupplyService
     /// <inheritdoc />
     public async Task<SupplyDetailResponseDto> GetDetailAsync(int id)
     {
-        return await _context.Supplies
+        Supply supply = await _context.Supplies
             .Include(s => s.Items).ThenInclude(si => si.Product)
             .Include(s => s.Photos)
             .Include(s => s.CreatedUser).ThenInclude(u => u.Roles)
             .Include(s => s.UpdateHistories)
-            .Where(s => s.Id == id)
-            .Select(s => new SupplyDetailResponseDto(s, _authorizationService.GetSupplyAuthorization(s)))
             .AsSplitQuery()
-            .SingleOrDefaultAsync()
+            .SingleOrDefaultAsync(s => s.Id == id && !s.IsDeleted)
         ?? throw new ResourceNotFoundException(
             nameof(Supply),
             nameof(id),
             id.ToString());
+        
+        return new SupplyDetailResponseDto(
+            supply,
+            _authorizationService.GetSupplyAuthorization(supply),
+            mapUpdateHistories: _authorizationService.CanAccessSupplyUpdateHistories());
     }
 
     /// <inheritdoc />
@@ -152,7 +155,7 @@ public class SupplyService : ISupplyService
         // Initialize supply.
         Supply supply = new Supply
         {
-            SuppliedDateTime = requestDto.SuppliedDateTime ?? DateTime.UtcNow.ToApplicationTime(),
+            PaidDateTime = requestDto.PaidDateTime ?? DateTime.UtcNow.ToApplicationTime(),
             ShipmentFee = requestDto.ShipmentFee,
             Note = requestDto.Note,
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
@@ -242,11 +245,38 @@ public class SupplyService : ISupplyService
 
         // Storing the old data for update history logging and stats adjustments.
         SupplyUpdateHistoryDataDto oldData = new SupplyUpdateHistoryDataDto(supply);
-        long originalItemAmount = supply.ItemAmount;
-        long originalShipmentFee = supply.ShipmentFee;
+        long oldItemAmount = supply.ItemAmount;
+        long oldShipmentFee = supply.ShipmentFee;
+        DateOnly oldPaidDate = DateOnly.FromDateTime(supply.PaidDateTime);
+        
+        // Determining PaidDateTime.
+        if (requestDto.PaidDateTime.HasValue)
+        {
+            // Restrict the PaidDateTime to be modified after being locked.
+            if (supply.IsLocked)
+            {
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
+                    .ReplaceResourceName(DisplayNames.Supply)
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
+                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+            }
+            
+            // Validate PaidDateTime.
+            try
+            {
+                supply.PaidDateTime = requestDto.PaidDateTime.Value;
+            }
+            catch (ArgumentException exception)
+            {
+                string errorMessage = exception.Message
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
+                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+            }
+            
+            supply.PaidDateTime = requestDto.PaidDateTime.Value;
+        }
 
         // Update supply properties.
-        supply.SuppliedDateTime = requestDto.SuppliedDateTime ?? DateTime.UtcNow.ToApplicationTime();
         supply.ShipmentFee = requestDto.ShipmentFee;
         supply.Note = requestDto.Note;
 
@@ -267,8 +297,8 @@ public class SupplyService : ISupplyService
         // Storing new data for update history logging.
         SupplyUpdateHistoryDataDto newData = new SupplyUpdateHistoryDataDto(supply);
 
-        // Create update history.
-        CreateUpdateHistory(supply, oldData, newData, requestDto.UpdateReason);
+        // Log update history.
+        LogUpdateHistory(supply, oldData, newData, requestDto.UpdateReason);
 
         // Perform the updating operation.
         try
@@ -276,8 +306,14 @@ public class SupplyService : ISupplyService
             await _context.SaveChangesAsync();
             
             // The supply can be saved without any error, adjust the stats.
-            await _statsService.IncrementSupplyCostAsync(supply.ItemAmount - originalItemAmount);
-            await _statsService.IncrementShipmentCostAsync(supply.ShipmentFee - originalShipmentFee);
+            // Revert the old stats.
+            await _statsService.IncrementSupplyCostAsync(-oldItemAmount, oldPaidDate);
+            await _statsService.IncrementShipmentCostAsync(-oldShipmentFee, oldPaidDate);
+            
+            // Add new stats.
+            DateOnly newPaidDate = DateOnly.FromDateTime(supply.PaidDateTime);
+            await _statsService.IncrementShipmentCostAsync(supply.ItemAmount, newPaidDate);
+            await _statsService.IncrementShipmentCostAsync(supply.ShipmentFee, newPaidDate);
             
             // Commit the transaction and finish the operation.
             await transaction.CommitAsync();
@@ -520,7 +556,7 @@ public class SupplyService : ISupplyService
     }
     
     /// <summary>
-    /// Create and add update history for the specified supply.
+    /// Log the old and new data to update history for the specified supply.
     /// </summary>
     /// <param name="supply">
     /// The supply entity which the new update history is associated.
@@ -532,7 +568,7 @@ public class SupplyService : ISupplyService
     /// An object containing the new data of the supply after modification. 
     /// </param>
     /// <param name="reason">The reason of the modification.</param>
-    private static void CreateUpdateHistory(
+    private void LogUpdateHistory(
             Supply supply,
             SupplyUpdateHistoryDataDto oldData,
             SupplyUpdateHistoryDataDto newData,
@@ -542,7 +578,8 @@ public class SupplyService : ISupplyService
         {
             Reason = reason,
             OldData = JsonSerializer.Serialize(oldData),
-            NewData = JsonSerializer.Serialize(newData)
+            NewData = JsonSerializer.Serialize(newData),
+            UserId = _authorizationService.GetUserId()
         };
         
         supply.UpdateHistories ??= new List<SupplyUpdateHistory>();

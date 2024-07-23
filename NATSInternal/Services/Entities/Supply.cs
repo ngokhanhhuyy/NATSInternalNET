@@ -1,15 +1,19 @@
 namespace NATSInternal.Services.Entities;
 
 [Table("supplies")]
-public class Supply
+public class Supply : LockableEntity
 {
     [Column("id")]
     [Key]
     public int Id { get; set; }
 
-    [Column("supplied_datetime")]
+    [Column("paid_datetime")]
     [Required]
-    public DateTime SuppliedDateTime { get; set; }
+    public DateTime PaidDateTime
+    {
+        get => StatsDateTime;
+        set => StatsDateTime = value;
+    }
 
     [Column("shipment_fee")]
     [Required]
@@ -18,14 +22,6 @@ public class Supply
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
-
-    [Column("created_datetime")]
-    [Required]
-    public DateTime CreatedDateTime { get; set; }
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; }
 
     [Column("is_deleted")]
     [Required]

@@ -1,23 +1,23 @@
 namespace NATSInternal.Services.Entities;
 
 [Table("orders")]
-public class Order
+public class Order : LockableEntity
 {
     [Column("id")]
     [Key]
     public int Id { get; set; }
 
-    [Column("ordered_datetime")]
+    [Column("paid_datetime")]
     [Required]
-    public DateTime OrderedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
+    public DateTime PaidDateTime
+    {
+        get => StatsDateTime;
+        set => StatsDateTime = value;
+    }
 
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; } = false;
 
     [Column("is_deleted")]
     [Required]

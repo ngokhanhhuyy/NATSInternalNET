@@ -162,19 +162,10 @@ public class ExpenseService : IExpenseService
             expense.Payee = payee;
         }
         
-        // Set expense photos.
+        // Create expense photos.
         if (requestDto.Photos != null)
         {
-            foreach (ExpensePhotoRequestDto photoRequestDto in requestDto.Photos)
-            {
-                string url = await _photoService
-                    .CreateAsync( photoRequestDto.File, "expenses", false);
-                ExpensePhoto photo = new ExpensePhoto
-                {
-                    Url = url
-                };
-                expense.Photos.Add(photo);
-            }
+            await CreatePhotosAsync(expense, requestDto.Photos);
         }
         
         // Perform the creating operation.
@@ -249,49 +240,40 @@ public class ExpenseService : IExpenseService
         // Using transaction for atomic operations.
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
+        
+        // Storing the old data for update history logging and stats adjustment.
+        long oldAmount = expense.Amount;
+        ExpenseCategory oldCategory = expense.Category;
+        DateOnly oldPaidDate = DateOnly.FromDateTime(expense.PaidDateTime);
+        ExpenseUpdateHistoryDataDto oldData = new ExpenseUpdateHistoryDataDto(expense);
 
-        // Modifying the expense fields if the fields can affect the stats related data
-        // when the request specified them.
-        if (requestDto.PaidDateTime.HasValue || expense.Amount != requestDto.Amount)
+        // Determine the PaidDateTime if the request has specified a value.
+        if (requestDto.PaidDateTime.HasValue)
         {
             // Check if the current user has permission to specify the paid datetime.
             if (!_authorizationService.CanSetExpensePaidDateTime())
             {
                 throw new AuthorizationException();
             }
-
-            // Verify that with the new paid datetime, the status of the expense won't be changed.
-            bool expenseStatusWillNotBeChanged = _statsService
-                .VerifyResourceDateTimeToBeUpdated(
-                    expense.PaidDateTime,
-                    requestDto.PaidDateTime.Value);
-            if (!expenseStatusWillNotBeChanged)
+            
+            // Validate the specified PaidDateTime value from the request.
+            try
             {
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.PaidDateTime)
-                    .ReplaceComparisonValue(requestDto.PaidDateTime.Value.ToVietnameseString());
+                expense.PaidDateTime = requestDto.PaidDateTime.Value;
+            }
+            catch (ArgumentException exception)
+            {
+                string errorMessage = exception.Message
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
 
-            // The specified paid datetime is valid, adjust the paid datetime, amount and stats.
-            // Decrement previous stats.
-            await _statsService.IncrementExpenseAsync(
-                -expense.Amount,
-                expense.Category,
-                DateOnly.FromDateTime(expense.PaidDateTime));
-
-            // Assign the specified paid datetime and amount to the expense.
-            expense.Amount = requestDto.Amount;
+            // The specified PaidDateTime is valid, assign it to the expense.
             expense.PaidDateTime = requestDto.PaidDateTime.Value;
-
-            // Adjust new stats.
-            await _statsService.IncrementExpenseAsync(
-                expense.Amount,
-                expense.Category,
-                DateOnly.FromDateTime(expense.PaidDateTime));
         }
         
         // Update other fields.
+        expense.Amount = requestDto.Amount;
         expense.Category = requestDto.Category;
         expense.Note = requestDto.Note;
         
@@ -315,99 +297,87 @@ public class ExpenseService : IExpenseService
         }
         
         // Update photos.
-        List<string> photoUrlsToBeDeletedWhenSucceeded = new List<string>();
-        List<string> photoUrlsToBeDeletedWhenFailed = new List<string>();
+        List<string> urlsToBeDeletedWhenSucceeded = new List<string>();
+        List<string> urlsToBeDeletedWhenFailed = new List<string>();
         if (requestDto.Photos != null)
         {
-            for (int i = 0; i < requestDto.Photos.Count; i++)
-            {
-                ExpensePhotoRequestDto photoRequestDto = requestDto.Photos[i];
-                ExpensePhoto photo;
-                if (!photoRequestDto.Id.HasValue)
-                {
-                    string url = await _photoService
-                        .CreateAsync(photoRequestDto.File, "expenses", false);
-                    photoUrlsToBeDeletedWhenFailed.Add(url);
-                    photo = new ExpensePhoto { Url = url };
-                    expense.Photos.Add(photo);
-                }
-                else if (photoRequestDto.HasBeenChanged)
-                {
-                    photo = expense.Photos.SingleOrDefault(e => e.Id == photoRequestDto.Id);
-                    if (photo == null)
-                    {
-                        string errorMessage = ErrorMessages.NotFoundByProperty
-                            .ReplaceResourceName(DisplayNames.ExpensePhoto);
-                        throw new OperationException($"photos[{i}].id", errorMessage);
-                    }
-
-                    // Delete old photo.
-                    photoUrlsToBeDeletedWhenSucceeded.Add(photo.Url);
-
-                    // Create new photo.
-                    if (photoRequestDto.File != null)
-                    {
-                        string url = await _photoService
-                            .CreateAsync(photoRequestDto.File, "expenses", false);
-                        photoUrlsToBeDeletedWhenFailed.Add(url);
-                        photo.Url = url;
-                    } else {
-                        _context.ExpensePhotos.Remove(photo);
-                    }
-                }
-            }
+            (List<string>, List<string>) photosUpdateResult;
+            photosUpdateResult = await UpdatePhotosAsync(expense, requestDto.Photos);
+            urlsToBeDeletedWhenSucceeded.AddRange(photosUpdateResult.Item1);
+            urlsToBeDeletedWhenFailed.AddRange(photosUpdateResult.Item2);
         }
         
-        // Save changes and commit transaction.
+        // Storing the new data for update history logging.
+        ExpenseUpdateHistoryDataDto newData = new ExpenseUpdateHistoryDataDto(expense);
+        
+        // Log update history.
+        LogUpdateHistory(expense, oldData, newData, requestDto.UpdateReason);
+        
+        // Perform the updating operation.
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The expense can be saved without error.
+            // Revert the old stats.
+            await _statsService.IncrementExpenseAsync(
+                -oldAmount, oldCategory, oldPaidDate);
+
+            // Add the new stats.
+            DateOnly newPaidDate = DateOnly.FromDateTime(expense.PaidDateTime);
+            await _statsService.IncrementExpenseAsync(
+                expense.Amount, expense.Category, newPaidDate);
+            
+            // Commit the transaction, finish the opeartion.
             await transaction.CommitAsync();
-            foreach (string url in photoUrlsToBeDeletedWhenSucceeded)
+            
+            // Clean the old photos.
+            foreach (string url in urlsToBeDeletedWhenSucceeded)
             {
                 _photoService.Delete(url);
             }
         }
         catch (DbUpdateException exception)
-        when (exception.InnerException is MySqlException sqlException)
         {
             // Remove all created photos.
-            foreach (string url in photoUrlsToBeDeletedWhenFailed)
+            foreach (string url in urlsToBeDeletedWhenFailed)
             {
                 _photoService.Delete(url);
             }
             
-            // Handle exception and convert to the appropriate exception.
-            SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
-            exceptionHandler.Handle(sqlException);
-            if (exceptionHandler.IsForeignKeyNotFound)
+            // Handle concurrency exception.
+            if (exception is DbUpdateConcurrencyException)
             {
-                string propertyName = string.Empty;
-                string errorMessage = ErrorMessages.NotFound;
-                switch (exceptionHandler.ViolatedFieldName)
+                throw new ConcurrencyException();
+            }
+            
+            // Handle operation exception.
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
+                exceptionHandler.Handle(sqlException);
+                if (exceptionHandler.IsForeignKeyNotFound)
                 {
-                    case "user_id":
-                        propertyName = nameof(expense.CreatedUserId);
-                        errorMessage = errorMessage.ReplaceResourceName(DisplayNames.User);
-                        break;
-                    case "payee_id":
-                        propertyName = nameof(expense.PayeeId);
-                        errorMessage = errorMessage.ReplaceResourceName(DisplayNames.ExpensePayee);
-                        break;
+                    string propertyName = string.Empty;
+                    string errorMessage = ErrorMessages.NotFound;
+                    switch (exceptionHandler.ViolatedFieldName)
+                    {
+                        case "created_user_id":
+                            propertyName = nameof(expense.CreatedUserId);
+                            errorMessage = errorMessage
+                                .ReplaceResourceName(DisplayNames.User);
+                            break;
+                        case "payee_id":
+                            propertyName = nameof(expense.PayeeId);
+                            errorMessage = errorMessage
+                                .ReplaceResourceName(DisplayNames.ExpensePayee);
+                            break;
+                    }
+                    throw new OperationException(propertyName, errorMessage);
                 }
-                throw new OperationException(propertyName, errorMessage);
-            }
-            throw;
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            // Remove all created photos.
-            foreach (string url in photoUrlsToBeDeletedWhenFailed)
-            {
-                _photoService.Delete(url);
             }
             
-            throw new ConcurrencyException();
+            throw;
         }
     }
 
@@ -476,5 +446,129 @@ public class ExpenseService : IExpenseService
         {
             throw new ConcurrencyException();
         }
+    }
+    
+    /// <summary>
+    /// Create photos with the data provided in the request for the specified <c>Expense</c>.
+    /// </summary>
+    /// <param name="expense">
+    /// The <c>Expense</c> of which the photos are to be created.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the data of the new photos.
+    /// </param>
+    private async Task CreatePhotosAsync(
+            Expense expense,
+            List<ExpensePhotoRequestDto> requestDtos)
+    {
+        expense.Photos ??= new List<ExpensePhoto>();
+        foreach (ExpensePhotoRequestDto photoRequestDto in requestDtos)
+        {
+            string url = await _photoService
+                .CreateAsync( photoRequestDto.File, "expenses", false);
+            ExpensePhoto photo = new ExpensePhoto
+            {
+                Url = url
+            };
+            expense.Photos.Add(photo);
+        }
+    }
+    
+    /// <summary>
+    /// Update the specified <c>Expense</c>'s photos with the data provided in the request.
+    /// </summary>
+    /// <param name="expense">
+    /// The <c>Expense</c> of which the photos are to be updated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the data for the photos to be updated.
+    /// </param>
+    /// <returns>
+    /// A <c>Tuple</c> which contains 2 lists of urls. The first list contains the urls
+    /// which must be deleted after the expense updating operation succeeded. The other
+    /// contains the urls which must be deleted after the expense updating operation failed
+    /// and is aborted.
+    /// </returns>
+    /// <exception cref="OperationException">
+    /// Thown when the photo associated to one of the ids specified in the request doesn't exist.
+    /// </exception>
+    private async Task<(List<string>, List<string>)> UpdatePhotosAsync(
+            Expense expense,
+            List<ExpensePhotoRequestDto> requestDtos)
+    {
+        List<string> urlsToBeDeletedWhenSucceeded = new List<string>();
+        List<string> urlsToBeDeletedWhenFailed = new List<string>();
+        for (int i = 0; i < requestDtos.Count; i++)
+        {
+            ExpensePhotoRequestDto photoRequestDto = requestDtos[i];
+            ExpensePhoto photo;
+            if (!photoRequestDto.Id.HasValue)
+            {
+                string url = await _photoService
+                    .CreateAsync(photoRequestDto.File, "expenses", false);
+                urlsToBeDeletedWhenFailed.Add(url);
+                photo = new ExpensePhoto { Url = url };
+                expense.Photos.Add(photo);
+            }
+            else if (photoRequestDto.HasBeenChanged)
+            {
+                photo = expense.Photos.SingleOrDefault(e => e.Id == photoRequestDto.Id);
+                if (photo == null)
+                {
+                    string errorMessage = ErrorMessages.NotFoundByProperty
+                        .ReplaceResourceName(DisplayNames.ExpensePhoto);
+                    throw new OperationException($"photos[{i}].id", errorMessage);
+                }
+
+                // Delete old photo.
+                urlsToBeDeletedWhenSucceeded.Add(photo.Url);
+
+                // Create new photo.
+                if (photoRequestDto.File != null)
+                {
+                    string url = await _photoService
+                        .CreateAsync(photoRequestDto.File, "expenses", false);
+                    urlsToBeDeletedWhenFailed.Add(url);
+                    photo.Url = url;
+                }
+                else
+                {
+                    _context.ExpensePhotos.Remove(photo);
+                }
+            }
+        }
+        
+        return (urlsToBeDeletedWhenSucceeded, urlsToBeDeletedWhenFailed);
+    }
+    
+    /// <summary>
+    /// Log the old and new data to update history for the specified expense.
+    /// </summary>
+    /// <param name="expense">
+    /// The expense entity which the new update history is associated.
+    /// </param>
+    /// <param name="oldData">
+    /// An object containing the old data of the expense before modification.
+    /// </param>
+    /// <param name="newData">
+    /// An object containing the new data of the expense after modification. 
+    /// </param>
+    /// <param name="reason">The reason of the modification.</param>
+    private void LogUpdateHistory(
+            Expense expense,
+            ExpenseUpdateHistoryDataDto oldData,
+            ExpenseUpdateHistoryDataDto newData,
+            string reason)
+    {
+        ExpenseUpdateHistory updateHistory = new ExpenseUpdateHistory
+        {
+            Reason = reason,
+            OldData = JsonSerializer.Serialize(oldData),
+            NewData = JsonSerializer.Serialize(newData),
+            UserId = _authorizationService.GetUserId()
+        };
+        
+        expense.UpdateHistories ??= new List<ExpenseUpdateHistory>();
+        expense.UpdateHistories.Add(updateHistory);
     }
 }

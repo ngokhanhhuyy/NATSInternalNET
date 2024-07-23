@@ -36,15 +36,15 @@ public class OrderService : IOrderService
             case nameof(OrderListRequestDto.FieldOptions.Amount):
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(o => o.Items.Sum(i => i.Amount))
-                        .ThenBy(o => o.OrderedDateTime)
+                        .ThenBy(o => o.PaidDateTime)
                     : query.OrderByDescending(o => o.Items.Sum(i => i.Amount))
-                        .ThenByDescending(o => o.OrderedDateTime);
+                        .ThenByDescending(o => o.PaidDateTime);
                 break;
             default:
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(o => o.OrderedDateTime)
+                    ? query.OrderBy(o => o.PaidDateTime)
                         .ThenBy(o => o.Items.Sum(i => i.Amount))
-                    : query.OrderByDescending(o => o.OrderedDateTime)
+                    : query.OrderByDescending(o => o.PaidDateTime)
                         .ThenByDescending(o => o.Items.Sum(i => i.Amount));
                 break;
         }
@@ -54,7 +54,7 @@ public class OrderService : IOrderService
         {
             DateTime rangeFromDateTime;
             rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.OrderedDateTime >= rangeFromDateTime);
+            query = query.Where(o => o.PaidDateTime >= rangeFromDateTime);
         }
             
         // Filter to range if specified.
@@ -62,7 +62,7 @@ public class OrderService : IOrderService
         {
             DateTime rangeToDateTime;
             rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.OrderedDateTime <= rangeToDateTime);
+            query = query.Where(o => o.PaidDateTime <= rangeToDateTime);
         }
 
         // Filter by not being soft deleted.
@@ -121,33 +121,33 @@ public class OrderService : IOrderService
 
         // Determine ordered datetime.
         DateTime orderedDateTime = DateTime.UtcNow.ToApplicationTime();
-        if (requestDto.OrderedDateTime.HasValue)
+        if (requestDto.PaidDateTime.HasValue)
         {
             // Check if the current user has permission to specify the ordered datetime.
-            if (!_authorizationService.CanSetOrderOrderedDateTime())
+            if (!_authorizationService.CanSetOrderPaidDateTime())
             {
                 throw new AuthorizationException();
             }
 
             // Check if that with the specified ordered datetime, the new order will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.OrderedDateTime.Value))
+            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
             {
                 DateTime minimumAllowedDateTime = _statsService
                     .GetResourceMinimumOpenedDateTime();
                 string errorMessage = ErrorMessages.GreaterThanOrEqual
                     .ReplacePropertyName(DisplayNames.Order)
                     .ReplaceComparisonValue(minimumAllowedDateTime.ToVietnameseString());
-                throw new OperationException(nameof(requestDto.OrderedDateTime), errorMessage);
+                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
 
             // The ordered datetime is valid, assign it to the new order.
-            orderedDateTime = requestDto.OrderedDateTime.Value;
+            orderedDateTime = requestDto.PaidDateTime.Value;
         }
 
         // Initialize order entity.
         Order order = new Order
         {
-            OrderedDateTime = orderedDateTime,
+            PaidDateTime = orderedDateTime,
             Note = requestDto.Note,
             CustomerId = requestDto.CustomerId,
             CreatedUserId = _authorizationService.GetUserId(),
@@ -172,7 +172,7 @@ public class OrderService : IOrderService
 
             // The order can be created successfully without any error. Add the order
             // to the stats.
-            DateOnly orderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+            DateOnly orderedDate = DateOnly.FromDateTime(order.PaidDateTime);
             await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, orderedDate);
             if (order.VatAmount > 0)
             {
@@ -248,29 +248,29 @@ public class OrderService : IOrderService
         }
 
         // Revert stats for items' amount and vat amount.
-        DateOnly oldOrderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+        DateOnly oldOrderedDate = DateOnly.FromDateTime(order.PaidDateTime);
         await _statsService.IncrementRetailGrossRevenueAsync(-order.ItemAmount, oldOrderedDate);
         await _statsService.IncrementVatCollectedAmountAsync(-order.VatAmount, oldOrderedDate);
 
         // Handle the new ordered datetime when the request specifies it.
-        if (requestDto.OrderedDateTime.HasValue)
+        if (requestDto.PaidDateTime.HasValue)
         {
             // Check if the current user has permission to specify a new ordered datetime.
-            if (!_authorizationService.CanSetOrderOrderedDateTime())
+            if (!_authorizationService.CanSetOrderPaidDateTime())
             {
                 throw new AuthorizationException();
             }
 
             // Check if that with the new ordered datetime, the status of the order won't be changed.
-            if (!IsUpdatedOrderedDateTimeValid(order, requestDto.OrderedDateTime.Value))
+            if (!IsUpdatedOrderedDateTimeValid(order, requestDto.PaidDateTime.Value))
             {
                 throw new OperationException(
-                    nameof(requestDto.OrderedDateTime),
+                    nameof(requestDto.PaidDateTime),
                     ErrorMessages.Invalid.ReplacePropertyName(DisplayNames.OrderedDateTime));
             }
 
             // The new ordered datetime is considered to be valid, assign it to the order.
-            order.OrderedDateTime = requestDto.OrderedDateTime.Value;
+            order.PaidDateTime = requestDto.PaidDateTime.Value;
         }
 
         // Update order properties.
@@ -300,7 +300,7 @@ public class OrderService : IOrderService
             // The order can be updated successfully without any error.
             // Adjust the stats for items' amount and vat collected amount.
             // Delete all old photos which have been replaced by new ones.
-            DateOnly newOrderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+            DateOnly newOrderedDate = DateOnly.FromDateTime(order.PaidDateTime);
             await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, newOrderedDate);
             await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, newOrderedDate);
 
@@ -390,7 +390,7 @@ public class OrderService : IOrderService
                     await _context.SaveChangesAsync();
 
                     // Order has been deleted successfully, adjust the stats.
-                    DateOnly orderedDate = DateOnly.FromDateTime(order.OrderedDateTime);
+                    DateOnly orderedDate = DateOnly.FromDateTime(order.PaidDateTime);
                     await _statsService.IncrementRetailGrossRevenueAsync(
                         order.ItemAmount,
                         orderedDate);
@@ -418,14 +418,14 @@ public class OrderService : IOrderService
     private bool IsUpdatedOrderedDateTimeValid(Order order, DateTime newOrderedDateTime)
     {
         DateTime minDateTime = new DateTime(
-            order.OrderedDateTime.AddMonths(-1).Year,
-            order.OrderedDateTime.AddMonths(-1).Month,
+            order.PaidDateTime.AddMonths(-1).Year,
+            order.PaidDateTime.AddMonths(-1).Month,
             1,
             0, 0, 0);
         DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        DateTime maxDateTime = order.OrderedDateTime.AddMonths(2) > currentDateTime
+        DateTime maxDateTime = order.PaidDateTime.AddMonths(2) > currentDateTime
             ? currentDateTime
-            : order.OrderedDateTime.AddMonths(2);
+            : order.PaidDateTime.AddMonths(2);
         return newOrderedDateTime > minDateTime || newOrderedDateTime <= maxDateTime;
     }
 

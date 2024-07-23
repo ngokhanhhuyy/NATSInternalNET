@@ -10,21 +10,25 @@ public class SupplyDetailResponseDto
     public string Note { get; set; }
     public DateTime CreatedDateTime { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
-    public bool IsClosed { get; set; }
+    public bool IsLocked { get; set; }
     public List<SupplyItemResponseDto> Items { get; set; }
     public List<SupplyPhotoResponseDto> Photos { get; set; }
     public UserBasicResponseDto User { get; set; }
     public SupplyAuthorizationResponseDto Authorization { get; set; }
+    public List<SupplyUpdateHistoryResponseDto> UpdateHistories { get; set; }
 
-    public SupplyDetailResponseDto(Supply supply, SupplyAuthorizationResponseDto authorization)
+    public SupplyDetailResponseDto(
+            Supply supply,
+            SupplyAuthorizationResponseDto authorization, 
+            bool mapUpdateHistories = false)
     {
         Id = supply.Id;
-        SuppliedDateTime = supply.SuppliedDateTime;
+        SuppliedDateTime = supply.PaidDateTime;
         ShipmentFee = supply.ShipmentFee;
         ItemAmount = supply.ItemAmount;
         TotalAmount = supply.TotalAmount;
         Note = supply.Note;
-        IsClosed = supply.IsClosed;
+        IsLocked = supply.IsLocked;
         CreatedDateTime = supply.CreatedDateTime;
         UpdatedDateTime = supply.UpdatedDateTime;
         Items = supply.Items?
@@ -35,5 +39,12 @@ public class SupplyDetailResponseDto
             .Select(p => new SupplyPhotoResponseDto(p)).ToList();
         User = new UserBasicResponseDto(supply.CreatedUser);
         Authorization = authorization;
+        
+        if (mapUpdateHistories)
+        {
+            UpdateHistories = supply.UpdateHistories
+                .Select(uh => new SupplyUpdateHistoryResponseDto(uh))
+                .ToList();
+        }
     }
 }

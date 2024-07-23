@@ -3,9 +3,9 @@ namespace NATSInternal.Services.Dtos;
 public class OrderBasicResponseDto
 {
     public int Id { get; set; }
-    public DateTime OrderedDateTime { get; set; }
+    public DateTime PaidDateTime { get; set; }
     public long Amount { get; set; }
-    public bool IsClosed { get; set; }  
+    public bool IsLocked { get; set; }  
     public CustomerBasicResponseDto Customer { get; set; }
     public OrderAuthorizationResponseDto Authorization { get; set; }
 
@@ -25,9 +25,9 @@ public class OrderBasicResponseDto
     private void MapFromEntity(Order order)
     {
         Id = order.Id;
-        OrderedDateTime = order.OrderedDateTime;
+        PaidDateTime = order.PaidDateTime;
         Amount = order.ItemAmount;
-        IsClosed = order.IsClosed;
+        IsLocked = order.IsLocked;
         Customer = new CustomerBasicResponseDto(order.Customer);
     }
 }

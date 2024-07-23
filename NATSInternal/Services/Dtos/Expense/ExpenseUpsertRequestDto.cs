@@ -8,10 +8,12 @@ public class ExpenseUpsertRequestDto : IRequestDto<ExpenseUpsertRequestDto>
     public string Note { get; set; }
     public string PayeeName { get; set; }
     public List<ExpensePhotoRequestDto> Photos { get; set; }
+    public string UpdateReason { get; set; }
     
     public ExpenseUpsertRequestDto TransformValues()
     {
         PayeeName = PayeeName?.ToNullIfEmpty();
+        UpdateReason = UpdateReason?.ToNullIfEmpty();
         
         if (Photos != null)
         {

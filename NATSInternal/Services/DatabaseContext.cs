@@ -125,7 +125,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(s => s.CreatedUserId)
                 .HasConstraintName("FK__supplies__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(s => s.SuppliedDateTime)
+            e.HasIndex(s => s.PaidDateTime)
                 .IsUnique()
                 .HasDatabaseName("UX__supply_supplied_datetime");
             e.HasIndex(s => s.IsDeleted)
@@ -193,7 +193,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(o => o.CreatedUserId)
                 .HasConstraintName("FK__orders__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(o => o.OrderedDateTime)
+            e.HasIndex(o => o.PaidDateTime)
                 .HasDatabaseName("IX__orders__ordered_datetime");
             e.HasIndex(o => o.IsDeleted)
                 .HasDatabaseName("IX__orders__is_deleted");

@@ -1,7 +1,7 @@
 namespace NATSInternal.Services.Entities;
 
 [Table("expenses")]
-public class Expense
+public class Expense : LockableEntity
 {
     [Column("id")]
     [Key]
@@ -13,7 +13,11 @@ public class Expense
 
     [Column("paid_datetime")]
     [Required]
-    public DateTime PaidDateTime { get; set; }
+    public DateTime PaidDateTime
+    {
+        get => StatsDateTime;
+        set => StatsDateTime = value;
+    }
     
     [Column("category")]
     [Required]
@@ -22,10 +26,6 @@ public class Expense
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; }
 
     // Foreign keys
     [Column("created_user_id")]

@@ -1,12 +1,12 @@
 ﻿namespace NATSInternal.Services.Validations.Validators;
 
-public class SupplyValidator : Validator<SupplyUpsertRequestDto>
+public class SupplyUpsertValidator : Validator<SupplyUpsertRequestDto>
 {
-    public SupplyValidator()
+    public SupplyUpsertValidator()
     {
-        RuleFor(dto => dto.SuppliedDateTime)
-            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime())
-            .WithName(DisplayNames.SuppliedDateTime);
+        RuleFor(dto => dto.PaidDateTime)
+            .IsValidStatsDateTime()
+            .WithName(DisplayNames.PaidDateTime);
         RuleFor(dto => dto.ShipmentFee)
             .GreaterThanOrEqualTo(0)
             .WithName(DisplayNames.ShipmentFee);

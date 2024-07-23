@@ -121,14 +121,14 @@ public class StatsTask : BackgroundService
 
             // Close supplies.
             await context.Supplies
-                .Where(s => s.SuppliedDateTime >= minDateTime)
-                .Where(s => s.SuppliedDateTime < maxDateTime)
+                .Where(s => s.PaidDateTime >= minDateTime)
+                .Where(s => s.PaidDateTime < maxDateTime)
                 .ExecuteUpdateAsync(setter => setter.SetProperty(s => s.IsClosed, true));
 
             // Close orders.
             await context.Orders
-                .Where(o => o.OrderedDateTime >= minDateTime)
-                .Where(o => o.OrderedDateTime < maxDateTime)
+                .Where(o => o.PaidDateTime >= minDateTime)
+                .Where(o => o.PaidDateTime < maxDateTime)
                 .ExecuteUpdateAsync(setter => setter.SetProperty(o => o.IsClosed, true));
 
             // Close treatments and treatment sessions.

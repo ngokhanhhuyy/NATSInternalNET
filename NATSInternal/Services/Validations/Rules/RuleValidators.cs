@@ -65,4 +65,46 @@ public static class RuleValidators
             }
         }).WithMessage(ErrorMessages.Invalid);
     }
+    
+    public static IRuleBuilderOptions<T, DateTime?> IsValidStatsDateTime<T>(
+            this IRuleBuilder<T, DateTime?> ruleBuilder)
+    {
+        return ruleBuilder.Must(dateTime =>
+        {
+            if (dateTime != null)
+            {
+                DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+                if (dateTime > currentDateTime)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }).WithMessage(ErrorMessages.EarlierThanOrEqualToNow)
+        .Must(dateTime =>
+        {
+            if (dateTime != null)
+            {
+                if (dateTime < MinimumStatsDateTime)
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }).WithMessage(ErrorMessages.LaterThanOrEqual.ReplaceComparisonValue(
+            MinimumStatsDateTime.ToVietnameseString()));
+    }
+    
+    private static DateTime MinimumStatsDateTime
+    {
+        get
+        {
+            DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+            return new DateTime(
+                currentDateTime.AddMonths(-1).Year,
+                currentDateTime.AddMonths(-1).Month,
+                1, 0, 0, 0);
+        }
+    }
 }

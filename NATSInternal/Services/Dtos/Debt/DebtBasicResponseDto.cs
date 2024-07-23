@@ -5,7 +5,7 @@ public class DebtBasicResponseDto
     public int Id { get; set; }
     public long Amount { get; set; }
     public string Note { get; set; }
-    public DateTime CreatedDateTime { get; set; }
+    public DateTime PaidDateTime { get; set; }
     public bool IsClosed { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public DebtAuthorizationResponseDto Authorization { get; set; }
@@ -26,7 +26,7 @@ public class DebtBasicResponseDto
         Id = debt.Id;
         Amount = debt.Amount;
         Note = debt.Note;
-        CreatedDateTime = debt.CreatedDateTime;
+        PaidDateTime = debt.CreatedDateTime;
         IsClosed = debt.IsClosed;
         Customer = new CustomerBasicResponseDto(debt.Customer);
     }
