@@ -1,5 +1,3 @@
-using System.Transactions;
-
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
@@ -38,17 +36,17 @@ public class TreatmentService : ITreatmentService
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor))
-                        .ThenBy(t => t.CreatedDateTime)
+                        .ThenBy(t => t.PaidDateTime)
                     : query.OrderByDescending(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor))
-                        .ThenByDescending(t => t.CreatedDateTime);
+                        .ThenByDescending(t => t.PaidDateTime);
                 break;
             default:
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(t => t.CreatedDateTime)
+                    ? query.OrderBy(t => t.PaidDateTime)
                         .ThenBy(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor))
-                    : query.OrderByDescending(t => t.CreatedDateTime)
+                    : query.OrderByDescending(t => t.PaidDateTime)
                         .ThenBy(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor));
                 break;
@@ -59,7 +57,7 @@ public class TreatmentService : ITreatmentService
         {
             DateTime rangeFromDateTime;
             rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.OrderedDateTime >= rangeFromDateTime);
+            query = query.Where(o => o.PaidDateTime >= rangeFromDateTime);
         }
 
         // Filter to range if specified.
@@ -67,7 +65,7 @@ public class TreatmentService : ITreatmentService
         {
             DateTime rangeToDateTime;
             rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.OrderedDateTime <= rangeToDateTime);
+            query = query.Where(o => o.PaidDateTime <= rangeToDateTime);
         }
 
         // Filter by not being soft deleted.
@@ -76,7 +74,7 @@ public class TreatmentService : ITreatmentService
         // Initialize response dto.
         TreatmentListResponseDto responseDto = new TreatmentListResponseDto
         {
-            Authorization = _authorizationService.GetTreatmentListAuthorization();
+            Authorization = _authorizationService.GetTreatmentListAuthorization()
         };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
@@ -123,9 +121,9 @@ public class TreatmentService : ITreatmentService
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
 
-        // Determine treatmented datetime.
-        DateTime treatmentedDateTime = DateTime.UtcNow.ToApplicationTime();
-        if (requestDto.OrderedDateTime.HasValue)
+        // Determine PaidDateTime.
+        DateTime paidDateTime = DateTime.UtcNow.ToApplicationTime();
+        if (requestDto.PaidDateTime.HasValue)
         {
             // Check if the currentuser has permission to specify the treatmented datetime.
             if (!_authorizationService.CanSetTreatmentPaidDateTime())
@@ -134,24 +132,24 @@ public class TreatmentService : ITreatmentService
             }
 
             // Check if that with the specified treatmented datetime, the new treatment will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.OrderedDateTime.Value))
+            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
             {
                 DateTime minimumAllowedDateTime = _statsService
                     .GetResourceMinimumOpenedDateTime();
                 string errorMessage = ErrorMessages.GreaterThanOrEqual
                     .ReplacePropertyName(DisplayNames.Treatment)
                     .ReplaceComparisonValue(minimumAllowedDateTime.ToVietnameseString());
-                throw new OperationException(nameof(requestDto.OrderedDateTime), errorMessage);
+                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
 
-            // The treatmented datetime is valid, assign it to the new treatment.
-            treatmentedDateTime = requestDto.OrderedDateTime.Value;
+            // The PaidDateTime is valid, assign it to the new treatment.
+            paidDateTime = requestDto.PaidDateTime.Value;
         }
 
         // Initialize treatment entity.
         Treatment treatment = new Treatment
         {
-            OrderedDateTime = treatmentedDateTime,
+            PaidDateTime = paidDateTime,
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             Note = requestDto.Note,
             CreatedUserId = _authorizationService.GetUserId(),
@@ -174,7 +172,7 @@ public class TreatmentService : ITreatmentService
 
             // The treatment can be created successfully without any error. Add the treatment
             // to the stats.
-            DateOnly treatmentedDate = DateOnly.FromDateTime(treatment.OrderedDateTime);
+            DateOnly treatmentedDate = DateOnly.FromDateTime(treatment.PaidDateTime);
             await _statsService.IncrementTreatmentGrossRevenueAsync(treatment.Amount, treatmentedDate);
             if (treatment.VatAmount > 0)
             {
@@ -248,14 +246,19 @@ public class TreatmentService : ITreatmentService
         {
             throw new AuthorizationException();
         }
-
-        // Revert stats for items' amount and vat amount.
-        DateOnly oldOrderedDate = DateOnly.FromDateTime(treatment.OrderedDateTime);
-        await _statsService.IncrementTreatmentGrossRevenueAsync(-treatment.Amount, oldOrderedDate);
-        await _statsService.IncrementVatCollectedAmountAsync(-treatment.VatAmount, oldOrderedDate);
+        
+        // Using transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
+        
+        // Storing the old data for ujpdate history logging and stats adjustment.
+        long oldAmount = treatment.Amount;
+        long oldVatAmount = treatment.VatAmount;
+        DateOnly oldPaidDate = DateOnly.FromDateTime(treatment.PaidDateTime);
+        TreatmentUpdateHistoryDataDto oldData = new TreatmentUpdateHistoryDataDto(treatment);
 
         // Handle the new treatmented datetime when the request specifies it.
-        if (requestDto.OrderedDateTime.HasValue)
+        if (requestDto.PaidDateTime.HasValue)
         {
             // Check if the current user has permission to specify a new treatmented datetime.
             if (!_authorizationService.CanSetTreatmentPaidDateTime())
@@ -263,16 +266,19 @@ public class TreatmentService : ITreatmentService
                 throw new AuthorizationException();
             }
 
-            // Check if that with the new treatmented datetime, the status of the treatment won't be changed.
-            if (!IsUpdatedOrderedDateTimeValid(treatment, requestDto.OrderedDateTime.Value))
+            // Validate the specified PaidDateTime value from the request.
+            try
             {
-                throw new OperationException(
-                    nameof(requestDto.OrderedDateTime),
-                    ErrorMessages.Invalid.ReplacePropertyName(DisplayNames.OrderedDateTime));
+                treatment.PaidDateTime = requestDto.PaidDateTime.Value;
             }
-
-            // The new treatmented datetime is considered to be valid, assign it to the treatment.
-            treatment.OrderedDateTime = requestDto.OrderedDateTime.Value;
+            catch (ArgumentException exception)
+            {
+                string errorMessage = exception.Message
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
+                throw new OperationException(
+                    nameof(requestDto.PaidDateTime),
+                    errorMessage);
+            }
         }
 
         // Update treatment properties.
@@ -293,6 +299,12 @@ public class TreatmentService : ITreatmentService
             urlsToBeDeletedWhenSucceeds.AddRange(photoUpdateResults.Item1);
             urlsToBeDeletedWhenFails.AddRange(photoUpdateResults.Item2);
         }
+        
+        // Store new data for update history logging.
+        TreatmentUpdateHistoryDataDto newData = new TreatmentUpdateHistoryDataDto(treatment);
+        
+        // Log update history.
+        LogUpdateHistory(treatment, oldData, newData, requestDto.UpdateReason);
 
         // Save changes and handle the errors.
         try
@@ -302,16 +314,24 @@ public class TreatmentService : ITreatmentService
 
             // The treatment can be updated successfully without any error.
             // Adjust the stats for items' amount and vat collected amount.
-            // Delete all old photos which have been replaced by new ones.
-            DateOnly newOrderedDate = DateOnly.FromDateTime(treatment.OrderedDateTime);
-            await _statsService.IncrementRetailGrossRevenueAsync(treatment.Amount, newOrderedDate);
-            await _statsService.IncrementVatCollectedAmountAsync(treatment.VatAmount, newOrderedDate);
 
-            // Delete photo files which have been specified.
+            // Revert the old stats.
+            await _statsService.IncrementTreatmentGrossRevenueAsync(-oldAmount, oldPaidDate);
+            await _statsService.IncrementVatCollectedAmountAsync(-oldVatAmount, oldPaidDate);
+            
+            // Create new stats.
+            DateOnly newPaidDate = DateOnly.FromDateTime(treatment.PaidDateTime);
+            await _statsService.IncrementRetailGrossRevenueAsync(treatment.Amount, newPaidDate);
+            await _statsService.IncrementVatCollectedAmountAsync(treatment.VatAmount, newPaidDate);
+
+            // Delete all old photos which have been replaced by new ones.
             foreach (string url in urlsToBeDeletedWhenSucceeds)
             {
                 _photoService.Delete(url);
             }
+            
+            // Commit the transaction and finish the operation.
+            await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
         {
@@ -322,13 +342,13 @@ public class TreatmentService : ITreatmentService
             }
 
             // Handle concurrency exception.
-            if (exception.InnerException is DbUpdateConcurrencyException)
+            if (exception is DbUpdateConcurrencyException)
             {
                 throw new ConcurrencyException();
             }
 
             // Handling the exception in the foreseen cases.
-            else if (exception.InnerException is MySqlException sqlException)
+            if (exception.InnerException is MySqlException sqlException)
             {
                 SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
                 exceptionHandler.Handle(sqlException);
@@ -346,6 +366,8 @@ public class TreatmentService : ITreatmentService
                                 nameof(User),
                                 nameof(requestDto.TherapistId),
                                 requestDto.TherapistId.ToString());
+                        case "created_user_id":
+                            throw new ConcurrencyException();
                     }
                 }
             }
@@ -403,7 +425,7 @@ public class TreatmentService : ITreatmentService
                     await _context.SaveChangesAsync();
 
                     // Order has been deleted successfully, adjust the stats.
-                    DateOnly orderedDate = DateOnly.FromDateTime(treatment.OrderedDateTime);
+                    DateOnly orderedDate = DateOnly.FromDateTime(treatment.PaidDateTime);
                     await _statsService.IncrementRetailGrossRevenueAsync(
                         treatment.Amount,
                         orderedDate);
@@ -448,8 +470,12 @@ public class TreatmentService : ITreatmentService
     /// Create treatment photos associated to the given treatment with the database provided in the request.
     /// This method must only be called during the treatment creating operation.
     /// </summary>
-    /// <param name="treatment">The treatment which photos are to be created.</param>
-    /// <param name="requestDtos">A list of objects containing the data for the creating operation.</param>
+    /// <param name="treatment">
+    /// The treatment which photos are to be created.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the data for the creating operation.
+    /// </param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task CreatePhotosAsync(Treatment treatment, List<TreatmentPhotoRequestDto> requestDtos)
     {
@@ -468,8 +494,12 @@ public class TreatmentService : ITreatmentService
     /// Update or create treatment items associated to the given treatment with the data provided
     /// in the request. This method must only be called during the treatment updating operation.
     /// </summary>
-    /// <param name="treatment">The treatment which items are to be created or updated.</param>
-    /// <param name="requestDtos">A list of objects containing the new data for updating operation.</param>
+    /// <param name="treatment">
+    /// The treatment which items are to be created or updated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the new data for updating operation.
+    /// </param>
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.
     /// </exception>
@@ -524,12 +554,17 @@ public class TreatmentService : ITreatmentService
     /// Update or create treatment photos associated to the given treatment with the data provided
     /// in the request. This method must only be called during the treatment updating operation.
     /// </summary>
-    /// <param name="treatment">The treatment which photos are to be created or updated.</param>
-    /// <param name="requestDtos">A list of objects containing the new data for updating operation.</param>
+    /// <param name="treatment">
+    /// The treatment which photos are to be created or updated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the new data for updating operation.
+    /// </param>
     /// <returns>
     /// A tuple containing 2 lists of photos' url strings, the first one represents the deleted photos'
     /// urls which must be deleted after the whole treatment updating operation succeeds, the second one
-    /// represents the  created photos' urls which must be deleted after the whole treatment updating operation fails.
+    /// represents the  created photos' urls which must be deleted after the whole treatment updating
+    /// operation fails.
     /// </returns>
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.
@@ -593,27 +628,35 @@ public class TreatmentService : ITreatmentService
 
         return (urlsToBeDeletedWhenSucceeds, urlsToBeDeletedWhenFails);
     }
-
+    
     /// <summary>
-    /// Check if the treatmented datetime value provided in the request is valid to be updated
-    /// for the given treatment.
+    /// Log the old and new data to update history for the specified treatment.
     /// </summary>
-    /// <param name="treatment">The treatment to be updated.</param>
-    /// <param name="newOrderedDateTime">The new treatmented datetime provided in the request.</param>
-    /// <returns>
-    /// <c>true</c> if the treatmented datetime value is valid; otherwise, <c>false</c>.
-    /// </returns>
-    private bool IsUpdatedOrderedDateTimeValid(Treatment treatment, DateTime newOrderedDateTime)
+    /// <param name="treatment">
+    /// The treatment entity which the new update history is associated.
+    /// </param>
+    /// <param name="oldData">
+    /// An object containing the old data of the treatment before modification.
+    /// </param>
+    /// <param name="newData">
+    /// An object containing the new data of the treatment after modification. 
+    /// </param>
+    /// <param name="reason">The reason of the modification.</param>
+    private void LogUpdateHistory(
+            Treatment treatment,
+            TreatmentUpdateHistoryDataDto oldData,
+            TreatmentUpdateHistoryDataDto newData,
+            string reason)
     {
-        DateTime minDateTime = new DateTime(
-            treatment.OrderedDateTime.AddMonths(-1).Year,
-            treatment.OrderedDateTime.AddMonths(-1).Month,
-            1,
-            0, 0, 0);
-        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        DateTime maxDateTime = treatment.OrderedDateTime.AddMonths(2) > currentDateTime
-            ? currentDateTime
-            : treatment.OrderedDateTime.AddMonths(2);
-        return newOrderedDateTime > minDateTime || newOrderedDateTime <= maxDateTime;
+        TreatmentUpdateHistory updateHistory = new TreatmentUpdateHistory
+        {
+            Reason = reason,
+            OldData = JsonSerializer.Serialize(oldData),
+            NewData = JsonSerializer.Serialize(newData),
+            UserId = _authorizationService.GetUserId()
+        };
+        
+        treatment.UpdateHistories ??= new List<TreatmentUpdateHistory>();
+        treatment.UpdateHistories.Add(updateHistory);
     }
 }

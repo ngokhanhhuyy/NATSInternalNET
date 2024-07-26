@@ -2,7 +2,7 @@
 
 public class TreatmentUpsertRequestDto : IRequestDto<TreatmentUpsertRequestDto>
 {
-    public DateTime? OrderedDateTime { get; set; }
+    public DateTime? PaidDateTime { get; set; }
     public long ServiceAmount { get; set; }
     public decimal ServiceVatFactor { get; set; }
     public string Note { get; set; }

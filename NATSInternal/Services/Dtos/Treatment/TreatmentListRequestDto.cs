@@ -3,7 +3,7 @@ namespace NATSInternal.Services.Dtos;
 public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>
 {
     public bool OrderByAscending { get; set; }
-    public string OrderByField { get; set; } = nameof(FieldOptions.OrderedDateTime);
+    public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public DateOnly? RangeFrom { get; set; }
     public DateOnly? RangeTo { get; set; }
     public int Page { get; set; } = 1;
@@ -17,7 +17,7 @@ public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>
     
     public enum FieldOptions
     {
-        OrderedDateTime,
+        PaidDateTime,
         Amount
     }
 }

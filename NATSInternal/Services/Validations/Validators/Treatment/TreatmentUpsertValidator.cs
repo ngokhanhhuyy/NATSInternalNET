@@ -4,11 +4,9 @@ public class TreatmentUpsertValidator : Validator<TreatmentUpsertRequestDto>
 {
     public TreatmentUpsertValidator()
     {
-        RuleFor(dto => dto.OrderedDateTime)
-            .GreaterThanOrEqualTo(MinimumOrderedDateTime)
-            .When(dto => dto.OrderedDateTime.HasValue)
-            .WithMessage(dto => GetMinimumOrderedDateTimeErrorMessage(dto))
-            .WithName(DisplayNames.OrderedDateTime);
+        RuleFor(dto => dto.PaidDateTime)
+            .IsValidStatsDateTime()
+            .WithName(DisplayNames.PaidDateTime);
         RuleFor(dto => dto.ServiceAmount)
             .GreaterThanOrEqualTo(0)
             .WithName(DisplayNames.ServiceAmount);
@@ -38,22 +36,4 @@ public class TreatmentUpsertValidator : Validator<TreatmentUpsertRequestDto>
             .NotNull()
             .SetValidator(new TreatmentPhotoValidator());
     }
-
-    public DateTime MinimumOrderedDateTime
-    {
-        get
-        {
-            DateTime minDate = DateTime.UtcNow.ToApplicationTime().AddMonths(-1);
-            return new DateTime(minDate.Year, minDate.Month, 1, 0, 0, 0);
-        }
-    }
-
-    private string GetMinimumOrderedDateTimeErrorMessage(TreatmentUpsertRequestDto requestDto)
-    {
-        return ErrorMessages.LaterThanOrEqual
-            .ReplacePropertyName(DisplayNames.OrderedDateTime)
-            .ReplaceComparisonValue(MinimumOrderedDateTime.ToVietnameseString());
-    }
-
-
 }

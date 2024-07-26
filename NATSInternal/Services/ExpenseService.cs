@@ -267,7 +267,9 @@ public class ExpenseService : IExpenseService
             {
                 string errorMessage = exception.Message
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
-                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+                throw new OperationException(
+                    nameof(requestDto.PaidDateTime),
+                    errorMessage);
             }
 
             // The specified PaidDateTime is valid, assign it to the expense.

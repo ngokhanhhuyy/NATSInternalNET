@@ -2,8 +2,8 @@ namespace NATSInternal.Services.Dtos;
 
 public class ExpenseUpdateHistoryResponseDto
 {
-    private ExpenseUpdateHistoryDataDto _oldData;
-    private ExpenseUpdateHistoryDataDto _newData;
+    private readonly ExpenseUpdateHistoryDataDto _oldData;
+    private readonly ExpenseUpdateHistoryDataDto _newData;
 
     public DateTime UpdatedDateTime { get; set; }
     public UserBasicResponseDto UpdatedUser { get; set; }
