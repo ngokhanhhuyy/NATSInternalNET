@@ -1,19 +1,15 @@
 namespace NATSInternal.Services.Entities;
 
 [Table("treatments")]
-public class Treatment
+public class Treatment : LockableEntity
 {
     [Column("id")]
     [Key]
     public int Id { get; set; }
 
-    [Column("ordered_datetime")]
+    [Column("paid_datetime")]
     [Required]
-    public DateTime OrderedDateTime { get; set; }
-
-    [Column("created_datetime")]
-    [Required]
-    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
+    public DateTime PaidDateTime { get; set; }
 
     [Column("service_amount")]
     [Required]
@@ -26,10 +22,6 @@ public class Treatment
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; } = false;
 
     [Column("is_deleted")]
     [Required]

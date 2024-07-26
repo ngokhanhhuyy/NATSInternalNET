@@ -5,7 +5,7 @@ public class SupplyBasicResponseDto
     public int Id { get; set; }
     public DateTime SuppliedDateTime { get; set; }
     public long TotalAmount { get; set; }
-    public bool IsClosed { get; set; }
+    public bool IsLocked { get; set; }
     public UserBasicResponseDto User { get; set; }
     public string FirstPhotoUrl { get; set; }
     public SupplyAuthorizationResponseDto Authorization { get; set; }
@@ -26,7 +26,7 @@ public class SupplyBasicResponseDto
         Id = supply.Id;
         SuppliedDateTime = supply.PaidDateTime;
         TotalAmount = supply.TotalAmount;
-        IsClosed = supply.IsClosed;
+        IsLocked = supply.IsLocked;
         User = new UserBasicResponseDto(supply.CreatedUser);
         FirstPhotoUrl = supply.FirstPhotoUrl;
     }

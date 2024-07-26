@@ -3,14 +3,14 @@ namespace NATSInternal.Services.Dtos;
 public class TreatmentDetailResponseDto
 {
     public int Id { get; set; }
-    public DateTime OrderedDateTime { get; set; }
+    public DateTime PaidDateTime { get; set; }
     public DateTime CreatedDateTime { get; set; }
     public DateTime? LastUpdatedDateTime { get; set; }
     public long ServiceAmount { get; set; }
     public decimal ServiceVatAmount { get; set; }
     public long ProductAmount { get; set; }
     public string Note { get; set; }
-    public bool IsClosed { get; set; }
+    public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public UserBasicResponseDto CreatedUser { get; set; }
     public UserBasicResponseDto Therapist { get; set; }
@@ -23,13 +23,13 @@ public class TreatmentDetailResponseDto
             TreatmentAuthorizationResponseDto authorization)
     {
         Id = treatment.Id;
-        OrderedDateTime = treatment.OrderedDateTime;
+        PaidDateTime = treatment.PaidDateTime;
         LastUpdatedDateTime = treatment.LastUpdatedDateTime;
         ServiceAmount = treatment.ServiceAmount;
         ServiceVatAmount = treatment.ServiceVatFactor;
         ProductAmount = treatment.ProductAmount;
         Note = treatment.Note;
-        IsClosed = treatment.IsClosed;
+        IsLocked = treatment.IsLocked;
         Customer = new CustomerBasicResponseDto(treatment.Customer);
         CreatedUser = new UserBasicResponseDto(treatment.CreatedUser);
         Therapist = new UserBasicResponseDto(treatment.Therapist);

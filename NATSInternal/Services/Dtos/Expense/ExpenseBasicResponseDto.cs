@@ -6,7 +6,7 @@ public class ExpenseBasicResponseDto
     public long Amount { get; set; }
     public DateTime PaidDateTime { get; set; }
     public ExpenseCategory Category { get; set; }
-    public bool IsClosed { get; set; }
+    public bool IsLocked { get; set; }
     public ExpenseAuthorizationResponseDto Authorization { get; set; }
 
     public ExpenseBasicResponseDto(Expense expense)
@@ -28,6 +28,6 @@ public class ExpenseBasicResponseDto
         Amount = expense.Amount;
         PaidDateTime = expense.PaidDateTime;
         Category = expense.Category;
-        IsClosed = expense.IsClosed;
+        IsLocked = expense.IsLocked;
     }
 }

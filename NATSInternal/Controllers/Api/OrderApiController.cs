@@ -8,18 +8,15 @@ public class OrderApiController : ControllerBase
     private readonly IOrderService _orderService;
     private readonly IValidator<OrderListRequestDto> _listValidator;
     private readonly IValidator<OrderUpsertRequestDto> _upsertValidator;
-    private readonly IValidator<DebtPaymentRequestDto> _paymentValidator;
 
     public OrderApiController(
             IOrderService orderService,
             IValidator<OrderListRequestDto> listValidator,
-            IValidator<OrderUpsertRequestDto> upsertValidator,
-            IValidator<DebtPaymentRequestDto> paymentValidator)
+            IValidator<OrderUpsertRequestDto> upsertValidator)
     {
         _orderService = orderService;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
-        _paymentValidator = paymentValidator;
     }
 
     [HttpGet]

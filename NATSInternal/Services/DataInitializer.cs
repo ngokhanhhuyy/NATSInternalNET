@@ -958,7 +958,6 @@ public sealed class DataInitializer
                     PaidDateTime = currentDateTime,
                     Category = category,
                     Note = null,
-                    IsClosed = ShouldOfficiallyClose(currentDateTime),
                     CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
                     Payee = payee
                 };
@@ -1007,7 +1006,6 @@ public sealed class DataInitializer
                 {
                     PaidDateTime = currentDateTime,
                     Note = null,
-                    IsClosed = ShouldOfficiallyClose(currentDateTime),
                     CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
                     CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
                     Items = new List<OrderItem>()

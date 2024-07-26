@@ -91,19 +91,21 @@ public class ExpenseService : IExpenseService
     /// <inheritdoc/>
     public async Task<ExpenseDetailResponseDto> GetDetailAsync(int id)
     {
-        return await _context.Expenses
+        Expense expense = await _context.Expenses
             .Include(e => e.CreatedUser).ThenInclude(u => u.Roles)
             .Include(e => e.Payee)
             .Include(e => e.Photos)
             .Where(e => e.Id == id)
-            .Select(e => new ExpenseDetailResponseDto(
-                e,
-                _authorizationService.GetExpenseAuthorization(e)))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Expense),
                 nameof(id),
                 id.ToString());
+        
+        return new ExpenseDetailResponseDto(
+            expense,
+            _authorizationService.GetExpenseAuthorization(expense),
+            mapHistories: _authorizationService.CanAccessExpenseUpdateHistories());
     }
 
     /// <inheritdoc/>

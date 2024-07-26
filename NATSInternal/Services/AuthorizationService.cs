@@ -403,7 +403,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (expense.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedExpense))
+        if (expense.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedExpense))
         {
             return false;
         }
@@ -413,7 +413,7 @@ public class AuthorizationService : IAuthorizationService
     
     public bool CanDeleteExpense(Expense expense)
     {
-        return _user.HasPermission(PermissionConstants.DeleteExpense) && !expense.IsClosed;
+        return _user.HasPermission(PermissionConstants.DeleteExpense) && !expense.IsLocked;
     }
 
     public bool CanSetExpensePaidDateTime()
@@ -439,7 +439,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (order.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedOrder))
+        if (order.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedOrder))
         {
             return false;
         }
@@ -449,7 +449,7 @@ public class AuthorizationService : IAuthorizationService
     
     public bool CanDeleteOrder(Order order)
     {
-        return !order.IsClosed && _user.HasPermission(PermissionConstants.DeleteOrder);
+        return !order.IsLocked && _user.HasPermission(PermissionConstants.DeleteOrder);
     }
 
     public bool CanSetOrderPaidDateTime()
@@ -475,7 +475,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (treatment.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedTreatment))
+        if (treatment.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedTreatment))
         {
             return false;
         }
@@ -511,7 +511,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
         
-        if (debt.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedDebt))
+        if (debt.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedDebt))
         {
             return false;
         }
@@ -547,7 +547,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
 
-        if (debtPayment.IsClosed && !_user.HasPermission(PermissionConstants.EditLockedDebt))
+        if (debtPayment.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedDebt))
         {
             return false;
         }
@@ -583,7 +583,7 @@ public class AuthorizationService : IAuthorizationService
             return false;
         }
 
-        if (consultant.IsClosed &&
+        if (consultant.IsLocked &&
             !_user.HasPermission(PermissionConstants.EditLockedConsultant))
         {
             return false;

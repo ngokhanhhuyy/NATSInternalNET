@@ -272,7 +272,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasForeignKey(t => t.CustomerId)
                 .HasConstraintName("FK__treatments__customers__customer_id")
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(t => t.OrderedDateTime)
+            e.HasIndex(t => t.PaidDateTime)
                 .HasDatabaseName("IX__treatments__ordered_datetime");
             e.HasIndex(t => t.IsDeleted)
                 .HasDatabaseName("IX__treatments__is_deleted");
