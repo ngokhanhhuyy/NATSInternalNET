@@ -88,26 +88,29 @@ public class DebtService : IDebtService
     /// <inheritdoc />
     public async Task<DebtDetailResponseDto> GetDetailAsync(int id)
     {
-        return await _context.Debts
+        Debt debt = await _context.Debts
             .Include(d => d.Customer)
             .Include(d => d.CreatedUser).ThenInclude(u => u.Roles)
+            .Include(d => d.UpdateHistories)
             .Where(d => d.Id == id && !d.IsDeleted)
-            .Select(d => new DebtDetailResponseDto(
-                d,
-                _authorizationService.GetDebtAuthorization(d)))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Debt),
                 nameof(id),
                 id.ToString());
-    }
+        
+        return new DebtDetailResponseDto(
+            debt,
+            _authorizationService.GetDebtAuthorization(debt),
+            mapUpdateHistories: _authorizationService.CanAccessDebtUpdateHistories());
+}
     
     /// <inheritdoc />
     public async Task<int> CreateAsync(DebtUpsertRequestDto requestDto)
     {
         // Determining the created datetime.
         DateTime createdDateTime = DateTime.UtcNow.ToApplicationTime();
-        if (requestDto.CreatedDateTime.HasValue)
+        if (requestDto.IncurredDateTime.HasValue)
         {
             // Check if the current user has permission to specify the created datetime for the debt.
             if (!_authorizationService.CanSetDebtCreatedDateTime())
@@ -116,16 +119,16 @@ public class DebtService : IDebtService
             }
             
             // Verify that with the specified created datetime, the debt will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.CreatedDateTime.Value))
+            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.IncurredDateTime.Value))
             {
                 string errorMessage = ErrorMessages.GreaterThanOrEqual
                     .ReplacePropertyName(DisplayNames.CreatedDateTime)
                     .ReplaceComparisonValue(_statsService.GetResourceMinimumOpenedDateTime().ToVietnameseString());
-                throw new OperationException(nameof(requestDto.CreatedDateTime), errorMessage);
+                throw new OperationException(nameof(requestDto.IncurredDateTime), errorMessage);
             }
             
             // The specified created datetime is valid, assign it to the debt.
-            createdDateTime = requestDto.CreatedDateTime.Value;
+            createdDateTime = requestDto.IncurredDateTime.Value;
         }
         
         // Initialize debt entity.
@@ -187,11 +190,12 @@ public class DebtService : IDebtService
             .BeginTransactionAsync();
         
         // Store the old data and create new data for stats adjustment.
-        DateOnly oldCreatedDate = DateOnly.FromDateTime(debt.CreatedDateTime);
+        DateOnly oldIncurredDate = DateOnly.FromDateTime(debt.IncurredDateTime);
         long oldAmount = debt.Amount;
+        DebtUpdateHistoryDataDto oldData = new DebtUpdateHistoryDataDto(debt);
 
         // Update the created datetime and amount if specified.
-        if (requestDto.CreatedDateTime.HasValue)
+        if (requestDto.IncurredDateTime.HasValue)
         {
             // Check if the current user has permission to change the created datetime.
             if (!_authorizationService.CanSetDebtCreatedDateTime())
@@ -200,8 +204,8 @@ public class DebtService : IDebtService
             }
             
             // Check if the amount or created datetime has been actually changed.
-            DateOnly createdDateFromRequest = DateOnly.FromDateTime(requestDto.CreatedDateTime.Value);
-            if (createdDateFromRequest != oldCreatedDate || requestDto.Amount != debt.Amount)
+            DateOnly createdDateFromRequest = DateOnly.FromDateTime(requestDto.IncurredDateTime.Value);
+            if (createdDateFromRequest != oldIncurredDate || requestDto.Amount != debt.Amount)
             {
             
                 // Verify if the amount has been changed, and with the new amount, the remaning debt amount
@@ -217,38 +221,46 @@ public class DebtService : IDebtService
                     }
                 }
                 
-                // Check if that with the new created datetime, the status of the debt won't be changed.
-                bool willDebtStatusNotBeChanged = _statsService
-                    .VerifyResourceDateTimeToBeUpdated(debt.CreatedDateTime, requestDto.CreatedDateTime.Value);
-                if (!willDebtStatusNotBeChanged)
+                // Validate the IncurredDateTime from the request.
+                try
                 {
-                    DateTime minAllowedDateTime = _statsService.GetResourceMinimumOpenedDateTime();
-                    string errorMessage = ErrorMessages.GreaterThanOrEqual
-                        .ReplacePropertyName(DisplayNames.CreatedDateTime)
-                        .ReplaceComparisonValue(minAllowedDateTime.ToVietnameseString());
-                    throw new OperationException(nameof(requestDto.CreatedDateTime), errorMessage);
+                    debt.IncurredDateTime = requestDto.IncurredDateTime.Value;
                 }
-                
-                // Change the created datetime.
-                debt.CreatedDateTime = requestDto.CreatedDateTime.Value;
+                catch (ArgumentException exception)
+                {
+                    string errorMessage = exception.Message
+                        .ReplacePropertyName(DisplayNames.IncurredDateTime);
+                    throw new OperationException(
+                        nameof(requestDto.IncurredDateTime),
+                        errorMessage);
+                }
             }
         }
         
         // Update other properties.
         debt.Amount = requestDto.Amount;
         debt.Note = requestDto.Note;
-                
-        // Undo the stats for the old debt.
-        await _statsService.IncrementDebtAmountAsync(- oldAmount, oldCreatedDate);
-
-        // Readjust the stats for the changed debt.
-        DateOnly newCreatedDate = DateOnly.FromDateTime(debt.CreatedDateTime);
-        await _statsService.IncrementDebtAmountAsync(debt.Amount, newCreatedDate);
+        
+        // Store the new data for update history logging.
+        DebtUpdateHistoryDataDto newData = new DebtUpdateHistoryDataDto(debt);
+        
+        // Log update history.
+        LogUpdateHistory(debt, oldData, newData, requestDto.UpdatingReason);
         
         // Perform the update operations.
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The debt can be saved successfully without any error.
+            // Revert the stats for the old debt.
+            await _statsService.IncrementDebtAmountAsync(- oldAmount, oldIncurredDate);
+
+            // Add the stats for the changed debt.
+            DateOnly newIncurredDate = DateOnly.FromDateTime(debt.IncurredDateTime);
+            await _statsService.IncrementDebtAmountAsync(debt.Amount, newIncurredDate);
+            
+            // Commit the transaction, finish the operation.
             await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
@@ -340,7 +352,10 @@ public class DebtService : IDebtService
     /// <exception cref="OperationException">
     /// Thrown when there is any exception which is related to the data during the operation.
     /// </exception>
-    private void HandleCreateOrUpdateException(MySqlException exception, int customerId, int userId)
+    private void HandleCreateOrUpdateException(
+            MySqlException exception,
+            int customerId,
+            int userId)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
@@ -363,5 +378,37 @@ public class DebtService : IDebtService
             }
             throw new OperationException("id", errorMessage);
         }
+    }
+    
+    /// <summary>
+    /// Log the old and new data to update history for the specified debt.
+    /// </summary>
+    /// <param name="debt">
+    /// The debt entity which the new update history is associated.
+    /// </param>
+    /// <param name="oldData">
+    /// An object containing the old data of the debt before modification.
+    /// </param>
+    /// <param name="newData">
+    /// An object containing the new data of the debt after modification. 
+    /// </param>
+    /// <param name="reason">The reason of the modification.</param>
+    private void LogUpdateHistory(
+            Debt debt,
+            DebtUpdateHistoryDataDto oldData,
+            DebtUpdateHistoryDataDto newData,
+            string reason)
+    {
+        DebtUpdateHistory updateHistory = new DebtUpdateHistory
+        {
+            Reason = reason,
+            OldData = JsonSerializer.Serialize(oldData),
+            NewData = JsonSerializer.Serialize(newData),
+            UserId = _authorizationService.GetUserId(),
+            UpdatedDateTime = DateTime.UtcNow.ToApplicationTime()
+        };
+        
+        debt.UpdateHistories ??= new List<DebtUpdateHistory>();
+        debt.UpdateHistories.Add(updateHistory);
     }
 }

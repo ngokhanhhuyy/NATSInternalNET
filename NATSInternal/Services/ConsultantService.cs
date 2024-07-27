@@ -85,18 +85,21 @@ public class ConsultantService : IConsultantService
     /// <inheritdoc />
     public async Task<ConsultantDetailResponseDto> GetDetailAsync(int id)
     {
-        return await _context.Consultants
-            .Include(e => e.CreatedUser).ThenInclude(u => u.Roles)
-            .Include(e => e.Customer)
+        Consultant consultant = await _context.Consultants
+            .Include(c => c.CreatedUser).ThenInclude(c => c.Roles)
+            .Include(c => c.Customer)
+            .Include(c => c.UpdateHistories)
             .Where(e => e.Id == id)
-            .Select(c => new ConsultantDetailResponseDto(
-                c,
-                _authorizationService.GetConsultantAuthorization(c)))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Expense),
                 nameof(id),
                 id.ToString());
+        
+        return new ConsultantDetailResponseDto(
+            consultant,
+            _authorizationService.GetConsultantAuthorization(consultant),
+            mapUpdateHistory: _authorizationService.CanAccessConsultantUpdateHistories());
     }
 
     /// <inheritdoc />
@@ -226,8 +229,8 @@ public class ConsultantService : IConsultantService
                 throw new AuthorizationException();
             }
 
-            // Prevent the consultant's PaidDateTime to be modified when the consultant is closed.
-            if (consultant.IsClosed)
+            // Prevent the consultant's PaidDateTime to be modified when the consultant is locked.
+            if (consultant.IsLocked)
             {
                 string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
                     .ReplaceResourceName(DisplayNames.Consultant)
@@ -235,21 +238,17 @@ public class ConsultantService : IConsultantService
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
 
-            // Verify that with the new paid datetime, the status of the expense won't be changed.
-            bool expenseStatusWillNotBeChanged = _statsService
-                .VerifyResourceDateTimeToBeUpdated(
-                    consultant.PaidDateTime,
-                    requestDto.PaidDateTime.Value);
-            if (!expenseStatusWillNotBeChanged)
+            // Validate the specfied PaidDateTime from the request.
+            try
             {
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.PaidDateTime)
-                    .ReplaceComparisonValue(requestDto.PaidDateTime.Value.ToVietnameseString());
+                consultant.PaidDateTime = requestDto.PaidDateTime.Value;
+            }
+            catch (ArgumentException exception)
+            {
+                string errorMessage = exception.Message
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
-
-            // Assign the specified paid datetime and amount to the expense.
-            consultant.PaidDateTime = requestDto.PaidDateTime.Value;
         }
 
         // Update fields.
@@ -261,7 +260,7 @@ public class ConsultantService : IConsultantService
         newData = new ConsultantUpdateHistoryDataDto(consultant);
         
         // Initialize update history.
-        CreateUpdateHistory(consultant, oldData, newData, requestDto.UpdatingReason);
+        LogUpdateHistory(consultant, oldData, newData, requestDto.UpdatingReason);
         
         // Perform the updating operation.
         try
@@ -360,13 +359,13 @@ public class ConsultantService : IConsultantService
     }
     
     /// <summary>
-    /// Create and log the update history for the specified consultant entity.
+    /// Lg the update history for the specified consultant entity.
     /// </summary>
     /// <param name="consultant">The consultant to be logged a new update history.</param>
     /// <param name="oldData">The old data before updating of the consultant.</param>
     /// <param name="newData">The new data after updating of the consultant.</param>
-    /// <param name="reason">The reason of the updating of the consultant.</param>
-    private void CreateUpdateHistory(
+    /// <param name="reason">The reason of the modification.</param>
+    private void LogUpdateHistory(
             Consultant consultant,
             ConsultantUpdateHistoryDataDto oldData,
             ConsultantUpdateHistoryDataDto newData,

@@ -5,7 +5,7 @@ public class ConsultantBasicResponseDto
     public int Id { get; set; }
     public long Amount { get; set; }
     public DateTime PaidDateTime { get; set; }
-    public bool IsClosed { get; set; }
+    public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public ConsultantAuthorizationResponseDto Authorization { get; set; }
 
@@ -27,7 +27,7 @@ public class ConsultantBasicResponseDto
         Id = consultant.Id;
         Amount = consultant.Amount;
         PaidDateTime = consultant.PaidDateTime;
-        IsClosed = consultant.IsClosed;
+        IsLocked = consultant.IsLocked;
         Customer = new CustomerBasicResponseDto(consultant.Customer);
     }
 }

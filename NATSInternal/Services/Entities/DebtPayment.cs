@@ -1,7 +1,7 @@
 ﻿namespace NATSInternal.Services.Entities;
 
 [Table("debt_payments")]
-public class DebtPayment
+public class DebtPayment : LockableEntity
 {
     [Column("id")]
     [Key]
@@ -17,11 +17,11 @@ public class DebtPayment
 
     [Column("paid_datetime")]
     [Required]
-    public DateTime PaidDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; }
+    public DateTime PaidDateTime
+    {
+        get => StatsDateTime;
+        set => StatsDateTime = value;
+    }
 
     [Column("is_deleted")]
     [Required]

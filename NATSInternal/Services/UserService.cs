@@ -124,36 +124,22 @@ public class UserService : IUserService
     /// <returns>An object containing the users who have just joined.</returns>
     public async Task<UserListResponseDto> GetJoinedRecentlyListAsync()
     {
-        DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+        DateOnly minimumJoiningDate = DateOnly
+            .FromDateTime(DateTime.UtcNow.ToApplicationTime())
+            .AddMonths(-1);
 
         List<User> users = await _context.Users
             .Include(u => u.Roles)
             .OrderBy(u => u.JoiningDate)
             .Where(u => u.JoiningDate.HasValue && !u.IsDeleted)
-            .Where(u => u.JoiningDate.Value.AddMonths(1) > today)
+            .Where(u => u.JoiningDate.Value > minimumJoiningDate)
             .ToListAsync();
 
         return new UserListResponseDto
         {
-            Results = users.Select(u => new UserBasicResponseDto
-            {
-                Id = u.Id,
-                UserName = u.UserName,
-                FirstName = u.FirstName,
-                MiddleName = u.MiddleName,
-                LastName = u.LastName,
-                FullName = u.FullName,
-                Gender = u.Gender,
-                Birthday = u.Birthday,
-                JoiningDate = u.JoiningDate,
-                AvatarUrl = u.AvatarUrl,
-                Role = new RoleBasicResponseDto
-                {
-                    Id = u.Role.Id,
-                    Name = u.Role.Name,
-                    DisplayName = u.Role.DisplayName
-                }
-            }).ToList()
+            Results = users
+                .Select(u => new UserBasicResponseDto(u))
+                .ToList()
         };
     }
 
@@ -183,25 +169,7 @@ public class UserService : IUserService
 
         return new UserListResponseDto
         {
-            Results = users.Select(u => new UserBasicResponseDto
-            {
-                Id = u.Id,
-                UserName = u.UserName,
-                FirstName = u.FirstName,
-                MiddleName = u.MiddleName,
-                LastName = u.LastName,
-                FullName = u.FullName,
-                Gender = u.Gender,
-                Birthday = u.Birthday,
-                JoiningDate = u.JoiningDate,
-                AvatarUrl = u.AvatarUrl,
-                Role = new RoleBasicResponseDto
-                {
-                    Id = u.Role.Id,
-                    Name = u.Role.Name,
-                    DisplayName = u.Role.DisplayName
-                }
-            }).ToList()
+            Results = users.Select(u => new UserBasicResponseDto(u)).ToList()
         };
     }
 
@@ -215,17 +183,7 @@ public class UserService : IUserService
         RoleDetailResponseDto responseDto = await _context.UserRoles
             .Include(ur => ur.Role).ThenInclude(r => r.Claims)
             .Where(ur => ur.UserId == id)
-            .Select(ur => new RoleDetailResponseDto
-            {
-                Id = ur.Role.Id,
-                Name = ur.Role.Name,
-                DisplayName = ur.Role.DisplayName,
-                PowerLevel = ur.Role.PowerLevel,
-                Permissions = ur.Role.Claims
-                    .Where(c => c.ClaimType == "Permission")
-                    .Select(c => c.ClaimValue)
-                    .ToList()
-            }).SingleOrDefaultAsync()
+            .Select(ur => new RoleDetailResponseDto(ur.Role)).SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(nameof(User), nameof(id), id.ToString());
         return responseDto;
     }
@@ -249,45 +207,7 @@ public class UserService : IUserService
             throw new ResourceNotFoundException(nameof(User), nameof(id), id.ToString());
         }
 
-        UserDetailResponseDto responseDto = new UserDetailResponseDto
-        {
-            Id = user.Id,
-            UserName = user.UserName,
-            PersonalInformation = new UserPersonalInformationResponseDto
-            {
-
-                FirstName = user.FirstName,
-                MiddleName = user.MiddleName,
-                LastName = user.LastName,
-                FullName = user.FullName,
-                Gender = user.Gender,
-                Birthday = user.Birthday,
-                PhoneNumber = user.PhoneNumber,
-                Email = user.Email,
-                AvatarUrl = user.AvatarUrl,
-            },
-            UserInformation = new UserUserInformationResponseDto
-            {
-                JoiningDate = user.JoiningDate,
-                CreatedDateTime = user.CreatedDateTime,
-                UpdatedDateTime = user.UpdatedDateTime,
-                Note = user.Note,
-                Role = new RoleDetailResponseDto
-                {
-                    Id = user.Role.Id,
-                    Name = user.Role.Name,
-                    DisplayName = user.Role.DisplayName,
-                    PowerLevel = user.Role.PowerLevel,
-                    Permissions = user.Role.Claims
-                    .Where(c => c.ClaimType == "Permission")
-                    .Select(c => c.ClaimValue)
-                    .ToList()
-                }
-            },
-            Authorization = _authorizationService.GetUserDetailAuthorization(user)
-        };
-
-        return responseDto;
+        return new UserDetailResponseDto(user);
     }
 
     /// <summary>

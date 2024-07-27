@@ -6,7 +6,7 @@ public class DebtBasicResponseDto
     public long Amount { get; set; }
     public string Note { get; set; }
     public DateTime PaidDateTime { get; set; }
-    public bool IsClosed { get; set; }
+    public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public DebtAuthorizationResponseDto Authorization { get; set; }
 
@@ -27,7 +27,7 @@ public class DebtBasicResponseDto
         Amount = debt.Amount;
         Note = debt.Note;
         PaidDateTime = debt.CreatedDateTime;
-        IsClosed = debt.IsClosed;
+        IsLocked = debt.IsLocked;
         Customer = new CustomerBasicResponseDto(debt.Customer);
     }
 }

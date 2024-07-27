@@ -283,7 +283,6 @@ public class TreatmentService : ITreatmentService
 
         // Update treatment properties.
         treatment.Note = requestDto.Note;
-        treatment.CustomerId = requestDto.CustomerId;
         treatment.TherapistId = requestDto.TherapistId;
 
         // Update treatment items.

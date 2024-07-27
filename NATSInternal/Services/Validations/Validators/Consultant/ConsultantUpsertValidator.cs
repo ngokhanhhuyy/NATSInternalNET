@@ -4,6 +4,9 @@ public class ConsultantUpsertValidator : Validator<ConsultantUpsertRequestDto>
 {
     public ConsultantUpsertValidator()
     {
+        RuleFor(dto => dto.PaidDateTime)
+            .IsValidStatsDateTime()
+            .WithName(DisplayNames.PaidDateTime);
         RuleFor(dto => dto.Amount)
             .GreaterThan(0)
             .WithName(DisplayNames.Amount);
@@ -15,21 +18,11 @@ public class ConsultantUpsertValidator : Validator<ConsultantUpsertRequestDto>
             .GreaterThanOrEqualTo(0)
             .WithName(DisplayNames.Customer);
 
-        RuleSet("Create", () => {
-            RuleFor(dto => dto.PaidDateTime)
-                .GreaterThanOrEqualTo(GetMinimumPaidDateTime())
-                .When(dto => dto.PaidDateTime.HasValue)
-                .WithName(DisplayNames.PaidDateTime);
+        RuleSet("Update", () =>
+        {
+            RuleFor(dto => dto.UpdatingReason)
+                .MaximumLength(255)
+                .WithName(DisplayNames.Reason);
         });
-
-        RuleSet("Update", () => { });
-    }
-
-    private static DateTime GetMinimumPaidDateTime()
-    {
-        return new DateTime(
-            DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Year,
-            DateTime.UtcNow.ToApplicationTime().AddMonths(-1).Month,
-            1, 0, 0, 0);
     }
 }

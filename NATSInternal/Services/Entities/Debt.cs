@@ -1,7 +1,7 @@
 ﻿namespace NATSInternal.Services.Entities;
 
 [Table("debts")]
-public class Debt
+public class Debt : LockableEntity
 {
     [Column("id")]
     [Key]
@@ -14,14 +14,13 @@ public class Debt
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
-
-    [Column("created_datetime")]
-    [Required]
-    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; }
+    
+    [Column("incurred_datetime")]
+    public DateTime IncurredDateTime
+    {
+        get => StatsDateTime;
+        set => StatsDateTime = value;
+    }
 
     [Column("is_deleted")]
     [Required]

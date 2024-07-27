@@ -12,10 +12,12 @@ public class ConsultantDetailResponseDto
     public CustomerBasicResponseDto Customer { get; set; }
     public UserBasicResponseDto User { get; set; }
     public ConsultantAuthorizationResponseDto Authorization { get; set; }
+    public List<ConsultantUpdateHistoryResponseDto> UpdateHistories { get; set; }
 
     public ConsultantDetailResponseDto(
             Consultant consultant,
-            ConsultantAuthorizationResponseDto authorization)
+            ConsultantAuthorizationResponseDto authorization,
+            bool mapUpdateHistory = false)
     {
         Id = consultant.Id;
         Amount = consultant.Amount;
@@ -23,9 +25,16 @@ public class ConsultantDetailResponseDto
         PaidDateTime = consultant.PaidDateTime;
         CreatedDateTime = consultant.CreatedDateTime;
         LastUpdatedDateTime = consultant.LastUpdatedDateTime;
-        IsClosed = consultant.IsClosed;
+        IsClosed = consultant.IsLocked;
         Customer = new CustomerBasicResponseDto(consultant.Customer);
         User = new UserBasicResponseDto(consultant.CreatedUser);
         Authorization = authorization;
+        
+        if (mapUpdateHistory)
+        {
+            UpdateHistories = consultant.UpdateHistories
+                .Select(uh => new ConsultantUpdateHistoryResponseDto(uh))
+                .ToList();
+        }
     }
 }

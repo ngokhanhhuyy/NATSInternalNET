@@ -283,7 +283,6 @@ public class OrderService : IOrderService
 
         // Update order properties.
         order.Note = requestDto.Note;
-        order.CustomerId = requestDto.CustomerId;
 
         // Update order items.
         UpdateItems(order, requestDto.Items);

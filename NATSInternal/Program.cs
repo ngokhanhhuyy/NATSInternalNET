@@ -169,14 +169,6 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditSupply))
     .AddPolicy("CanDeleteSupply", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteSupply))
-    .AddPolicy("CanEditSupplyItem", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.EditSupplyItem))
-    .AddPolicy("CanDeleteSupplyItem", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteSupplyItem))
-    .AddPolicy("CanEditSupplyPhoto", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.EditSupplyPhoto))
-    .AddPolicy("CanDeleteSupplyPhoto", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteSupplyPhoto))
     .AddPolicy("CanCreateExpense", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateExpense))
     .AddPolicy("CanEditExpense", policy =>
@@ -260,7 +252,6 @@ builder.Services.AddSwaggerGen();
 
 // Background tasks.
 builder.Services.AddHostedService<RefreshTokenCleanerTask>();
-builder.Services.AddHostedService<StatsTask>();
 
 // Add CORS.
 builder.Services.AddCors(options =>

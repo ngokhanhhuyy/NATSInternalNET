@@ -1,11 +1,19 @@
 namespace NATSInternal.Services.Entities;
 
 [Table("consultant")]
-public class Consultant
+public class Consultant : LockableEntity
 {
     [Column("id")]
     [Key]
     public int Id { get; set; }
+    
+    [Column("paid_datetime")]
+    [Required]
+    public DateTime PaidDateTime
+    {
+        get => StatsDateTime;
+        set => StatsDateTime = value;
+    }
 
     [Column("amount")]
     [Required]
@@ -14,18 +22,6 @@ public class Consultant
     [Column("note")]
     [StringLength(255)]
     public string Note { get; set; }
-
-    [Column("created_datetime")]
-    [Required]
-    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
-
-    [Column("paid_datetime")]
-    [Required]
-    public DateTime PaidDateTime { get; set; }
-
-    [Column("is_closed")]
-    [Required]
-    public bool IsClosed { get; set; }
 
     [Column("is_deleted")]
     [Required]

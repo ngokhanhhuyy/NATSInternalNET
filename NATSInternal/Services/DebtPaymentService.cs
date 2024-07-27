@@ -89,18 +89,20 @@ public class DebtPaymentService : IDebtPaymentService
     /// <inheritdoc />
     public async Task<DebtPaymentDetailResponseDto> GetDetailAsync(int id)
     {
-        return await _context.DebtPayments
+        DebtPayment debtPayment = await _context.DebtPayments
             .Include(d => d.Customer)
             .Include(d => d.CreatedUser).ThenInclude(u => u.Role)
             .Where(d => d.Id == id && !d.IsDeleted)
-            .Select(d => new DebtPaymentDetailResponseDto(
-                d,
-                _authorizationService.GetDebtPaymentAuthorization(d)))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(DebtPayment),
                 nameof(id),
                 id.ToString());
+        
+        return new DebtPaymentDetailResponseDto(
+                debtPayment,
+                _authorizationService.GetDebtPaymentAuthorization(debtPayment),
+                mapUpdateHistories: _authorizationService.CanAccessExpenseUpdateHistories());
     }
 
     /// <inheritdoc />
@@ -208,8 +210,10 @@ public class DebtPaymentService : IDebtPaymentService
             .BeginTransactionAsync();
         
         // Store the old data and create new data for stats adjustment.
-        DateOnly oldPaidDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
         long oldAmount = debtPayment.Amount;
+        DateOnly oldPaidDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
+        DebtPaymentUpdateHistoryDataDto oldData;
+        oldData = new DebtPaymentUpdateHistoryDataDto(debtPayment);
 
         // Update the paid datetime if specified.
         if (requestDto.PaidDateTime.HasValue)
@@ -224,7 +228,6 @@ public class DebtPaymentService : IDebtPaymentService
             DateOnly createdDateFromRequest = DateOnly.FromDateTime(requestDto.PaidDateTime.Value);
             if (createdDateFromRequest != oldPaidDate || requestDto.Amount != debtPayment.Amount)
             {
-            
                 // Verify if the amount has been changed, and with the new amount,
                 // the remaning debt amount won't be negative.
                 if (requestDto.Amount != debtPayment.Amount)
@@ -238,21 +241,19 @@ public class DebtPaymentService : IDebtPaymentService
                     }
                 }
                 
-                // Check if that with the new paid datetime, the status of the debt won't be changed.
-                bool willDebtStatusNotBeChanged = _statsService.VerifyResourceDateTimeToBeUpdated(
-                        debtPayment.PaidDateTime,
-                        requestDto.PaidDateTime.Value);
-                if (!willDebtStatusNotBeChanged)
+                // Validate the specified PaidDateTime from the request.
+                try
                 {
-                    DateTime minAllowedDateTime = _statsService.GetResourceMinimumOpenedDateTime();
-                    string errorMessage = ErrorMessages.GreaterThanOrEqual
-                        .ReplacePropertyName(DisplayNames.PaidDateTime)
-                        .ReplaceComparisonValue(minAllowedDateTime.ToVietnameseString());
-                    throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+                    debtPayment.PaidDateTime = requestDto.PaidDateTime.Value;
                 }
-                
-                // Change the paid datetime.
-                debtPayment.PaidDateTime = requestDto.PaidDateTime.Value;
+                catch (ArgumentException exception)
+                {
+                    string errorMessage = exception.Message
+                        .ReplacePropertyName(DisplayNames.PaidDateTime);
+                    throw new OperationException(
+                        nameof(requestDto.PaidDateTime),
+                        errorMessage);
+                }
             }
         }
 
@@ -260,25 +261,36 @@ public class DebtPaymentService : IDebtPaymentService
         // not be negative.
         if (debtPayment.Customer.RemainingDebtAmount - requestDto.Amount < 0)
         {
-            string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
+            const string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
             throw new OperationException(nameof(requestDto.Amount), amountErrorMessage);
         }
         
         // Update other properties.
         debtPayment.Amount = requestDto.Amount;
         debtPayment.Note = requestDto.Note;
-                
-        // Undo the stats for the old debt.
-        await _statsService.IncrementDebtPaidAmountAsync(- oldAmount, oldPaidDate);
-
-        // Readjust the stats for the changed debt amount.
-        DateOnly newPaidDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
-        await _statsService.IncrementDebtPaidAmountAsync(debtPayment.Amount, newPaidDate);
+        
+        // Store new data for update history logging.
+        DebtPaymentUpdateHistoryDataDto newData;
+        newData = new DebtPaymentUpdateHistoryDataDto(debtPayment);
+        
+        // Log update history.
+        LogUpdateHistory(debtPayment, oldData, newData, requestDto.UpdatingReason);
         
         // Perform the update operations.
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The debt payment can be updated successfully without any error.
+            // Adjust the stats.
+            // Revert the old stats.
+            await _statsService.IncrementDebtAmountAsync(-oldAmount, oldPaidDate);
+            
+            // Add new stats.
+            DateOnly newPaidDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
+            await _statsService.IncrementDebtAmountAsync(debtPayment.Amount, newPaidDate);
+            
+            // Commit the transaction and finish the operation.
             await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
@@ -343,7 +355,7 @@ public class DebtPaymentService : IDebtPaymentService
             ?? throw new ResourceNotFoundException(nameof(Debt), nameof(id), id.ToString());
 
         // Verify that if this debt payment is closed.
-        if (debtPayment.IsClosed)
+        if (debtPayment.IsLocked)
         {
             string errorMessage = ErrorMessages.ModificationTimeExpired
                 .ReplaceResourceName(DisplayNames.DebtPayment);
@@ -401,5 +413,36 @@ public class DebtPaymentService : IDebtPaymentService
                 }
             }
         }
+    }
+    
+    /// <summary>
+    /// Log the old and new data to update history for the specified debt payment.
+    /// </summary>
+    /// <param name="debtPayment">
+    /// The debt payment entity which the new update history is associated.
+    /// </param>
+    /// <param name="oldData">
+    /// An object containing the old data of the debt payment before modification.
+    /// </param>
+    /// <param name="newData">
+    /// An object containing the new data of the debt payment after modification. 
+    /// </param>
+    /// <param name="reason">The reason of the modification.</param>
+    private void LogUpdateHistory(
+            DebtPayment debtPayment,
+            DebtPaymentUpdateHistoryDataDto oldData,
+            DebtPaymentUpdateHistoryDataDto newData,
+            string reason)
+    {
+        DebtPaymentUpdateHistory updateHistory = new DebtPaymentUpdateHistory
+        {
+            Reason = reason,
+            OldData = JsonSerializer.Serialize(oldData),
+            NewData = JsonSerializer.Serialize(newData),
+            UpdatedDateTime = DateTime.UtcNow.ToApplicationTime(),
+            UserId = _authorizationService.GetUserId()
+        };
+        debtPayment.UpdateHistories ??= new List<DebtPaymentUpdateHistory>();
+        debtPayment.UpdateHistories.Add(updateHistory);
     }
 }
