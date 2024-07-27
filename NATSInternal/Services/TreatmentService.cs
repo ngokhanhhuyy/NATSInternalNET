@@ -251,7 +251,7 @@ public class TreatmentService : ITreatmentService
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
         
-        // Storing the old data for ujpdate history logging and stats adjustment.
+        // Storing the old data for update history logging and stats adjustment.
         long oldAmount = treatment.Amount;
         long oldVatAmount = treatment.VatAmount;
         DateOnly oldPaidDate = DateOnly.FromDateTime(treatment.PaidDateTime);
@@ -314,7 +314,6 @@ public class TreatmentService : ITreatmentService
 
             // The treatment can be updated successfully without any error.
             // Adjust the stats for items' amount and vat collected amount.
-
             // Revert the old stats.
             await _statsService.IncrementTreatmentGrossRevenueAsync(-oldAmount, oldPaidDate);
             await _statsService.IncrementVatCollectedAmountAsync(-oldVatAmount, oldPaidDate);

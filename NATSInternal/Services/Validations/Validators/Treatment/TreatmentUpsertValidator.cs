@@ -35,5 +35,15 @@ public class TreatmentUpsertValidator : Validator<TreatmentUpsertRequestDto>
         RuleForEach(dto => dto.Photos)
             .NotNull()
             .SetValidator(new TreatmentPhotoValidator());
+        
+        RuleSet("Create", () => { });
+        
+        RuleSet("Update", () =>
+        {
+            RuleFor(dto => dto.UpdateReason)
+                .NotEmpty()
+                .MaximumLength(255)
+                .WithName(DisplayNames.Reason);
+        });
     }
 }

@@ -246,11 +246,16 @@ public class OrderService : IOrderService
         {
             throw new AuthorizationException();
         }
-
-        // Revert stats for items' amount and vat amount.
-        DateOnly oldOrderedDate = DateOnly.FromDateTime(order.PaidDateTime);
-        await _statsService.IncrementRetailGrossRevenueAsync(-order.ItemAmount, oldOrderedDate);
-        await _statsService.IncrementVatCollectedAmountAsync(-order.VatAmount, oldOrderedDate);
+        
+        // Use transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
+        
+        // Storing the old data for update history logging and stats adjustments.
+        long oldItemAmount = order.ItemAmount;
+        long oldVatAmount = order.VatAmount;
+        DateOnly oldPaidDate = DateOnly.FromDateTime(order.PaidDateTime);
+        OrderUpdateHistoryDataDto oldData = new OrderUpdateHistoryDataDto(order);
 
         // Handle the new ordered datetime when the request specifies it.
         if (requestDto.PaidDateTime.HasValue)
@@ -261,16 +266,19 @@ public class OrderService : IOrderService
                 throw new AuthorizationException();
             }
 
-            // Check if that with the new ordered datetime, the status of the order won't be changed.
-            if (!IsUpdatedOrderedDateTimeValid(order, requestDto.PaidDateTime.Value))
+            // Validate the specified PaidDateTime value from the request.
+            try
             {
+                order.PaidDateTime = requestDto.PaidDateTime.Value;
+            }
+            catch (ArgumentException exception)
+            {
+                string errorMessage = exception.Message
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(
                     nameof(requestDto.PaidDateTime),
-                    ErrorMessages.Invalid.ReplacePropertyName(DisplayNames.OrderedDateTime));
+                    errorMessage);
             }
-
-            // The new ordered datetime is considered to be valid, assign it to the order.
-            order.PaidDateTime = requestDto.PaidDateTime.Value;
         }
 
         // Update order properties.
@@ -290,6 +298,12 @@ public class OrderService : IOrderService
             urlsToBeDeletedWhenSucceeds.AddRange(photoUpdateResults.Item1);
             urlsToBeDeletedWhenFails.AddRange(photoUpdateResults.Item2);
         }
+        
+        // Store new data for update history logging.
+        OrderUpdateHistoryDataDto newData = new OrderUpdateHistoryDataDto(order);
+        
+        // Log update history.
+        LogUpdateHistory(order, oldData, newData, requestDto.UpdateReason);
 
         // Save changes and handle errors.
         try
@@ -299,16 +313,23 @@ public class OrderService : IOrderService
 
             // The order can be updated successfully without any error.
             // Adjust the stats for items' amount and vat collected amount.
+            // Revert the old stats.
+            await _statsService.IncrementRetailGrossRevenueAsync(-oldItemAmount, oldPaidDate);
+            await _statsService.IncrementVatCollectedAmountAsync(-oldVatAmount, oldPaidDate);
+            
             // Delete all old photos which have been replaced by new ones.
-            DateOnly newOrderedDate = DateOnly.FromDateTime(order.PaidDateTime);
-            await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, newOrderedDate);
-            await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, newOrderedDate);
+            DateOnly newPaidDate = DateOnly.FromDateTime(order.PaidDateTime);
+            await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, newPaidDate);
+            await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, newPaidDate);
 
             // Delete photo files which have been specified.
             foreach (string url in urlsToBeDeletedWhenSucceeds)
             {
                 _photoService.Delete(url);
             }
+            
+            // Commit the trasaction and finish the operation.
+            await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
         {
@@ -319,13 +340,13 @@ public class OrderService : IOrderService
             }
 
             // Handle concurrency exception.
-            if (exception.InnerException is DbUpdateConcurrencyException)
+            if (exception is DbUpdateConcurrencyException)
             {
                 throw new ConcurrencyException();
             }
 
             // Handling the exception in the foreseen cases.
-            else if (exception.InnerException is MySqlException sqlException)
+            if (exception.InnerException is MySqlException sqlException)
             {
                 SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
                 exceptionHandler.Handle(sqlException);
@@ -404,29 +425,6 @@ public class OrderService : IOrderService
             }
             throw;
         }
-    }
-
-    /// <summary>
-    /// Check if the ordered datetime value provided in the request is valid to be updated
-    /// for the given order.
-    /// </summary>
-    /// <param name="order">The order to be updated.</param>
-    /// <param name="newOrderedDateTime">The new ordered datetime provided in the request.</param>
-    /// <returns>
-    /// <c>true</c> if the ordered datetime value is valid; otherwise, <c>false</c>.
-    /// </returns>
-    private bool IsUpdatedOrderedDateTimeValid(Order order, DateTime newOrderedDateTime)
-    {
-        DateTime minDateTime = new DateTime(
-            order.PaidDateTime.AddMonths(-1).Year,
-            order.PaidDateTime.AddMonths(-1).Month,
-            1,
-            0, 0, 0);
-        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        DateTime maxDateTime = order.PaidDateTime.AddMonths(2) > currentDateTime
-            ? currentDateTime
-            : order.PaidDateTime.AddMonths(2);
-        return newOrderedDateTime > minDateTime || newOrderedDateTime <= maxDateTime;
     }
 
     /// <summary>
@@ -602,5 +600,36 @@ public class OrderService : IOrderService
         }
 
         return (urlsToBeDeletedWhenSucceeds, urlsToBeDeletedWhenFails);
+    }
+    
+    /// <summary>
+    /// Log the old and new data to update history for the specified order.
+    /// </summary>
+    /// <param name="order">
+    /// The order entity which the new update history is associated.
+    /// </param>
+    /// <param name="oldData">
+    /// An object containing the old data of the order before modification.
+    /// </param>
+    /// <param name="newData">
+    /// An object containing the new data of the order after modification. 
+    /// </param>
+    /// <param name="reason">The reason of the modification.</param>
+    private void LogUpdateHistory(
+            Order order,
+            OrderUpdateHistoryDataDto oldData,
+            OrderUpdateHistoryDataDto newData,
+            string reason)
+    {
+        OrderUpdateHistory updateHistory = new OrderUpdateHistory
+        {
+            Reason = reason,
+            OldData = JsonSerializer.Serialize(oldData),
+            NewData = JsonSerializer.Serialize(newData),
+            UserId = _authorizationService.GetUserId()
+        };
+        
+        order.UpdateHistories ??= new List<OrderUpdateHistory>();
+        order.UpdateHistories.Add(updateHistory);
     }
 }

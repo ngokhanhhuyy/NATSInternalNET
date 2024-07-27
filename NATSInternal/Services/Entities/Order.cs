@@ -21,7 +21,7 @@ public class Order : LockableEntity
 
     [Column("is_deleted")]
     [Required]
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; }
 
     // Foreign keys
     [Column("customer_id")]
