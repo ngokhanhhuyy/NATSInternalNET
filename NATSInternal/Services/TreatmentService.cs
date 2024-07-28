@@ -98,21 +98,33 @@ public class TreatmentService : ITreatmentService
     /// <inheritdoc />
     public async Task<TreatmentDetailResponseDto> GetDetailAsync(int id)
     {
-        // Fetch the entity with the given id and ensure it exists in the database.
-        return await _context.Treatments
+        // Initialize query.
+        IQueryable<Treatment> query = _context.Treatments
             .Include(t => t.Customer)
             .Include(t => t.Items)
-            .Include(t => t.Photos)
-            .Include(t => t.UpdateHistories)
-            .Where(t => t.Id == id && !t.IsDeleted)
-            .Select(t => new TreatmentDetailResponseDto(
-                t,
-                _authorizationService.GetTreatmentAuthorization(t)))
-            .SingleOrDefaultAsync()
+            .Include(t => t.Photos);
+
+        // Determine if the update histories should be fetched.
+        bool shouldIncludeUpdateHistories = _authorizationService
+            .CanAccessTreatmentUpdateHistories();
+        if (shouldIncludeUpdateHistories)
+        {
+            query = query.Include(t => t.UpdateHistories);
+        }
+
+        // Fetch the entity with the given id and ensure it exists in the database.
+        Treatment treatment = await query
+            .AsSplitQuery()
+            .SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(Treatment),
                 nameof(id),
                 id.ToString());
+
+        return new TreatmentDetailResponseDto(
+            treatment,
+            _authorizationService.GetTreatmentAuthorization(treatment),
+            mapUpdateHistories: shouldIncludeUpdateHistories);
     }
 
     /// <inheritdoc />

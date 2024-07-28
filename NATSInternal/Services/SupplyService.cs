@@ -105,22 +105,33 @@ public class SupplyService : ISupplyService
     /// <inheritdoc />
     public async Task<SupplyDetailResponseDto> GetDetailAsync(int id)
     {
-        Supply supply = await _context.Supplies
+        // Initialize query.
+        IQueryable<Supply> query =  _context.Supplies
             .Include(s => s.Items).ThenInclude(si => si.Product)
             .Include(s => s.Photos)
-            .Include(s => s.CreatedUser).ThenInclude(u => u.Roles)
-            .Include(s => s.UpdateHistories)
+            .Include(s => s.CreatedUser).ThenInclude(u => u.Roles);
+
+        // Determine if the update histories should be fetched.
+        bool shouldIncludeUpdateHistories = _authorizationService
+            .CanAccessSupplyUpdateHistories();
+        if (shouldIncludeUpdateHistories)
+        {
+            query = query.Include(s => s.UpdateHistories);
+        }
+
+        // Fetch the entity with the given id and ensure it exists in the database.
+        Supply supply = await query
             .AsSplitQuery()
             .SingleOrDefaultAsync(s => s.Id == id && !s.IsDeleted)
-        ?? throw new ResourceNotFoundException(
-            nameof(Supply),
-            nameof(id),
-            id.ToString());
+            ?? throw new ResourceNotFoundException(
+                nameof(Supply),
+                nameof(id),
+                id.ToString());
         
         return new SupplyDetailResponseDto(
             supply,
             _authorizationService.GetSupplyAuthorization(supply),
-            mapUpdateHistories: _authorizationService.CanAccessSupplyUpdateHistories());
+            mapUpdateHistories: shouldIncludeUpdateHistories);
     }
 
     /// <inheritdoc />

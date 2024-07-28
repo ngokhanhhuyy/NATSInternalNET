@@ -6,8 +6,8 @@ public class TreatmentUpdateHistoryDataDto
     public long ServiceAmount { get; set; }
     public decimal ServiceVatFactor { get; set; }
     public string Note { get; set; }
-    public int TherapistId { get; set; }
-    public int CustomerId { get; set; }
+    public TreatmentTherapistUpdateHistoryDataDto Therapist { get; set; }
+    public List<TreatmentItemUpdateHistoryDataDto> Items { get; set; }
     
     public TreatmentUpdateHistoryDataDto(Treatment treatment)
     {
@@ -15,7 +15,9 @@ public class TreatmentUpdateHistoryDataDto
         ServiceAmount = treatment.ServiceAmount;
         ServiceVatFactor = treatment.ServiceVatFactor;
         Note = treatment.Note;
-        TherapistId = treatment.TherapistId;
-        CustomerId = treatment.CustomerId;
+        Therapist = new TreatmentTherapistUpdateHistoryDataDto(treatment.Therapist);
+        Items = treatment.Items
+            .Select(i => new TreatmentItemUpdateHistoryDataDto(i))
+            .ToList();
     }
 }

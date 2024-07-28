@@ -91,13 +91,24 @@ public class ExpenseService : IExpenseService
     /// <inheritdoc/>
     public async Task<ExpenseDetailResponseDto> GetDetailAsync(int id)
     {
-        Expense expense = await _context.Expenses
+        // Initialize query.
+        IQueryable<Expense> query = _context.Expenses
             .Include(e => e.CreatedUser).ThenInclude(u => u.Roles)
             .Include(e => e.Payee)
-            .Include(e => e.Photos)
-            .Include(e => e.UpdateHistories)
-            .Where(e => e.Id == id)
-            .SingleOrDefaultAsync()
+            .Include(e => e.Photos);
+
+        // Determine if the update histories should be fetched.
+        bool shouldIncludeUpdateHistories = _authorizationService
+            .CanAccessExpenseUpdateHistories();
+        if (shouldIncludeUpdateHistories)
+        {
+            query = query.Include(e => e.UpdateHistories);
+        }
+
+        // Fetch the entity with the given id and ensure it exists in the database.
+        Expense expense = await query
+            .AsSingleQuery()
+            .SingleOrDefaultAsync(e => e.Id == id)
             ?? throw new ResourceNotFoundException(
                 nameof(Expense),
                 nameof(id),
@@ -106,7 +117,7 @@ public class ExpenseService : IExpenseService
         return new ExpenseDetailResponseDto(
             expense,
             _authorizationService.GetExpenseAuthorization(expense),
-            mapHistories: _authorizationService.CanAccessExpenseUpdateHistories());
+            mapHistories: shouldIncludeUpdateHistories);
     }
 
     /// <inheritdoc/>

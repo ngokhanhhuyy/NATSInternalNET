@@ -1,14 +1,14 @@
 namespace NATSInternal.Services.Dtos;
 
-public class OrderItemUpdateHistoryDataDto
+public class TreatmentItemUpdateHistoryDataDto
 {
     public int Id { get; set; }
     public long Amount { get; set; }
     public decimal VatFactor { get; set; }
     public int Quantity { get; set; }
     public string ProductName { get; set; }
-    
-    public OrderItemUpdateHistoryDataDto(OrderItem item)
+
+    public TreatmentItemUpdateHistoryDataDto(TreatmentItem item)
     {
         Id = item.Id;
         Amount = item.Amount;

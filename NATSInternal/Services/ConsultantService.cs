@@ -85,12 +85,23 @@ public class ConsultantService : IConsultantService
     /// <inheritdoc />
     public async Task<ConsultantDetailResponseDto> GetDetailAsync(int id)
     {
-        Consultant consultant = await _context.Consultants
+        // Initialize query.
+        IQueryable<Consultant> query = _context.Consultants
             .Include(c => c.CreatedUser).ThenInclude(c => c.Roles)
-            .Include(c => c.Customer)
-            .Include(c => c.UpdateHistories)
-            .Where(e => e.Id == id)
-            .SingleOrDefaultAsync()
+            .Include(c => c.Customer);
+
+        // Determine if the update histories should be fetched.
+        bool shouldIncludeUpdateHistories = _authorizationService
+            .CanAccessConsultantUpdateHistories();
+        if (shouldIncludeUpdateHistories)
+        {
+            query = query.Include(c => c.UpdateHistories);
+        }
+
+        // Fetch the entity with the given id and ensure it exists in the database.
+        Consultant consultant = await query
+            .AsSingleQuery()
+            .SingleOrDefaultAsync(c => c.Id == id && !c.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(Expense),
                 nameof(id),

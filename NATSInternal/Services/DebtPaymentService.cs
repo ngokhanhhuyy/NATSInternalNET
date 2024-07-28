@@ -89,11 +89,23 @@ public class DebtPaymentService : IDebtPaymentService
     /// <inheritdoc />
     public async Task<DebtPaymentDetailResponseDto> GetDetailAsync(int id)
     {
-        DebtPayment debtPayment = await _context.DebtPayments
+        // Initalize query.
+        IQueryable<DebtPayment> query = _context.DebtPayments
             .Include(d => d.Customer)
-            .Include(d => d.CreatedUser).ThenInclude(u => u.Role)
-            .Where(d => d.Id == id && !d.IsDeleted)
-            .SingleOrDefaultAsync()
+            .Include(d => d.CreatedUser).ThenInclude(u => u.Role);
+        
+        // Determine if the update histories should be fetched.
+        bool shouldIncludeUpdateHistories = _authorizationService
+            .CanAccessDebtPaymentUpdateHistories();
+        if (shouldIncludeUpdateHistories)
+        {
+            query = query.Include(dp => dp.UpdateHistories);
+        }
+
+        // Fetch the entity with the given id and ensure it exists in the database.
+        DebtPayment debtPayment = await query
+            .AsSplitQuery()
+            .SingleOrDefaultAsync(d => d.Id == id && !d.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(DebtPayment),
                 nameof(id),
@@ -102,7 +114,7 @@ public class DebtPaymentService : IDebtPaymentService
         return new DebtPaymentDetailResponseDto(
                 debtPayment,
                 _authorizationService.GetDebtPaymentAuthorization(debtPayment),
-                mapUpdateHistories: _authorizationService.CanAccessExpenseUpdateHistories());
+                mapUpdateHistories: shouldIncludeUpdateHistories);
     }
 
     /// <inheritdoc />

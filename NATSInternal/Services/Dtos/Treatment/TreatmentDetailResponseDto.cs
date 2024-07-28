@@ -17,10 +17,12 @@ public class TreatmentDetailResponseDto
     public List<TreatmentItemResponseDto> Items { get; set; }
     public List<TreatmentPhotoResponseDto> Photos { get; set; }
     public TreatmentAuthorizationResponseDto Authorization { get; set; }
+    public List<TreatmentUpdateHistoryResponseDto> UpdateHistories { get; set; }
 
     public TreatmentDetailResponseDto(
             Treatment treatment,
-            TreatmentAuthorizationResponseDto authorization)
+            TreatmentAuthorizationResponseDto authorization,
+            bool mapUpdateHistories = false)
     {
         Id = treatment.Id;
         PaidDateTime = treatment.PaidDateTime;
@@ -36,5 +38,12 @@ public class TreatmentDetailResponseDto
         Items = treatment.Items?.Select(ti => new TreatmentItemResponseDto(ti)).ToList();
         Photos = treatment.Photos?.Select(tp => new TreatmentPhotoResponseDto(tp)).ToList();
         Authorization = authorization;
+
+        if (mapUpdateHistories)
+        {
+            UpdateHistories = treatment.UpdateHistories
+                .Select(uh => new TreatmentUpdateHistoryResponseDto(uh))
+                .ToList();
+        }
     }
 }

@@ -14,10 +14,12 @@ public class OrderDetailResponseDto
     public UserBasicResponseDto User { get; set; }
     public List<OrderPhotoResponseDto> Photos { get; set; }
     public OrderAuthorizationResponseDto Authorization { get; set; }
+    public List<OrderUpdateHistoryResponseDto> UpdateHistories { get; set; }
 
     public OrderDetailResponseDto(
             Order order,
-            OrderAuthorizationResponseDto authorization)
+            OrderAuthorizationResponseDto authorization,
+            bool mapUpdateHistories = false)
     {
         Id = order.Id;
         OrderedDateTime = order.PaidDateTime;
@@ -31,5 +33,12 @@ public class OrderDetailResponseDto
         User = new UserBasicResponseDto(order.CreatedUser);
         Photos = order.Photos?.Select(p => new OrderPhotoResponseDto(p)).ToList();
         Authorization = authorization;
+
+        if (mapUpdateHistories)
+        {
+            UpdateHistories = order.UpdateHistories
+                .Select(uh => new OrderUpdateHistoryResponseDto(uh))
+                .ToList();
+        }
     }
 }

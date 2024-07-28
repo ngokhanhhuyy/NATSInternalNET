@@ -95,22 +95,34 @@ public class OrderService : IOrderService
     /// <inheritdoc />
     public async Task<OrderDetailResponseDto> GetDetailAsync(int id)
     {
-        return await _context.Orders
+        // Initialize query.
+        IQueryable<Order> query = _context.Orders
             .Include(o => o.Items).ThenInclude(oi => oi.Product)
             .Include(o => o.Photos)
             .Include(o => o.Customer)
-            .Include(o => o.CreatedUser)
-            .Include(o => o.UpdateHistories)
-            .Where(o => o.Id == id && !o.IsDeleted)
-            .Select(o => new OrderDetailResponseDto(
-                o,
-                _authorizationService.GetOrderAuthorization(o)))
+            .Include(o => o.CreatedUser);
+
+        // Determine if the update histories should be fetched.
+        bool shouldIncludeUpdateHistories = _authorizationService
+            .CanAccessOrderUpdateHistories();
+        if (shouldIncludeUpdateHistories)
+        {
+            query = query.Include(o => o.UpdateHistories);
+        }
+
+        // Fetch the entity with the given id from the database.
+        Order order = await query
             .AsSplitQuery()
-            .SingleOrDefaultAsync()
+            .SingleOrDefaultAsync(o => o.Id == id && !o.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(User),
                 nameof(id),
                 id.ToString());
+
+        return new OrderDetailResponseDto(
+            order,
+            _authorizationService.GetOrderAuthorization(order),
+            mapUpdateHistories: shouldIncludeUpdateHistories);
     }
 
     /// <inheritdoc />
