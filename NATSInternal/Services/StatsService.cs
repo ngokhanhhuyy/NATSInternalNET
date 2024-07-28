@@ -171,19 +171,28 @@ public class StatsService : IStatsService
     }
 
     /// <inheritdoc />
-    public bool VerifyResourceDateTimeToBeCreated(DateTime dateTime)
+    public void ValidateStatsDateTime<TEntity>(TEntity entity, DateTime statsDateTime)
+            where TEntity : LockableEntity
     {
-        DateTime resourceMinimumOpenedDateTime = GetResourceMinimumOpenedDateTime();
-
-        return dateTime > resourceMinimumOpenedDateTime;
-    }
-
-    /// <inheritdoc />
-    public bool VerifyResourceDateTimeToBeUpdated(DateTime originalDateTime, DateTime newDateTime)
-    {
-        bool isOriginalDateTimeClosed = originalDateTime < GetResourceMinimumOpenedDateTime();
-        bool isNewDateTimeClosed = newDateTime < GetResourceMinimumOpenedDateTime();
-        return isOriginalDateTimeClosed == isNewDateTimeClosed;
+        string errorMessage;
+        if (statsDateTime > entity.CreatedDateTime)
+        {
+            errorMessage = ErrorMessages.EarlierThanOrEqual
+                .ReplaceComparisonValue(entity.CreatedDateTime.ToVietnameseString());
+            throw new ArgumentException(errorMessage);
+        }
+        
+        DateTime minimumAssignableDateTime;
+        minimumAssignableDateTime = new DateTime(
+            entity.CreatedDateTime.AddMonths(-1).Year,
+            entity.CreatedDateTime.AddMonths(-1).Month,
+            1, 0, 0, 0);
+        if (statsDateTime < minimumAssignableDateTime)
+        {
+            errorMessage = ErrorMessages.GreaterThanOrEqual
+                .ReplaceComparisonValue(minimumAssignableDateTime.ToVietnameseString());
+            throw new ValidationException(errorMessage);
+        }
     }
 
     /// <inheritdoc />

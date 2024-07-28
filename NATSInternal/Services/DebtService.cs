@@ -117,17 +117,7 @@ public class DebtService : IDebtService
             {
                 throw new AuthorizationException();
             }
-            
-            // Verify that with the specified created datetime, the debt will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.IncurredDateTime.Value))
-            {
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.CreatedDateTime)
-                    .ReplaceComparisonValue(_statsService.GetResourceMinimumOpenedDateTime().ToVietnameseString());
-                throw new OperationException(nameof(requestDto.IncurredDateTime), errorMessage);
-            }
-            
-            // The specified created datetime is valid, assign it to the debt.
+
             createdDateTime = requestDto.IncurredDateTime.Value;
         }
         
@@ -202,14 +192,23 @@ public class DebtService : IDebtService
             {
                 throw new AuthorizationException();
             }
-            
-            // Check if the amount or created datetime has been actually changed.
-            DateOnly createdDateFromRequest = DateOnly.FromDateTime(requestDto.IncurredDateTime.Value);
-            if (createdDateFromRequest != oldIncurredDate || requestDto.Amount != debt.Amount)
+
+            // Prevent the consultant's IncurredDateTime to be modified when the debt is locked.
+            if (debt.IsLocked)
             {
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
+                    .ReplaceResourceName(DisplayNames.Debt)
+                    .ReplacePropertyName(DisplayNames.IncurredDateTime);
+                throw new OperationException(
+                    nameof(requestDto.IncurredDateTime),
+                    errorMessage);
+            }
             
-                // Verify if the amount has been changed, and with the new amount, the remaning debt amount
-                // won't be negative.
+            // Assign the new PaidDateTime value only if it's different from the old one.
+            if (requestDto.IncurredDateTime.Value != debt.IncurredDateTime)
+            {
+                // Verify if the amount has been changed, and with the new amount,
+                // the remaning debt amount won't be negative.
                 if (requestDto.Amount != debt.Amount)
                 {
                     long amountDifference = requestDto.Amount - debt.Amount;
@@ -224,9 +223,11 @@ public class DebtService : IDebtService
                 // Validate the IncurredDateTime from the request.
                 try
                 {
-                    debt.IncurredDateTime = requestDto.IncurredDateTime.Value;
+                    _statsService.ValidateStatsDateTime(
+                        debt,
+                        requestDto.IncurredDateTime.Value);
                 }
-                catch (ArgumentException exception)
+                catch (ValidationException exception)
                 {
                     string errorMessage = exception.Message
                         .ReplacePropertyName(DisplayNames.IncurredDateTime);
@@ -234,6 +235,9 @@ public class DebtService : IDebtService
                         nameof(requestDto.IncurredDateTime),
                         errorMessage);
                 }
+                
+                // The specified IncurredDateTime is valid, assign it to the debt.
+                debt.IncurredDateTime = requestDto.IncurredDateTime.Value;
             }
         }
         

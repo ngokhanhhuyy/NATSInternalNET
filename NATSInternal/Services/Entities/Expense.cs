@@ -13,11 +13,7 @@ public class Expense : LockableEntity
 
     [Column("paid_datetime")]
     [Required]
-    public DateTime PaidDateTime
-    {
-        get => StatsDateTime;
-        set => StatsDateTime = value;
-    }
+    public DateTime PaidDateTime { get; set; }
     
     [Column("category")]
     [Required]

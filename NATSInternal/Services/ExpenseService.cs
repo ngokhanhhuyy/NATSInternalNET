@@ -95,6 +95,7 @@ public class ExpenseService : IExpenseService
             .Include(e => e.CreatedUser).ThenInclude(u => u.Roles)
             .Include(e => e.Payee)
             .Include(e => e.Photos)
+            .Include(e => e.UpdateHistories)
             .Where(e => e.Id == id)
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
@@ -124,17 +125,7 @@ public class ExpenseService : IExpenseService
             {
                 throw new AuthorizationException();
             }
-
-            // Verify that with the specified paid datetime, the expense will not be considered as closed.
-            if (_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
-            {
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.PaidDateTime)
-                    .ReplaceComparisonValue(requestDto.PaidDateTime.Value.ToVietnameseString());
-                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
-            }
-
-            // The specified paid datetime is valid, assign the expense to it.
+            
             paidDateTime = requestDto.PaidDateTime.Value;
         }
         
@@ -257,23 +248,36 @@ public class ExpenseService : IExpenseService
             {
                 throw new AuthorizationException();
             }
-            
-            // Validate the specified PaidDateTime value from the request.
-            try
+
+            // Prevent the consultant's PaidDateTime to be modified when the consultant is locked.
+            if (expense.IsLocked)
             {
-                expense.PaidDateTime = requestDto.PaidDateTime.Value;
-            }
-            catch (ArgumentException exception)
-            {
-                string errorMessage = exception.Message
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
+                    .ReplaceResourceName(DisplayNames.Consultant)
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(
                     nameof(requestDto.PaidDateTime),
                     errorMessage);
             }
 
-            // The specified PaidDateTime is valid, assign it to the expense.
-            expense.PaidDateTime = requestDto.PaidDateTime.Value;
+            // Assign the new PaidDateTime value only if it's different from the old one.
+            if (requestDto.PaidDateTime.Value != expense.PaidDateTime)
+            {
+                // Validate and assign the specified PaidDateTime value from the request.
+                try
+                {
+                    _statsService.ValidateStatsDateTime(expense, requestDto.PaidDateTime.Value);
+                    expense.PaidDateTime = requestDto.PaidDateTime.Value;
+                }
+                catch (ArgumentException exception)
+                {
+                    string errorMessage = exception.Message
+                        .ReplacePropertyName(DisplayNames.PaidDateTime);
+                    throw new OperationException(
+                        nameof(requestDto.PaidDateTime),
+                        errorMessage);
+                }
+            }
         }
         
         // Update other fields.

@@ -103,6 +103,7 @@ public class TreatmentService : ITreatmentService
             .Include(t => t.Customer)
             .Include(t => t.Items)
             .Include(t => t.Photos)
+            .Include(t => t.UpdateHistories)
             .Where(t => t.Id == id && !t.IsDeleted)
             .Select(t => new TreatmentDetailResponseDto(
                 t,
@@ -131,18 +132,6 @@ public class TreatmentService : ITreatmentService
                 throw new AuthorizationException();
             }
 
-            // Check if that with the specified treatmented datetime, the new treatment will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
-            {
-                DateTime minimumAllowedDateTime = _statsService
-                    .GetResourceMinimumOpenedDateTime();
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.Treatment)
-                    .ReplaceComparisonValue(minimumAllowedDateTime.ToVietnameseString());
-                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
-            }
-
-            // The PaidDateTime is valid, assign it to the new treatment.
             paidDateTime = requestDto.PaidDateTime.Value;
         }
 
@@ -157,7 +146,7 @@ public class TreatmentService : ITreatmentService
         };
 
         // Initialize treatment item entites.
-        CreateItems(treatment, requestDto.Items);
+        await CreateItems(treatment, requestDto.Items);
 
         // Initialize photos.
         if (requestDto.Photos != null)
@@ -266,18 +255,34 @@ public class TreatmentService : ITreatmentService
                 throw new AuthorizationException();
             }
 
-            // Validate the specified PaidDateTime value from the request.
-            try
+            // Prevent the treatment's PaidDateTime to be modified when the treatment is locked.
+            if (treatment.IsLocked)
             {
-                treatment.PaidDateTime = requestDto.PaidDateTime.Value;
-            }
-            catch (ArgumentException exception)
-            {
-                string errorMessage = exception.Message
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
+                    .ReplaceResourceName(DisplayNames.Treatment)
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(
                     nameof(requestDto.PaidDateTime),
                     errorMessage);
+            }
+
+            // Assign the new PaidDateTime value only if it's different from the old one.
+            if (requestDto.PaidDateTime.Value != treatment.PaidDateTime)
+            {
+                // Validate and assign the specified PaidDateTime value from the request.
+                try
+                {
+                    _statsService.ValidateStatsDateTime(treatment, requestDto.PaidDateTime.Value);
+                    treatment.PaidDateTime = requestDto.PaidDateTime.Value;
+                }
+                catch (ArgumentException exception)
+                {
+                    string errorMessage = exception.Message
+                        .ReplacePropertyName(DisplayNames.PaidDateTime);
+                    throw new OperationException(
+                        nameof(requestDto.PaidDateTime),
+                        errorMessage);
+                }
             }
         }
 
@@ -286,7 +291,7 @@ public class TreatmentService : ITreatmentService
         treatment.TherapistId = requestDto.TherapistId;
 
         // Update treatment items.
-        UpdateItems(treatment, requestDto.Items);
+        await UpdateItems(treatment, requestDto.Items);
 
         // Update photos.
         List<string> urlsToBeDeletedWhenSucceeds = new List<string>();
@@ -378,6 +383,7 @@ public class TreatmentService : ITreatmentService
     {
         // Fetch the entity from the database and ensure it exists.
         Treatment treatment = await _context.Treatments
+            .Include(t => t.Items).ThenInclude(i => i.Product)
             .SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(Treatment),
@@ -394,11 +400,31 @@ public class TreatmentService : ITreatmentService
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
 
+        // Delete all the items associated to this treatment.
+        DeleteItemsAsync(treatment);
+
+        // Delete the treatment entity.
+        _context.Treatments.Remove(treatment);
+
         // Perform the deleting operation.
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The treatment can be deleted successfully without any error.
+            // Revert the stats associated to the treatment.
+            DateOnly paidDate = DateOnly.FromDateTime(treatment.PaidDateTime);
+            await _statsService.IncrementTreatmentGrossRevenueAsync(-treatment.Amount, paidDate);
+            await _statsService.IncrementVatCollectedAmountAsync(-treatment.VatAmount, paidDate);
+
+            // Commit the transaction and finish the operation.
             await transaction.CommitAsync();
+
+            // Deleted all the created photo files for the supply.
+            foreach (string url in treatment.Photos.Select(p => p.Url).ToList())
+            {
+                _photoService.Delete(url);
+            }
         }
         catch (DbUpdateException exception)
         {
@@ -449,17 +475,50 @@ public class TreatmentService : ITreatmentService
     /// <param name="requestDtos">
     /// A list of objects containing the new data for the creating operation.
     /// </param>
-    private void CreateItems(Treatment treatment, List<TreatmentItemRequestDto> requestDtos)
+    private async Task CreateItems(Treatment treatment, List<TreatmentItemRequestDto> requestDtos)
     {
-        foreach (TreatmentItemRequestDto itemRequestDto in requestDtos)
+        // Fetch a list of products which ids are specified in the request.
+        List<int> requestedProductIds = requestDtos.Select(i => i.ProductId).ToList();
+        List<Product> products = await _context.Products
+            .Where(p => requestedProductIds.Contains(p.Id))
+            .ToListAsync();
+        
+        for (int i = 0; i < requestDtos.Count; i++)
         {
+            TreatmentItemRequestDto itemRequestDto = requestDtos[i];
+            // Get the product with the specified id from pre-fetched list.
+            Product product = products.SingleOrDefault(p => p.Id == itemRequestDto.Id);
+
+            // Ensure the product exists.
+            if (product == null)
+            {
+                string errorMessage = ErrorMessages.NotFoundByProperty
+                    .ReplaceResourceName(DisplayNames.Product)
+                    .ReplacePropertyName(DisplayNames.Id)
+                    .ReplaceAttemptedValue(itemRequestDto.ProductId.ToString());
+                throw new OperationException($"items[{i}].productId", errorMessage);
+            }
+
+            // Validate that with the specified quantity value.
+            if (product.StockingQuantity < itemRequestDto.Quantity)
+            {
+                string errorMessage = ErrorMessages.NegativeProductStockingQuantity;
+                throw new OperationException($"items[{i}].quantity", errorMessage);
+            }
+
+            // Initialize entity.
             TreatmentItem item = new TreatmentItem
             {
                 Amount = itemRequestDto.Amount,
                 VatFactor = itemRequestDto.VatFactor,
                 Quantity = itemRequestDto.Quantity,
-                ProductId = itemRequestDto.ProductId
+                Product = product
             };
+
+            // Adjust the stocking quantity of the associated product.
+            product.StockingQuantity -= item.Quantity;
+
+            // Add item.
             treatment.Items.Add(item);
         }
     }
@@ -501,8 +560,17 @@ public class TreatmentService : ITreatmentService
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.
     /// </exception>
-    private void UpdateItems(Treatment treatment, List<TreatmentItemRequestDto> requestDtos)
+    private async Task UpdateItems(Treatment treatment, List<TreatmentItemRequestDto> requestDtos)
     {
+        // Pre-fetch a list of products for new items which ids are specfied in the request.
+        List<int> productIdsForNewItems = requestDtos
+            .Where(i => !i.Id.HasValue)
+            .Select(i => i.ProductId)
+            .ToList();
+        List<Product> productsForNewItems = await _context.Products
+            .Where(p => productIdsForNewItems.Contains(p.Id))
+            .ToListAsync();
+
         for (int i = 0; i < requestDtos.Count; i++)
         {
             TreatmentItemRequestDto itemRequestDto = requestDtos[i];
@@ -511,13 +579,16 @@ public class TreatmentService : ITreatmentService
             {
                 item = treatment.Items.SingleOrDefault(ti => ti.Id == itemRequestDto.Id.Value);
 
-                // Throw error if the item couldn't be found.
+                // Ensure the item exists.
                 if (item == null)
                 {
                     string errorMessage = ErrorMessages.NotFound
                         .ReplaceResourceName(DisplayNames.TreatmentItem);
                     throw new OperationException($"items[{i}].id", errorMessage);
                 }
+
+                // Revert the added stocking quantity of the product associated to the item.
+                item.Product.StockingQuantity -= item.Quantity;
 
                 // Remove item if deleted.
                 if (itemRequestDto.HasBeenDeleted)
@@ -526,25 +597,48 @@ public class TreatmentService : ITreatmentService
                 }
 
                 // Update item properties if changed.
-                if (itemRequestDto.HasBeenChanged)
+                else if (itemRequestDto.HasBeenChanged)
                 {
                     item.Amount = itemRequestDto.Amount;
                     item.VatFactor = itemRequestDto.VatFactor;
                     item.Quantity = itemRequestDto.Quantity;
-                    item.ProductId = itemRequestDto.ProductId;
                 }
             }
             else
             {
+                // Get the product entity from the pre-fetched products list.
+                Product product = productsForNewItems
+                    .Single(p => p.Id == itemRequestDto.ProductId);
+                
+                // Ensure the product exists.
+                if (product == null)
+                {
+                    string errorMessage = ErrorMessages.NotFoundByProperty
+                        .ReplaceResourceName(DisplayNames.Product)
+                        .ReplacePropertyName(DisplayNames.Id)
+                        .ReplaceAttemptedValue(itemRequestDto.ProductId.ToString());
+                    throw new OperationException($"items[{i}].productId", errorMessage);
+                }
+
                 item = new TreatmentItem
                 {
                     Amount = itemRequestDto.Amount,
                     VatFactor = itemRequestDto.VatFactor,
                     Quantity = itemRequestDto.Quantity,
-                    ProductId = itemRequestDto.ProductId
+                    Product = product
                 };
                 _context.TreatmentItems.Add(item);
             }
+
+            // Validate the new quantity value.
+            if (item.Product.StockingQuantity - item.Quantity < 0)
+            {
+                string errorMessage = ErrorMessages.NegativeProductStockingQuantity;
+                throw new OperationException($"items[{i}].stockingQuantity", errorMessage);
+            }
+
+            // Add the quantity to the product's stocking quantity.
+            item.Product.StockingQuantity += item.Quantity;
         }
     }
 
@@ -627,6 +721,20 @@ public class TreatmentService : ITreatmentService
         return (urlsToBeDeletedWhenSucceeds, urlsToBeDeletedWhenFails);
     }
     
+    /// <summary>
+    /// Delete all the items associated to the specified treatment, revert the stocking
+    /// quantity of the products associated to each item.
+    /// </summary>
+    /// <param name="treatment">The <c>Treatment</c> of which the items are to be deleted.</param>
+    private void DeleteItemsAsync(Treatment treatment)
+    {
+        foreach (TreatmentItem item in treatment.Items)
+        {
+            item.Product.StockingQuantity += item.Quantity;
+            _context.TreatmentItems.Remove(item);
+        }
+    }
+
     /// <summary>
     /// Log the old and new data to update history for the specified treatment.
     /// </summary>

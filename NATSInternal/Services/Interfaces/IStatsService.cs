@@ -255,34 +255,24 @@ public interface IStatsService
     Task TemporarilyCloseAsync(DateOnly date);
 
     /// <summary>
-    /// Verify the datetime of the resource to be created (PaidDateTime, PaidDateTime,
-    /// PaidDateTime, ...). The datetime must be later than the minimum opened datetime so
-    /// that the resource will not be considered
-    /// as closed.
+    /// Validate if the specified <c>DateTime</c> is valid for an entity so that
+    /// its locking status won't change after being assigned.
     /// </summary>
-    /// <param name="dateTime">
-    /// The <c>DateTime</c> of the new resource which is used to calculate the stats.
+    /// <typeparam name="TEntity">
+    /// The entity type which inherits from <c>LockableEntity class.</c>
+    /// </typeparam>
+    /// <param name="entity">
+    /// The entity to which the <c>statsDateTime</c> is assigned.
     /// </param>
-    /// <returns>
-    /// <c>True</c> if the datetime is later than the minimum opened datetime. Otherwise, <c>False</c>.
-    /// </returns>
-    bool VerifyResourceDateTimeToBeCreated(DateTime dateTime);
-
-    /// <summary>
-    /// Verify the datetime of the resource to be updated, based on the original datetime of
-    /// the resource (PaidDateTime, PaidDateTime, PaidDateTime, ...). If the original datetime
-    /// is earlier than the minimum opened datetime and considered closed, the new datetime must be
-    /// also earler than the minimum opened datetime and vice versa. Both of them must be in the same
-    /// status.
-    /// </summary>
-    /// <param name="originalDateTime">
-    /// A <c>DateTime</c> object representing the original time of the resource before modification.
+    /// <param name="statsDateTime">
+    /// A <c>DateTime</c> object specified in the request representing the DateTime for
+    /// the field in the entity which is used to calculate the statistics.
     /// </param>
-    /// <param name="dateTime">
-    /// A <c>DateTime</c> object representing the time used to calculate the stats.
-    /// </param>
-    /// <returns></returns>
-    bool VerifyResourceDateTimeToBeUpdated(DateTime originalDateTime, DateTime dateTime);
+    /// <exception cref="ValidationException">
+    /// Thrown when the specified <c>DateTime</c> is not valid to be assigned to the entity.
+    /// </exception>
+    void ValidateStatsDateTime<TEntity>(TEntity entity, DateTime statsDateTime)
+            where TEntity : LockableEntity;
 
     /// <summary>
     /// Get the minimum datetime that if a resource is assigned to, it will be considered <c>opened</c>.

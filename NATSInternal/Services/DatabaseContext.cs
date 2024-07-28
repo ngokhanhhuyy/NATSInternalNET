@@ -412,7 +412,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
             e.ToTable("expense_update_histories");
             e.HasKey(euh => euh.Id);
             e.HasOne(euh => euh.Expense)
-                .WithMany(e => e.UpdateHistories)
+                .WithMany(ex => ex.UpdateHistories)
                 .HasForeignKey(euh => euh.ExpenseId)
                 .HasConstraintName("FK__expense_update_histories__expenses__expense_id")
                 .OnDelete(DeleteBehavior.Cascade);
@@ -454,8 +454,8 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(duh => duh.User)
                 .WithMany(u => u.DebtUpdateHistories)
-                .HasForeignKey(duh => duh.DebtId)
-                .HasConstraintName("FK__debt_update_histories__debts__debt_id")
+                .HasForeignKey(duh => duh.UserId)
+                .HasConstraintName("FK__debt_update_histories__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(duh => duh.UpdatedDateTime)
                 .HasDatabaseName("IX__debt_update_histories__updated_datetime");

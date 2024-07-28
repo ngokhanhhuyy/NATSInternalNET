@@ -17,11 +17,7 @@ public class DebtPayment : LockableEntity
 
     [Column("paid_datetime")]
     [Required]
-    public DateTime PaidDateTime
-    {
-        get => StatsDateTime;
-        set => StatsDateTime = value;
-    }
+    public DateTime PaidDateTime { get; set; }
 
     [Column("is_deleted")]
     [Required]

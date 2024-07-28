@@ -35,5 +35,6 @@ global using Microsoft.AspNetCore.Authentication.JwtBearer;
 global using FluentValidation;
 global using FluentValidation.Results;
 global using ValidationResult = FluentValidation.Results.ValidationResult;
+global using ValidationException = System.ComponentModel.DataAnnotations.ValidationException;
 global using ImageMagick;
 global using Bogus;

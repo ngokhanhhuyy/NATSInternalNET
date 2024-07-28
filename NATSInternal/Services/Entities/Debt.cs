@@ -16,11 +16,7 @@ public class Debt : LockableEntity
     public string Note { get; set; }
     
     [Column("incurred_datetime")]
-    public DateTime IncurredDateTime
-    {
-        get => StatsDateTime;
-        set => StatsDateTime = value;
-    }
+    public DateTime IncurredDateTime { get; set; }
 
     [Column("is_deleted")]
     [Required]

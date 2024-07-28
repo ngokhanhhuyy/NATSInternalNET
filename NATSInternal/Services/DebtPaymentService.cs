@@ -119,18 +119,6 @@ public class DebtPaymentService : IDebtPaymentService
                 throw new AuthorizationException();
             }
             
-            // Verify that with the specified paid datetime, the debt payment will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
-            {
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.CreatedDateTime)
-                    .ReplaceComparisonValue(_statsService
-                        .GetResourceMinimumOpenedDateTime()
-                        .ToVietnameseString());
-                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
-            }
-            
-            // The specified paid datetime is valid, assign it to the debt payment.
             paidDateTime = requestDto.PaidDateTime.Value;
         }
 
@@ -223,10 +211,20 @@ public class DebtPaymentService : IDebtPaymentService
             {
                 throw new AuthorizationException();
             }
+
+            // Prevent the consultant's PaidDateTime to be modified when the consultant is locked.
+            if (debtPayment.IsLocked)
+            {
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
+                    .ReplaceResourceName(DisplayNames.DebtPayment)
+                    .ReplacePropertyName(DisplayNames.PaidDateTime);
+                throw new OperationException(
+                    nameof(requestDto.PaidDateTime),
+                    errorMessage);
+            }
             
-            // Check if the amount or created datetime has been actually changed.
-            DateOnly createdDateFromRequest = DateOnly.FromDateTime(requestDto.PaidDateTime.Value);
-            if (createdDateFromRequest != oldPaidDate || requestDto.Amount != debtPayment.Amount)
+            // Assign the new PaidDateTime value only if it's different from the old one.
+            if (requestDto.PaidDateTime.Value != debtPayment.PaidDateTime)
             {
                 // Verify if the amount has been changed, and with the new amount,
                 // the remaning debt amount won't be negative.
@@ -244,9 +242,11 @@ public class DebtPaymentService : IDebtPaymentService
                 // Validate the specified PaidDateTime from the request.
                 try
                 {
-                    debtPayment.PaidDateTime = requestDto.PaidDateTime.Value;
+                    _statsService.ValidateStatsDateTime(
+                        debtPayment,
+                        requestDto.PaidDateTime.Value);
                 }
-                catch (ArgumentException exception)
+                catch (ValidationException exception)
                 {
                     string errorMessage = exception.Message
                         .ReplacePropertyName(DisplayNames.PaidDateTime);
@@ -254,6 +254,9 @@ public class DebtPaymentService : IDebtPaymentService
                         nameof(requestDto.PaidDateTime),
                         errorMessage);
                 }
+
+                // The specified PaidDateTime is valid, assign it to the debt payment.
+                debtPayment.PaidDateTime = requestDto.PaidDateTime.Value;
             }
         }
 

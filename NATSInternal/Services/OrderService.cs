@@ -100,6 +100,7 @@ public class OrderService : IOrderService
             .Include(o => o.Photos)
             .Include(o => o.Customer)
             .Include(o => o.CreatedUser)
+            .Include(o => o.UpdateHistories)
             .Where(o => o.Id == id && !o.IsDeleted)
             .Select(o => new OrderDetailResponseDto(
                 o,
@@ -129,17 +130,6 @@ public class OrderService : IOrderService
                 throw new AuthorizationException();
             }
 
-            // Check if that with the specified ordered datetime, the new order will not be closed.
-            if (!_statsService.VerifyResourceDateTimeToBeCreated(requestDto.PaidDateTime.Value))
-            {
-                DateTime minimumAllowedDateTime = _statsService
-                    .GetResourceMinimumOpenedDateTime();
-                string errorMessage = ErrorMessages.GreaterThanOrEqual
-                    .ReplacePropertyName(DisplayNames.Order)
-                    .ReplaceComparisonValue(minimumAllowedDateTime.ToVietnameseString());
-                throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
-            }
-
             // The ordered datetime is valid, assign it to the new order.
             orderedDateTime = requestDto.PaidDateTime.Value;
         }
@@ -157,7 +147,7 @@ public class OrderService : IOrderService
         _context.Orders.Add(order);
 
         // Initialize order items entities.
-        CreateItems(order, requestDto.Items);
+       await CreateItems(order, requestDto.Items);
         
         // Initialize photos.
         if (requestDto.Photos != null)
@@ -266,18 +256,34 @@ public class OrderService : IOrderService
                 throw new AuthorizationException();
             }
 
-            // Validate the specified PaidDateTime value from the request.
-            try
+            // Prevent the order's PaidDateTime to be modified when the order is locked.
+            if (order.IsLocked)
             {
-                order.PaidDateTime = requestDto.PaidDateTime.Value;
-            }
-            catch (ArgumentException exception)
-            {
-                string errorMessage = exception.Message
+                string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
+                    .ReplaceResourceName(DisplayNames.Order)
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(
                     nameof(requestDto.PaidDateTime),
                     errorMessage);
+            }
+
+            // Assign the new PaidDateTime value only if it's different from the old one.
+            if (requestDto.PaidDateTime.Value != order.PaidDateTime)
+            {
+                // Validate the specified PaidDateTime value from the request.
+                try
+                {
+                    _statsService.ValidateStatsDateTime(order, requestDto.PaidDateTime.Value);
+                    order.PaidDateTime = requestDto.PaidDateTime.Value;
+                }
+                catch (ArgumentException exception)
+                {
+                    string errorMessage = exception.Message
+                        .ReplacePropertyName(DisplayNames.PaidDateTime);
+                    throw new OperationException(
+                        nameof(requestDto.PaidDateTime),
+                        errorMessage);
+                }
             }
         }
 
@@ -285,7 +291,7 @@ public class OrderService : IOrderService
         order.Note = requestDto.Note;
 
         // Update order items.
-        UpdateItems(order, requestDto.Items);
+        await UpdateItems(order, requestDto.Items);
 
         // Update photos.
         List<string> urlsToBeDeletedWhenSucceeds = new List<string>();
@@ -436,17 +442,53 @@ public class OrderService : IOrderService
     /// <param name="requestDtos">
     /// A list of objects containing the new data for the creating operation.
     /// </param>
-    private void CreateItems(Order order, List<OrderItemRequestDto> requestDtos)
+    private async Task CreateItems(Order order, List<OrderItemRequestDto> requestDtos)
     {
-        foreach (OrderItemRequestDto itemRequestDto in requestDtos)
+        // Fetch a list of products which ids are specified in the request.
+        List<int> requestedProductIds = requestDtos
+            .Select(dto => dto.ProductId)
+            .ToList();
+        List<Product> products = await _context.Products
+            .Where(p => requestedProductIds.Contains(p.Id))
+            .ToListAsync();
+
+        for (int i = 0; i < requestDtos.Count; i++)
         {
+            OrderItemRequestDto itemRequestDto = requestDtos[i];
+            
+            // Get the product from the pre-fetched list.
+            Product product = products.SingleOrDefault(p => p.Id == itemRequestDto.ProductId);
+
+            // Ensure the product exists.
+            if (product == null)
+            {
+                string errorMessage = ErrorMessages.NotFoundByProperty
+                    .ReplaceResourceName(DisplayNames.Product)
+                    .ReplacePropertyName(DisplayNames.Id)
+                    .ReplaceAttemptedValue(itemRequestDto.ProductId.ToString());
+                throw new OperationException($"items[{i}].productId", errorMessage);
+            }
+
+            // Validate that with the specified quantity value.
+            if (product.StockingQuantity < itemRequestDto.Quantity)
+            {
+                string errorMessage = ErrorMessages.NegativeProductStockingQuantity;
+                throw new OperationException($"items[{i}].quantity", errorMessage);
+            }
+
+            // Initialize entity.
             OrderItem item = new OrderItem
             {
                 Amount = itemRequestDto.Amount,
                 VatFactor = itemRequestDto.VatFactor,
                 Quantity = itemRequestDto.Quantity,
-                ProductId = itemRequestDto.ProductId
+                Product = product
             };
+
+            // Adjust the stocking quantity of the associated product.
+            product.StockingQuantity -= item.Quantity;
+
+            // Add item.
             order.Items.Add(item);
         }
     }
@@ -457,11 +499,21 @@ public class OrderService : IOrderService
     /// </summary>
     /// <param name="order">The order which items are to be created or updated.</param>
     /// <param name="requestDtos">A list of objects containing the new data for updating operation.</param>
+    /// <returns>A <c>Task</c> object representing the asynchronous operation.</returns>
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.
     /// </exception>
-    private void UpdateItems(Order order, List<OrderItemRequestDto> requestDtos)
+    private async Task UpdateItems(Order order, List<OrderItemRequestDto> requestDtos)
     {
+        // Fetch a list of products which ids are specified in the request for the new items.
+        List<int> productIdsForNewItems = requestDtos
+            .Where(dto => !dto.Id.HasValue)
+            .Select(dto => dto.ProductId)
+            .ToList();
+        List<Product> productsForNewItems = await _context.Products
+            .Where(p => productIdsForNewItems.Contains(p.Id))
+            .ToListAsync();
+
         for (int i = 0; i < requestDtos.Count; i++)
         {
             OrderItemRequestDto itemRequestDto = requestDtos[i];
@@ -470,13 +522,16 @@ public class OrderService : IOrderService
             {
                 item = order.Items.SingleOrDefault(oi => oi.Id == itemRequestDto.Id.Value);
 
-                // Throw error if the item couldn't be found.
+                // Ensure the item exists.
                 if (item == null)
                 {
                     string errorMessage = ErrorMessages.NotFound
                         .ReplaceResourceName(DisplayNames.OrderItem);
                     throw new OperationException($"items[{i}].id", errorMessage);
                 }
+
+                // Revert the stocking quantity of the product associated to the item.
+                item.Product.StockingQuantity += item.Quantity;
 
                 // Remove item if deleted.
                 if (itemRequestDto.HasBeenDeleted)
@@ -485,25 +540,51 @@ public class OrderService : IOrderService
                 }
 
                 // Update item properties if changed.
-                if (itemRequestDto.HasBeenChanged)
+                else if (itemRequestDto.HasBeenChanged)
                 {
                     item.Amount = itemRequestDto.Amount;
                     item.VatFactor = itemRequestDto.VatFactor;
                     item.Quantity = itemRequestDto.Quantity;
-                    item.ProductId = itemRequestDto.ProductId;
                 }
             }
             else
             {
+                // Get the product entity in the pre-fetched list.
+                Product product = productsForNewItems
+                    .SingleOrDefault(p => p.Id == itemRequestDto.ProductId);
+
+                // Ensure the product exists.
+                if (product == null)
+                {
+                    string errorMessage = ErrorMessages.NotFoundByProperty
+                        .ReplaceResourceName(DisplayNames.Product)
+                        .ReplacePropertyName(DisplayNames.Id)
+                        .ReplaceAttemptedValue(itemRequestDto.ProductId.ToString());
+                    throw new OperationException(
+                        $"items[{i}].productId",
+                        errorMessage);
+                }
+
+                // Initialize the entity.
                 item = new OrderItem
                 {
                     Amount = itemRequestDto.Amount,
                     VatFactor = itemRequestDto.VatFactor,
                     Quantity = itemRequestDto.Quantity,
-                    ProductId = itemRequestDto.ProductId
+                    Product = product
                 };
                 _context.OrderItems.Add(item);
             }
+
+            // Validate the new quantity value.
+            if (item.Product.StockingQuantity - item.Quantity < 0)
+            {
+                string errorMessage = ErrorMessages.NegativeProductStockingQuantity;
+                throw new OperationException($"items[{i}].stockingQuantity", errorMessage);
+            }
+
+            // Add the quantity of the item to the product's stocking quantity.
+            item.Product.StockingQuantity -= item.Quantity;
         }
     }
 

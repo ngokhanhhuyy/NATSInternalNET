@@ -9,11 +9,7 @@ public class Order : LockableEntity
 
     [Column("paid_datetime")]
     [Required]
-    public DateTime PaidDateTime
-    {
-        get => StatsDateTime;
-        set => StatsDateTime = value;
-    }
+    public DateTime PaidDateTime { get; set; }
 
     [Column("note")]
     [StringLength(255)]
