@@ -21,25 +21,25 @@ jobs:
         with:
           dotnet-version: 8.0
           
-      - name: Install dependencies
-        working-directory: NATSInternal
-        run: dotnet restore
+      # - name: Install dependencies
+      #   working-directory: NATSInternal
+      #   run: dotnet restore
 
       - name: Build
         working-directory: NATSInternal
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release
         
-      - name: List Build Directory
-        run: |
-          echo "Listing NATSInternal/bin directory:"
-          ls -R NATSInternal/bin/Debug/net8.0/ || echo "NATSInternal/bin/Debug/net8.0/ directory does not exist."
+      # - name: List Build Directory
+      #   run: |
+      #     echo "Listing NATSInternal/bin directory:"
+      #     ls -R NATSInternal/bin/Debug/net8.0/ || echo "NATSInternal/bin/Debug/net8.0/ directory does not exist."
 
 
-      - name: Prepare Deployment Directory
-        run: |
-          mkdir -p ./deploy
-          cp -r ./NATSInternal/bin/Debug/net8.0/* ./deploy/
-          cp -r ./NATSInternal/wwwroot ./deploy/
+      # - name: Prepare Deployment Directory
+      #   run: |
+      #     mkdir -p ./deploy
+      #     cp -r ./NATSInternal/bin/Debug/net8.0/* ./deploy/
+      #     cp -r ./NATSInternal/wwwroot ./deploy/
 
       - name: Publish
         working-directory: NATSInternal
@@ -51,7 +51,7 @@ jobs:
           server: win8125.site4now.net
           username: nh0zhuybmt-001
           password: Huyy47b1
-          local-dir: ./deploy/
+          local-dir: ./NATSInternal/
           server-dir: ./natsinternal/
 
       # - name: Deploy to Simply        
