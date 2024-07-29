@@ -38,8 +38,8 @@ jobs:
       - name: Prepare Deployment Directory
         run: |
           mkdir -p ./deploy
-          cp -r ./bin/Debug/net8.0/* ./deploy/
-          cp -r ./wwwroot ./deploy/
+          cp -r ./NATSInternal/bin/Debug/net8.0/* ./deploy/
+          cp -r ./NATSInternal/wwwroot ./deploy/
 
       - name: Publish
         working-directory: NATSInternal
