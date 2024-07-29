@@ -33,3 +33,9 @@ jobs:
           server-username: nh0zhuybmt-001
           server-password: Huyy47b1
           source-path: '\root\home\nh0zhuybmt-001\www\natsinternal'
+          
+      - name: Migrate
+        run: |
+        dotnet tool install --global dotnet-ef
+        dotnet tool restore
+        dotnet ef database update --connection "Server=mysql8001.site4now.net;Database=db_aa5821_natsint;Uid=aa5821_natsint;Password=Huyy47b1;SSL Mode=None"
