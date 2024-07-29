@@ -285,6 +285,6 @@ app.UseDeveloperExceptionPage();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.UseStaticFiles();
+// app.UseStaticFiles();
 app.MapFallbackToFile("/index.html");
 app.Run();
