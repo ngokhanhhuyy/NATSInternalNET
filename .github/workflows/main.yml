@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.0
           
@@ -36,6 +36,6 @@ jobs:
           
       - name: Migrate
         run: |
-        dotnet tool install --global dotnet-ef
-        dotnet tool restore
-        dotnet ef database update --connection "Server=mysql8001.site4now.net;Database=db_aa5821_natsint;Uid=aa5821_natsint;Password=Huyy47b1;SSL Mode=None"
+          dotnet tool install --global dotnet-ef
+          dotnet tool restore
+          dotnet ef database update --connection "Server=mysql8001.site4now.net;Database=db_aa5821_natsint;Uid=aa5821_natsint;Password=Huyy47b1;SSL Mode=None"
