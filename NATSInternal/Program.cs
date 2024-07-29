@@ -280,6 +280,7 @@ else
     app.UseHttpsRedirection();
 }
 app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseDeveloperExceptionPage();
 // app.MapControllerRoute("default", "{controller=Home}/{action=Index}");
 app.UseAuthentication();
 app.UseAuthorization();
