@@ -34,6 +34,7 @@ jobs:
           source-path: '\root\home\nh0zhuybmt-001\www\natsinternal'
           
       - name: Migrate
+        working-directory: NATSInternal
         run: |
           dotnet tool install --global dotnet-ef
           dotnet tool restore
