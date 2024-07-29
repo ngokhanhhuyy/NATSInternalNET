@@ -28,11 +28,12 @@ jobs:
       - name: Build
         working-directory: NATSInternal
         run: dotnet build --configuration Debug --no-restore
-
+        
       - name: List Build Directory
         run: |
-          echo "Listing bin directory:"
-          ls -R bin/
+          echo "Listing NATSInternal/bin directory:"
+          ls -R NATSInternal/bin/Debug/net8.0/ || echo "NATSInternal/bin/Debug/net8.0/ directory does not exist."
+
 
       - name: Prepare Deployment Directory
         run: |
