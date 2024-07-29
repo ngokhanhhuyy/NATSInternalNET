@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Controllers.Api;
 
-[Route("/Api/CreatedUser")]
+[Route("/Api/User")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class UserApiController : ControllerBase
