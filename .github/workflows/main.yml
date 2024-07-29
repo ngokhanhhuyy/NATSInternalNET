@@ -52,6 +52,7 @@ jobs:
           username: nh0zhuybmt-001
           password: Huyy47b1
           local-dir: ./deploy/
+          server-dir: ./natsinternal/
 
       # - name: Deploy to Simply        
       #   uses: talunzhang/auto-web-deploy@v1.0.1
