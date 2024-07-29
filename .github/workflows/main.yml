@@ -51,7 +51,7 @@ jobs:
           server: win8125.site4now.net
           username: nh0zhuybmt-001
           password: Huyy47b1
-          local-dir: ./deploy
+          local-dir: ./deploy/
 
       # - name: Deploy to Simply        
       #   uses: talunzhang/auto-web-deploy@v1.0.1
