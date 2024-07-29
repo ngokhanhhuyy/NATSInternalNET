@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseWebRoot(Path.Combine(builder.Environment.ContentRootPath, "wwwroot"));
 
 // Add services to the container.
 //string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
