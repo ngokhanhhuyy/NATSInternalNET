@@ -23,7 +23,7 @@ jobs:
 
       - name: Publish
         working-directory: NATSInternal
-        run: dotnet publish --configuration Debug --output ./publish
+        run: dotnet publish --configuration Debug
 
       - name: Deploy to Simply        
         uses: talunzhang/auto-web-deploy@v1.0.1
@@ -32,7 +32,6 @@ jobs:
           server-computer-name: https://win8125.site4now.net:8172/MsDeploy.axd?site=nh0zhuybmt-001-site3
           server-username: nh0zhuybmt-001
           server-password: Huyy47b1
-          source-path: '\publish\'
           
       - name: Migrate
         working-directory: NATSInternal
