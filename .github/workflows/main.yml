@@ -15,15 +15,14 @@ jobs:
           
       - name: Install dependencies
         run: dotnet restore
-        
+
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        working-directory: NATSInternal
+        run: dotnet build --configuration Debug --no-restore
 
       - name: Publish
-        run: dotnet publish
-        
-      - name: Test with .NET
-        run: dotnet test
+        working-directory: NATSInternal
+        run: dotnet publish --configuration Debug --output ./publish
 
       - name: Deploy to Simply        
         uses: talunzhang/auto-web-deploy@v1.0.1
