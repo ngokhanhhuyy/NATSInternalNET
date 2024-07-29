@@ -29,7 +29,7 @@ jobs:
         uses: talunzhang/auto-web-deploy@v1.0.1
         with:
           website-name: natsinternal.khanhhuy.dev
-          server-computer-name: https://win8125.site4now.net:8172/MsDeploy.axd?site=nh0zhuybmt-001-site3
+          server-computer-name: https://win8125.site4now.net:8172
           server-username: nh0zhuybmt-001
           server-password: Huyy47b1
           source-path: NATSInternal\bin\Debug\net8.0\publish\
