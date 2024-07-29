@@ -8,6 +8,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
         with:
@@ -19,7 +27,19 @@ jobs:
 
       - name: Build
         working-directory: NATSInternal
-        run: dotnet build --configuration Debug --no-restore 
+        run: dotnet build --configuration Debug --no-restore
+        
+      - name: List Build Directory
+        run: |
+          echo "Listing NATSInternal/bin directory:"
+          ls -R NATSInternal/bin/Debug/net8.0/ || echo "NATSInternal/bin/Debug/net8.0/ directory does not exist."
+
+
+      - name: Prepare Deployment Directory
+        run: |
+          mkdir -p ./deploy
+          cp -r ./NATSInternal/bin/Debug/net8.0/* ./deploy/
+          cp -r ./NATSInternal/wwwroot ./deploy/
 
       - name: Publish
         working-directory: NATSInternal
@@ -31,6 +51,8 @@ jobs:
           server: win8125.site4now.net
           username: nh0zhuybmt-001
           password: Huyy47b1
+          local-dir: ./deploy/
+          server-dir: ./natsinternal/
 
       # - name: Deploy to Simply        
       #   uses: talunzhang/auto-web-deploy@v1.0.1
