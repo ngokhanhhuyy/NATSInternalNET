@@ -27,12 +27,17 @@ jobs:
 
       - name: Build
         working-directory: NATSInternal
-        run: dotnet build --configuration Debug --no-restore 
+        run: dotnet build --configuration Debug --no-restore
+
+      - name: List Build Directory
+        run: |
+          echo "Listing bin directory:"
+          ls -R bin/
 
       - name: Prepare Deployment Directory
         run: |
           mkdir -p ./deploy
-          cp -r ./bin/Debug/net8.0 ./deploy/
+          cp -r ./bin/Debug/net8.0/* ./deploy/
           cp -r ./wwwroot ./deploy/
 
       - name: Publish
