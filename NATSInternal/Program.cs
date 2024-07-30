@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseWebRoot(Path.Combine(builder.Environment.ContentRootPath, "wwwroot"));
 builder.Services.AddSignalR();
 
 // Connection string - EF Core.
@@ -238,6 +237,6 @@ app.UseDeveloperExceptionPage();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-// app.UseStaticFiles();
+app.UseStaticFiles();
 // app.MapFallbackToFile("/index.html");
 app.Run();
