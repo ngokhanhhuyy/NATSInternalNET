@@ -8,20 +8,6 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseWebRoot(Path.Combine(builder.Environment.ContentRootPath, "wwwroot"));
-
-// Add services to the container.
-//string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-//if (environment == Environments.Development)
-//{
-//    builder.Services.AddControllersWithViews()
-//        .AddRazorRuntimeCompilation();
-//}
-//else
-//{
-//    builder.Services.AddControllersWithViews();
-//}
-
-// Add signalR
 builder.Services.AddSignalR();
 
 // Connection string - EF Core.
@@ -42,40 +28,6 @@ builder.Services.Configure<IdentityOptions>(options => {
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequiredLength = 0;
 });
-
-// Authentication by cookies strategies.
-//builder.Services.ConfigureApplicationCookie(options => {
-//    options.Cookie.HttpOnly = true;
-//    options.ExpireTimeSpan = TimeSpan.FromDays(7);
-//    options.LoginPath = "/Authentication/SignIn";
-//    options.LogoutPath = "/Authentication/SignOut";
-//    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
-//    options.SlidingExpiration = true;
-//    options.Events.OnValidatePrincipal = async context =>
-//    {
-//        IAuthorizationService authorizationService = context.HttpContext
-//                .RequestServices
-//                .GetRequiredService<IAuthorizationService>();
-//        string userIdAsString = context.Principal?
-//            .FindFirst(ClaimTypes.NameIdentifier)?
-//            .Value;
-
-//        // Validate user id in the token.
-//        int userId;
-//        try
-//        {
-//            userId = int.Parse(userIdAsString);
-//            await authorizationService.SetUserId(userId);
-//        }
-//        catch
-//        {
-//            // If an exception occurs, sign out the user and redirect to the login page
-//            context.RejectPrincipal();
-//            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-//            context.HttpContext.Response.Redirect(options.LoginPath);
-//        }
-//    };
-//});
 
 // Authentication by JWT strategies.
 builder.Services
@@ -287,5 +239,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 // app.UseStaticFiles();
-app.MapFallbackToFile("/index.html");
+// app.MapFallbackToFile("/index.html");
 app.Run();

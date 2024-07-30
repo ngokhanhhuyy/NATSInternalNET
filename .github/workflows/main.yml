@@ -26,7 +26,8 @@ jobs:
       #   run: dotnet restore
 
       - name: Build
-        run: dotnet build --configuration Release --project NATSInternal/NATSInternal.csproj
+        working-directory: ./NATSInternal/
+        run: dotnet build --configuration Release
         
       # - name: List Build Directory
       #   run: |
@@ -41,7 +42,8 @@ jobs:
       #     cp -r ./NATSInternal/wwwroot ./deploy/
 
       - name: Publish
-        run: dotnet publish --configuration Release -r win-x64 --self-contained --project NATSInternal/NATSInternal.csproj
+        working-directory: ./NATSInternal/
+        run: dotnet publish --configuration Release -r win-x64 --self-contained
 
       - name: Sync files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -62,7 +64,8 @@ jobs:
       #     source-path: NATSInternal\bin\Debug\net8.0\publish\
           
       - name: Migrate
+        working-directory: ./NATSInternal/
         run: |
-          dotnet tool install --global dotnet-ef --project NATSInternal/NATSInternal.csproj
+          dotnet tool install --global dotnet-ef
           dotnet tool restore
           dotnet ef database update --connection "Server=mysql8001.site4now.net;Database=db_aa5821_natsint;Uid=aa5821_natsint;Password=Huyy47b1;SSL Mode=None"
