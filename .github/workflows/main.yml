@@ -20,6 +20,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0
+
+      - name: Clean previous build output
+        working-directory: ./NATSInternal/
+        run: dotnet clean --configuration Release
           
       # - name: Install dependencies
       #   working-directory: NATSInternal
