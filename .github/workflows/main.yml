@@ -26,7 +26,7 @@ jobs:
       #   run: dotnet restore
 
       - name: Build
-        working-directory: NATSInternal
+        working-directory: ./NATSInternal
         run: dotnet build --configuration Release
         
       # - name: List Build Directory
@@ -42,7 +42,7 @@ jobs:
       #     cp -r ./NATSInternal/wwwroot ./deploy/
 
       - name: Publish
-        working-directory: NATSInternal
+        working-directory: ./NATSInternal
         run: dotnet publish --configuration Release -r win-x64 --self-contained
 
       - name: Sync files
@@ -64,7 +64,7 @@ jobs:
       #     source-path: NATSInternal\bin\Debug\net8.0\publish\
           
       - name: Migrate
-        working-directory: NATSInternal
+        working-directory: ./NATSInternal
         run: |
           dotnet tool install --global dotnet-ef
           dotnet tool restore
