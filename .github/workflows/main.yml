@@ -43,7 +43,7 @@ jobs:
 
       - name: Publish
         working-directory: NATSInternal
-        run: dotnet publish --configuration Release
+        run: dotnet publish --configuration Release -r win-x64 --self-contained
 
       - name: Sync files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
