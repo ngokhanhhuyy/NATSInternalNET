@@ -207,7 +207,9 @@ public class UserService : IUserService
             throw new ResourceNotFoundException(nameof(User), nameof(id), id.ToString());
         }
 
-        return new UserDetailResponseDto(user);
+        return new UserDetailResponseDto(
+            user,
+            _authorizationService.GetUserDetailAuthorization(user));
     }
 
     /// <summary>

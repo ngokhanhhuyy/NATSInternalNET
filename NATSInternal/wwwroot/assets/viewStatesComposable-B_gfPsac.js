@@ -1,1 +1,0 @@
-import{ab as t,r as o,Q as r,o as i}from"./index-t81Ut7qy.js";function u(){const s=t(),e=o(!0);return r(()=>e.value,a=>{a?s.start():s.finish()}),i(()=>e.value=!1),{loadingState:{get isLoading(){return e.value},set isLoading(a){e.value=a}}}}export{u};
