@@ -9,6 +9,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <ChecksumAlgorithm>SHA1</ChecksumAlgorithm>
   </PropertyGroup>
 
   <ItemGroup>

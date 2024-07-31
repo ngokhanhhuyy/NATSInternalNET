@@ -9,6 +9,7 @@ public class AuthorizationService : IAuthorizationService
     {
         _context = context;
     }
+
     public async Task SetUserId(int id)
     {
         _user = await _context.Users
@@ -144,7 +145,8 @@ public class AuthorizationService : IAuthorizationService
         return new()
         {
             CanEdit = CanEditSupply(supply),
-            CanDelete = CanEditSupply(supply)
+            CanDelete = CanEditSupply(supply),
+            CanSetPaidDateTime = CanSetSupplyPaidDateTime()
         };
     }
     
@@ -181,7 +183,8 @@ public class AuthorizationService : IAuthorizationService
         return new OrderAuthorizationResponseDto
         {
             CanEdit = CanEditOrder(order),
-            CanDelete = CanDeleteOrder(order)
+            CanDelete = CanDeleteOrder(order),
+            CanSetPaidDateTime = CanSetOrderPaidDateTime()
         };
     }
     
@@ -200,7 +203,7 @@ public class AuthorizationService : IAuthorizationService
         {
             CanEdit = CanEditTreatment(treatment),
             CanDelete = CanDeleteTreatment(),
-            CanSetOrderedDateTime = CanSetTreatmentPaidDateTime()
+            CanSetPaidDateTime = CanSetTreatmentPaidDateTime()
         };
     }
 
@@ -237,7 +240,8 @@ public class AuthorizationService : IAuthorizationService
         return new DebtPaymentAuthorizationResponseDto
         {
             CanEdit = CanEditDebtPayment(debtPayment),
-            CanDelete = CanDeleteDebtPayment()
+            CanDelete = CanDeleteDebtPayment(),
+            CanSetPaidDateTime = CanSetDebtPaymentPaidDateTime()
         };
     }
 

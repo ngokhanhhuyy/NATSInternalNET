@@ -3,7 +3,7 @@
 public class SupplyBasicResponseDto
 {
     public int Id { get; set; }
-    public DateTime SuppliedDateTime { get; set; }
+    public DateTime PaidDateTime { get; set; }
     public long TotalAmount { get; set; }
     public bool IsLocked { get; set; }
     public UserBasicResponseDto User { get; set; }
@@ -24,7 +24,7 @@ public class SupplyBasicResponseDto
     private void MapFromEntity(Supply supply)
     {
         Id = supply.Id;
-        SuppliedDateTime = supply.PaidDateTime;
+        PaidDateTime = supply.PaidDateTime;
         TotalAmount = supply.TotalAmount;
         IsLocked = supply.IsLocked;
         User = new UserBasicResponseDto(supply.CreatedUser);

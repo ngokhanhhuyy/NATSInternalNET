@@ -3,7 +3,7 @@
 public class SupplyDetailResponseDto
 {
     public int Id { get; set; }
-    public DateTime SuppliedDateTime { get; set; }
+    public DateTime PaidDateTime { get; set; }
     public long ShipmentFee { get; set; }
     public long ItemAmount { get; set; }
     public long TotalAmount { get; set; }
@@ -23,7 +23,7 @@ public class SupplyDetailResponseDto
             bool mapUpdateHistories = false)
     {
         Id = supply.Id;
-        SuppliedDateTime = supply.PaidDateTime;
+        PaidDateTime = supply.PaidDateTime;
         ShipmentFee = supply.ShipmentFee;
         ItemAmount = supply.ItemAmount;
         TotalAmount = supply.TotalAmount;
