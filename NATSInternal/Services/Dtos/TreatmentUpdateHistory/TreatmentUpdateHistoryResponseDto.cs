@@ -6,7 +6,7 @@ public class TreatmentUpdateHistoryResponseDto
     private readonly TreatmentUpdateHistoryDataDto _newData;
 
     public DateTime UpdatedDateTime { get; private set; }
-    public UserBasicResponseDto User { get; private set; }
+    public UserBasicResponseDto UpdatedUser { get; private set; }
 
     public DateTime OldPaidDateTime => _oldData.PaidDateTime;
     public DateTime NewPaidDateTime => _newData.PaidDateTime;
@@ -35,6 +35,6 @@ public class TreatmentUpdateHistoryResponseDto
         _newData = JsonSerializer
             .Deserialize<TreatmentUpdateHistoryDataDto>(updateHistory.NewData);
         UpdatedDateTime = updateHistory.UpdatedDateTime;
-        User = new UserBasicResponseDto(updateHistory.User);
+        UpdatedUser = new UserBasicResponseDto(updateHistory.User);
     }
 }
