@@ -3,7 +3,7 @@
 public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>
 {
     public bool OrderByAscending { get; set; }
-    public string OrderByField { get; set; } = nameof(FieldOptions.SuppliedDateTime);
+    public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public DateOnly? RangeFrom { get; set; }
     public DateOnly? RangeTo { get; set; }
     public int? UserId { get; set; }
@@ -19,7 +19,7 @@ public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>
     public enum FieldOptions
     {
         TotalAmount,
-        SuppliedDateTime,
+        PaidDateTime,
         ShipmentFee,
         ItemAmount,
     }

@@ -39,7 +39,7 @@ public class SupplyService : ISupplyService
                     : query.OrderByDescending(s => s.Items.Sum(i => i.Amount))
                         .ThenByDescending(s => s.PaidDateTime);
                 break;
-            case nameof(SupplyListRequestDto.FieldOptions.SuppliedDateTime):
+            case nameof(SupplyListRequestDto.FieldOptions.PaidDateTime):
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(s => s.PaidDateTime)
                         .ThenBy(s => s.Items.Sum(i => i.Amount))

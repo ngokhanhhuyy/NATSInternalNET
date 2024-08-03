@@ -27,7 +27,7 @@ public class DebtPaymentService : IDebtPaymentService
         // Filter by fields.
         switch (requestDto.OrderByField)
         {
-            case nameof(DebtListRequestDto.FieldOptions.CreatedDateTime):
+            case nameof(DebtPaymentListRequestDto.FieldOptions.PaidDateTime):
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(d => d.PaidDateTime)
                         .ThenBy(d => d.Amount)

@@ -26,19 +26,19 @@ public class DebtService : IDebtService
         // Filter by fields.
         switch (requestDto.OrderByField)
         {
-            case nameof(DebtListRequestDto.FieldOptions.CreatedDateTime):
+            case nameof(DebtListRequestDto.FieldOptions.IncurredDateTime):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(d => d.CreatedDateTime)
+                    ? query.OrderBy(d => d.IncurredDateTime)
                         .ThenBy(d => d.Amount)
-                    : query.OrderByDescending(d => d.CreatedDateTime)
+                    : query.OrderByDescending(d => d.IncurredDateTime)
                         .ThenByDescending(d => d.Amount);
                 break;
             default:
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(d => d.Amount)
-                        .ThenBy(d => d.CreatedDateTime)
+                        .ThenBy(d => d.IncurredDateTime)
                     : query.OrderByDescending(d => d.Amount)
-                        .ThenBy(d => d.CreatedDateTime);
+                        .ThenBy(d => d.IncurredDateTime);
                 break;
         }
         
