@@ -5,14 +5,15 @@ public class ExpenseUpdateHistoryResponseDto
     private readonly ExpenseUpdateHistoryDataDto _oldData;
     private readonly ExpenseUpdateHistoryDataDto _newData;
 
-    public DateTime UpdatedDateTime { get; set; }
-    public UserBasicResponseDto UpdatedUser { get; set; }
-    
-    public long OldAmount => _oldData.Amount;
-    public long NewAmount => _newData.Amount;
+    public DateTime UpdatedDateTime { get; private set; }
+    public UserBasicResponseDto UpdatedUser { get; private set; }
+    public string Reason { get; private set; }
     
     public DateTime OldPaidDateTime => _oldData.PaidDateTime;
     public DateTime NewPaidDateTime => _newData.PaidDateTime;
+    
+    public long OldAmount => _oldData.Amount;
+    public long NewAmount => _newData.Amount;
 
     public ExpenseCategory OldCategory => _oldData.Category;
     public ExpenseCategory NewCategory => _newData.Category;
@@ -29,5 +30,6 @@ public class ExpenseUpdateHistoryResponseDto
         _newData = JsonSerializer.Deserialize<ExpenseUpdateHistoryDataDto>(updateHistory.NewData);
         UpdatedDateTime = updateHistory.UpdatedDateTime;
         UpdatedUser = new UserBasicResponseDto(updateHistory.User);
+        Reason = updateHistory.Reason;
     }
 }

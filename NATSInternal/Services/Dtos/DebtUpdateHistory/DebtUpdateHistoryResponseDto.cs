@@ -9,14 +9,14 @@ public class DebtUpdateHistoryResponseDto
     public UserBasicResponseDto UpdatedUser { get; private set; }
     public string Reason { get; private set; }
     
+    public DateTime OldIncurredDateTime => _oldData.IncurredDateTime;
+    public DateTime NewInCurredDateTime => _newData.IncurredDateTime;
+    
     public long OldAmount => _oldData.Amount;
     public long NewAmount => _newData.Amount;
     
     public string OldNote => _oldData.Note;
     public string NewNote => _newData.Note;
-    
-    public DateTime OldIncurredDateTime => _oldData.IncurredDateTime;
-    public DateTime NewInCurredDateTime => _newData.IncurredDateTime;
     
     public DebtUpdateHistoryResponseDto(DebtUpdateHistory updateHistory)
     {

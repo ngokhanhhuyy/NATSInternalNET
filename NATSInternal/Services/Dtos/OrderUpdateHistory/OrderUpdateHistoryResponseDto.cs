@@ -7,15 +7,13 @@ public class OrderUpdateHistoryResponseDto
     
     public DateTime UpdatedDateTime { get; set; }
     public UserBasicResponseDto UpdatedUser { get; set; }
+    public string Reason { get; set; }
     
     public DateTime OldPaidDateTime => _oldData.PaidDateTime;
     public DateTime NewPaidDateTime => _newData.PaidDateTime;
     
     public string OldNote => _oldData.Note;
     public string NewNote => _newData.Note;
-    
-    public int OldCustomerId => _oldData.CustomerId;
-    public int NewCustomerId => _oldData.CustomerId;
     
     public List<OrderItemUpdateHistoryDataDto> OldItems => _oldData.Items;
     public List<OrderItemUpdateHistoryDataDto> NewItems => _newData.Items;
@@ -28,5 +26,6 @@ public class OrderUpdateHistoryResponseDto
             .Deserialize<OrderUpdateHistoryDataDto>(updateHistory.NewData);
         UpdatedDateTime = updateHistory.UpdatedDateTime;
         UpdatedUser = new UserBasicResponseDto(updateHistory.User);
+        Reason = updateHistory.Reason;
     }
 }

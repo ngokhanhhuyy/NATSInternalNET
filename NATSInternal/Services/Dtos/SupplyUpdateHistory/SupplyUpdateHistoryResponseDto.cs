@@ -7,6 +7,7 @@ public class SupplyUpdateHistoryResponseDto
     
     public DateTime UpdatedDateTime { get; private set; }
     public UserBasicResponseDto UpdatedUser { get; private set; }
+    public string Reason { get; private set; }
     
     public DateTime OldPaidDateTime => _oldData.PaidDateTime;
     public DateTime NewPaidDateTime => _newData.PaidDateTime;
@@ -26,5 +27,6 @@ public class SupplyUpdateHistoryResponseDto
         _newData = JsonSerializer.Deserialize<SupplyUpdateHistoryDataDto>(updateHistory.NewData);
         UpdatedDateTime = updateHistory.UpdatedDateTime;
         UpdatedUser = new UserBasicResponseDto(updateHistory.User);
+        Reason = updateHistory.Reason;
     }
 }

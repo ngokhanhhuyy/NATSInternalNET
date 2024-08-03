@@ -71,10 +71,16 @@ public class Treatment : LockableEntity
     public long ProductVatAmount => Items.Sum(ts => (long)Math.Round(ts.Amount * ts.VatFactor * ts.Quantity));
 
     [NotMapped]
+    public long ServiceVatAmount => (long)Math.Round(ServiceAmount * ServiceVatFactor);
+
+    [NotMapped]
     public long Amount => ProductAmount + ServiceAmount;
 
     [NotMapped]
     public long VatAmount => (long)Math.Round(ProductVatAmount + (ServiceAmount * ServiceVatFactor));
+
+    [NotMapped]
+    public long TotalAmountAfterVAT => ProductAmount + ProductVatAmount + ServiceAmount + ServiceVatAmount;
 
     [NotMapped]
     public DateTime? LastUpdatedDateTime => UpdateHistories.Select(uh => uh.UpdatedDateTime).FirstOrDefault();

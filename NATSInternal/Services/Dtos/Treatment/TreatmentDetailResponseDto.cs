@@ -7,8 +7,10 @@ public class TreatmentDetailResponseDto
     public DateTime CreatedDateTime { get; set; }
     public DateTime? LastUpdatedDateTime { get; set; }
     public long ServiceAmount { get; set; }
-    public decimal ServiceVatAmount { get; set; }
+    public long ServiceVatAmount { get; set; }
+    public decimal ServiceVatFactor { get; set; }
     public long ProductAmount { get; set; }
+    public long TotalAmountAfterVAT { get; set; }
     public string Note { get; set; }
     public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
@@ -28,8 +30,10 @@ public class TreatmentDetailResponseDto
         PaidDateTime = treatment.PaidDateTime;
         LastUpdatedDateTime = treatment.LastUpdatedDateTime;
         ServiceAmount = treatment.ServiceAmount;
-        ServiceVatAmount = treatment.ServiceVatFactor;
+        ServiceVatAmount = treatment.ServiceVatAmount;
+        ServiceVatFactor = treatment.ServiceVatFactor;
         ProductAmount = treatment.ProductAmount;
+        TotalAmountAfterVAT = treatment.TotalAmountAfterVAT;
         Note = treatment.Note;
         IsLocked = treatment.IsLocked;
         Customer = new CustomerBasicResponseDto(treatment.Customer);
