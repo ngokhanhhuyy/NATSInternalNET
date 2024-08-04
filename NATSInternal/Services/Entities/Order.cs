@@ -41,11 +41,14 @@ public class Order : LockableEntity
     
     // Property for convinience.
     [NotMapped]
-    public long ItemAmount => Items.Sum(i => i.Amount * i.Quantity);
+    public long BeforeVatAmount => Items.Sum(i => i.Amount * i.Quantity);
 
     [NotMapped]
     public long VatAmount => Items.Sum(i => (long)Math.Round(i.Amount * i.VatFactor * i.Quantity));
 
+    [NotMapped]
+    public long AfterVatAmount => BeforeVatAmount + VatAmount;
+    
     [NotMapped]
     public DateTime? LastUpdatedDateTime => UpdateHistories
         .OrderBy(uh => uh.UpdatedDateTime)

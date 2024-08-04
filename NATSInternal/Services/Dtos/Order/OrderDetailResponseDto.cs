@@ -3,10 +3,11 @@ namespace NATSInternal.Services.Dtos;
 public class OrderDetailResponseDto
 {
     public int Id { get; set; }
-    public DateTime OrderedDateTime { get; set; }
+    public DateTime PaidDateTime { get; set; }
     public DateTime CreatedDateTime { get; set; }
-    public long AmountBeforeVAT { get; set; }
-    public long AmountAfterVAT { get; set; }
+    public long BeforeVatAmount { get; set; }
+    public long VatAmount { get; set; }
+    public long AfterVatAmount { get; set; }
     public string Note { get; set; }
     public bool IsLocked { get; set; }
     public List<OrderItemResponseDto> Items { get; set; }
@@ -22,10 +23,10 @@ public class OrderDetailResponseDto
             bool mapUpdateHistories = false)
     {
         Id = order.Id;
-        OrderedDateTime = order.PaidDateTime;
+        PaidDateTime = order.PaidDateTime;
         CreatedDateTime = order.CreatedDateTime;
-        AmountBeforeVAT = order.ItemAmount;
-        AmountAfterVAT = order.ItemAmount + order.VatAmount;
+        BeforeVatAmount = order.BeforeVatAmount;
+        AfterVatAmount = order.AfterVatAmount;
         Note = order.Note;
         IsLocked = order.IsLocked;
         Items = order.Items?.Select(i => new OrderItemResponseDto(i)).ToList();

@@ -7,6 +7,8 @@ public class OrderItemUpdateHistoryDataDto
     public decimal VatFactor { get; set; }
     public int Quantity { get; set; }
     public string ProductName { get; set; }
+
+    public OrderItemUpdateHistoryDataDto() { }
     
     public OrderItemUpdateHistoryDataDto(OrderItem item)
     {

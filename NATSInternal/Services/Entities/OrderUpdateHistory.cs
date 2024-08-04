@@ -9,7 +9,7 @@ public class OrderUpdateHistory
 
     [Column("updated_datetime")]
     [Required]
-    public DateTime UpdatedDateTime { get; set; }
+    public DateTime UpdatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
 
     [Column("reason")]
     [StringLength(255)]

@@ -26,7 +26,7 @@ public class OrderBasicResponseDto
     {
         Id = order.Id;
         PaidDateTime = order.PaidDateTime;
-        Amount = order.ItemAmount;
+        Amount = order.BeforeVatAmount;
         IsLocked = order.IsLocked;
         Customer = new CustomerBasicResponseDto(order.Customer);
     }

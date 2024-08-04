@@ -175,7 +175,7 @@ public class OrderService : IOrderService
             // The order can be created successfully without any error. Add the order
             // to the stats.
             DateOnly orderedDate = DateOnly.FromDateTime(order.PaidDateTime);
-            await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, orderedDate);
+            await _statsService.IncrementRetailGrossRevenueAsync(order.BeforeVatAmount, orderedDate);
             if (order.VatAmount > 0)
             {
                 await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, orderedDate);
@@ -254,7 +254,7 @@ public class OrderService : IOrderService
             .BeginTransactionAsync();
         
         // Storing the old data for update history logging and stats adjustments.
-        long oldItemAmount = order.ItemAmount;
+        long oldItemAmount = order.BeforeVatAmount;
         long oldVatAmount = order.VatAmount;
         DateOnly oldPaidDate = DateOnly.FromDateTime(order.PaidDateTime);
         OrderUpdateHistoryDataDto oldData = new OrderUpdateHistoryDataDto(order);
@@ -336,7 +336,7 @@ public class OrderService : IOrderService
             
             // Delete all old photos which have been replaced by new ones.
             DateOnly newPaidDate = DateOnly.FromDateTime(order.PaidDateTime);
-            await _statsService.IncrementRetailGrossRevenueAsync(order.ItemAmount, newPaidDate);
+            await _statsService.IncrementRetailGrossRevenueAsync(order.BeforeVatAmount, newPaidDate);
             await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, newPaidDate);
 
             // Delete photo files which have been specified.
@@ -430,7 +430,7 @@ public class OrderService : IOrderService
                     // Order has been deleted successfully, adjust the stats.
                     DateOnly orderedDate = DateOnly.FromDateTime(order.PaidDateTime);
                     await _statsService.IncrementRetailGrossRevenueAsync(
-                        order.ItemAmount,
+                        order.BeforeVatAmount,
                         orderedDate);
                     await _statsService.IncrementVatCollectedAmountAsync(
                         order.VatAmount,

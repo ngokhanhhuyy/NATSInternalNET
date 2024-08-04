@@ -6,6 +6,8 @@ public class OrderUpdateHistoryDataDto
     public string Note { get; set; }
     public int CustomerId { get; set; }
     public List<OrderItemUpdateHistoryDataDto> Items { get; set; }
+
+    public OrderUpdateHistoryDataDto() { }
     
     public OrderUpdateHistoryDataDto(Order order)
     {
