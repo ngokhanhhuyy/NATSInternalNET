@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using NATSInternal.Services.Entities;
+using System.Security.Claims;
 
 namespace NATSInternal.Services;
 
@@ -882,7 +883,9 @@ public sealed class DataInitializer
                 {
                     Product product;
                     product = products
-                        .Where(p => !supplyItems.Select(si => si.ProductId).Contains(p.Id))
+                        .Where(p => !supplyItems
+                            .Select(si => si.ProductId)
+                            .Contains(p.Id))
                         .OrderBy(_ => random.Next(1000))
                         .Take(1)
                         .Single();
@@ -1043,7 +1046,7 @@ public sealed class DataInitializer
         }
     }
 
-    private void InitializeTreatment()
+    private void InitializeTreatments()
     {
         if (!_context.Treatments.Any())
         {
@@ -1084,7 +1087,7 @@ public sealed class DataInitializer
                 Treatment treatment = new Treatment
                 {
                     
-                }
+                };
             }
         }
     }
@@ -1172,6 +1175,229 @@ public sealed class DataInitializer
         }
 
         _context.SaveChanges();
+    }
+
+    private void GenerateSupply(DateTime statsDateTime, Random random,
+            Faker faker, List<int> userIds, List<Product> products)
+    {
+        // Initialize supply entitiy.
+        Supply supply = new()
+        {
+            PaidDateTime = statsDateTime,
+            CreatedDateTime = statsDateTime,
+            ShipmentFee = random.Next(200_000, 500_000),
+            Note = faker.Lorem.Sentences(5),
+            CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
+            Items = new List<SupplyItem>()
+        };
+        _context.Supplies.Add(supply);
+
+        // Initialize supply item entities.
+        // Get a list of product which stocking quantities are low.
+        foreach (Product product in products)
+        {
+            if (product.StockingQuantity <= 20)
+            {
+                SupplyItem item = new SupplyItem
+                {
+                    Amount = (int)Math.Round(product.Price - product.Price * 0.1),
+                    SuppliedQuantity = 100 - product.StockingQuantity,
+                    Product = product,
+                };
+                supply.Items.Add(item);
+                product.StockingQuantity += item.SuppliedQuantity;
+            }
+        }
+
+        // Generate stats data.
+        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+        DailyStats dailyStats = _context.DailyStats
+            .Where(ds => ds.RecordedDate == statsDate)
+            .Single();
+        dailyStats.SupplyCost += supply.ItemAmount;
+        dailyStats.ShipmentCost += supply.ShipmentFee;
+        dailyStats.Monthly.SupplyCost += supply.ItemAmount;
+        dailyStats.Monthly.ShipmentCost += supply.ShipmentFee;
+    }
+
+    private void GenerateExpense(DateTime statsDateTime, Random random,
+            Faker faker, List<int> userIds)
+    {
+        // Generating category.
+        ExpenseCategory category = Enum.GetValues(typeof(ExpenseCategory))
+            .OfType<ExpenseCategory>()
+            .MinBy(_ => Guid.NewGuid());
+
+        // Generating company name.
+        string companyName = faker.Company.CompanyName();
+        ExpensePayee payee = _context.ExpensePayees.SingleOrDefault(e => e.Name == companyName);
+        if (payee is null)
+        {
+            payee = new ExpensePayee
+            {
+                Name = companyName
+            };
+            _context.ExpensePayees.Add(payee);
+        }
+
+        // Generating expense.
+        Expense expense = new Expense
+        {
+            Amount = random.Next(500, 5000) * 1000,
+            PaidDateTime = statsDateTime,
+            CreatedDateTime = statsDateTime,
+            Category = category,
+            Note = null,
+            CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
+            Payee = payee
+        };
+        _context.Expenses.Add(expense);
+
+        // Generating stats data.
+        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+        DailyStats dailyStats = _context.DailyStats
+            .Where(ds => ds.RecordedDate == statsDate)
+            .Single();
+        switch(expense.Category)
+        {
+            case ExpenseCategory.Utilities:
+                dailyStats.UtilitiesExpenses += expense.Amount;
+                dailyStats.Monthly.UtilitiesExpenses += expense.Amount;
+                break;
+            case ExpenseCategory.Equipment:
+                dailyStats.EquipmentExpenses += expense.Amount;
+                dailyStats.Monthly.EquipmentExpenses += expense.Amount;
+                break;
+            case ExpenseCategory.Office:
+                dailyStats.OfficeExpense += expense.Amount;
+                dailyStats.Monthly.OfficeExpense += expense.Amount;
+                break;
+            case ExpenseCategory.Staff:
+                dailyStats.StaffExpense += expense.Amount;
+                dailyStats.Monthly.StaffExpense += expense.Amount;
+                break;
+        }
+
+    }
+
+    private void GenerateOrder(DateTime statsDateTime, Random random,
+            List<int> customerIds, List<int> userIds, List<Product> products)
+    {
+        // Initialize order.
+        Order order = new Order
+        {
+            PaidDateTime = statsDateTime,
+            CreatedDateTime = statsDateTime,
+            Note = null,
+            CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
+            CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
+            Items = new List<OrderItem>()
+        };
+        _context.Orders.Add(order);
+
+        // Initialize order items.
+        int orderItemCount = random.Next(3, 10);
+        List<int> pickedProductIds = new List<int>();
+        for (int i = 0; i < orderItemCount; i++)
+        {
+            // Determine product.
+            Product product = products
+                .OrderBy(_ => Guid.NewGuid())
+                .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
+                .First();
+            pickedProductIds.Add(product.Id);
+
+            OrderItem item = new OrderItem
+            {
+                Amount = product.Price,
+                VatFactor = 0,
+                Quantity = Math.Min(5, product.StockingQuantity),
+                ProductId = product.Id
+            };
+            order.Items.Add(item);
+        }
+
+        // Generating stats data.
+        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+        DailyStats dailyStats = _context.DailyStats
+            .Where(ds => ds.RecordedDate == statsDate)
+            .Single();
+        dailyStats.RetailGrossRevenue += order.BeforeVatAmount;
+        dailyStats.VatCollectedAmount += order.VatAmount;
+        dailyStats.Monthly.RetailGrossRevenue += order.BeforeVatAmount;
+        dailyStats.Monthly.VatCollectedAmount += order.VatAmount;
+    }
+
+    private void GenerateTreatment(DateTime statsDateTime, Random random,
+            List<int> customerIds, List<int> userIds, List<Product> products)
+    {
+        // Initialize treatment entity.
+        Treatment treatment = new Treatment
+        {
+            PaidDateTime = statsDateTime,
+            CreatedDateTime = statsDateTime,
+            ServiceAmount = random.Next(1_000_000, 2_000_000),
+            ServiceVatFactor = (decimal)random.Next(0, 2) / 10,
+            Note = null,
+            CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
+            CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
+            Items = new List<TreatmentItem>()
+        };
+
+        // Initialize treatment item entities.
+        int treatmentItemCount = random.Next(3, 10);
+        List<int> pickedProductIds = new List<int>();
+        for (int i = 0; i < treatmentItemCount; i++)
+        {
+            // Determine product.
+            Product product = products
+                .OrderBy(_ => Guid.NewGuid())
+                .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
+                .First();
+            pickedProductIds.Add(product.Id);
+
+            TreatmentItem item = new TreatmentItem
+            {
+                Amount = product.Price,
+                VatFactor = 0,
+                Quantity = Math.Min(5, product.StockingQuantity),
+                ProductId = product.Id
+            };
+            treatment.Items.Add(item);
+        }
+
+        // Generating stats data.
+        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+        DailyStats dailyStats = _context.DailyStats
+            .Where(ds => ds.RecordedDate == statsDate)
+            .Single();
+        dailyStats.TreatmentGrossRevenue += treatment.Amount;
+        dailyStats.VatCollectedAmount += treatment.VatAmount;
+        dailyStats.Monthly.TreatmentGrossRevenue += treatment.Amount;
+        dailyStats.Monthly.VatCollectedAmount += treatment.VatAmount;
+    }
+
+    private void GenerateConsultant(DateTime statsDateTime, Random random,
+            List<int> customerIds, List<int> userIds)
+    {
+        // Initialize consultant entity.
+        Consultant consultant = new Consultant
+        {
+            PaidDateTime = statsDateTime,
+            CreatedDateTime = statsDateTime,
+            Amount = random.Next(500_000, 2_500_000),
+            Note = null,
+            CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
+            CreatedUserId = userIds.MinBy(_ => Guid.NewGuid())
+        };
+
+        // Generating stats data.
+        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+        DailyStats dailyStats = _context.DailyStats
+            .Where(ds => ds.RecordedDate == statsDate)
+            .Single();
+        dailyStats.ConsultantGrossRevenue += consultant.Amount;
+        dailyStats.Monthly.ConsultantGrossRevenue += consultant.Amount;
     }
 
     private static T ValueOrNull<T>(T value)
