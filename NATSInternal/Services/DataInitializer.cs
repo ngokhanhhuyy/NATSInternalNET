@@ -27,7 +27,7 @@ public sealed class DataInitializer
         InitializeStats();
         InitializeSupply();
         InitializeExpense();
-        // InitializeOrders();
+        InitializeOrders();
         _context.SaveChanges();
         transaction.Commit();
     }
@@ -979,8 +979,8 @@ public sealed class DataInitializer
         {
             Console.WriteLine("Initializing orders.");
             Random random = new Random();
-            DateTime maxOrderedDateTime = DateTime.UtcNow.ToApplicationTime();
-            DateTime currentDateTime = maxOrderedDateTime
+            DateTime maxPaidDateTime = DateTime.UtcNow.ToApplicationTime();
+            DateTime currentDateTime = maxPaidDateTime
                 .AddMonths(-6);
             List<int> customerIds = _context.Customers.Select(c => c.Id).ToList();
             List<Product> products = _context.Products.ToList();
@@ -993,13 +993,17 @@ public sealed class DataInitializer
                     .Contains(PermissionConstants.CreateOrder))
                 .Select(u => u.Id)
                 .ToList();
-            while (currentDateTime < maxOrderedDateTime)
+            while (currentDateTime < maxPaidDateTime)
             {
                 // Determine datetime
                 do
                 {
                     currentDateTime = currentDateTime.AddMinutes(random.Next(120, 360));
-                } while (currentDateTime.Hour < 8 || currentDateTime.Hour > 17);
+                }
+                while (currentDateTime.Hour < 8 ||
+                    currentDateTime.Hour > 17 ||
+                    currentDateTime.DayOfWeek == DayOfWeek.Saturday ||
+                    currentDateTime.DayOfWeek == DayOfWeek.Sunday);
 
                 // Initialize order.
                 Order order = new Order
@@ -1039,10 +1043,56 @@ public sealed class DataInitializer
         }
     }
 
+    private void InitializeTreatment()
+    {
+        if (!_context.Treatments.Any())
+        {
+            Console.WriteLine("Initializing treatments");
+            Random random = new Random();
+            DateTime maxPaidDateTime = DateTime.UtcNow.ToApplicationTime();
+            DateTime currentDateTime = maxPaidDateTime
+                .AddMonths(-6);
+            
+            // Fetch all necessary data for foreign keys.
+            List<int> customerIds = _context.Customers.Select(c => c.Id).ToList();
+            List<Product> products = _context.Products.ToList();
+            List<int> userIds = _context.Users
+                .Include(u => u.Roles).ThenInclude(r => r.Claims)
+                .Where(u => u.Roles
+                    .Single()
+                    .Claims
+                    .Select(c => c.ClaimValue)
+                    .Contains(PermissionConstants.CreateTreatment))
+                .Select(u => u.Id)
+                .ToList();
+
+            // Perform the loop for initialization.
+            while (currentDateTime < maxPaidDateTime) {
+                // Determine datetime.
+                do
+                {
+                    currentDateTime = currentDateTime.AddMinutes(random.Next(120, 360));
+                }
+                while (currentDateTime.Hour < 8 ||
+                    currentDateTime.Hour > 17 ||
+                    currentDateTime.DayOfWeek == DayOfWeek.Saturday ||
+                    currentDateTime.DayOfWeek == DayOfWeek.Sunday);
+
+                // 
+
+                // Initialize treatment.
+                Treatment treatment = new Treatment
+                {
+                    
+                }
+            }
+        }
+    }
+
     private void InitializeStats()
     {
         Console.WriteLine("Initializing stats ...");
-        DateOnly minimumDate = DateOnly.FromDateTime(GetMinimumResourceDateTimeToBeOpened());
+        DateOnly minimumDate = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime().AddMonths(-6));
         DateOnly maximumDate = DateOnly.FromDateTime(DateTime.UtcNow.ToApplicationTime().AddMonths(3));
 
         // Generating a list of date to check if there is any date not existing in the database.
