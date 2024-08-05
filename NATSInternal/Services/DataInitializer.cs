@@ -1346,15 +1346,14 @@ public sealed class DataInitializer
 
         // Initialize treatment item entities.
         int treatmentItemCount = random.Next(3, 10);
-        List<int> pickedProductIds = new List<int>();
         for (int i = 0; i < treatmentItemCount; i++)
         {
             // Determine product.
+            List<int> pickedProductIds = treatment.Items.Select(i => i.Product.Id).ToList();
             Product product = products
                 .OrderBy(_ => Guid.NewGuid())
                 .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
                 .First();
-            pickedProductIds.Add(product.Id);
 
             TreatmentItem item = new TreatmentItem
             {
