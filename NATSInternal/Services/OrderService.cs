@@ -583,7 +583,8 @@ public class OrderService : IOrderService
                     Amount = itemRequestDto.Amount,
                     VatFactor = itemRequestDto.VatFactor,
                     Quantity = itemRequestDto.Quantity,
-                    Product = product
+                    Product = product,
+                    Order = order
                 };
                 _context.OrderItems.Add(item);
             }
