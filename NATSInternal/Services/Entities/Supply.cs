@@ -41,7 +41,7 @@ public class Supply : LockableEntity
 
     // Properties for convinience.
     [NotMapped]
-    public long ItemAmount => Items.Sum(i => i.Amount);
+    public long ItemAmount => Items.Sum(i => i.Amount * i.SuppliedQuantity);
 
     [NotMapped]
     public long TotalAmount => ItemAmount + ShipmentFee;

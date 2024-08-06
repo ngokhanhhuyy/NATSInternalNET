@@ -106,6 +106,8 @@ public static class DisplayNames
     public const string Debt = "Khoản nợ";
     public const string DebtPayment = "Khoản thanh toán nợ";
     public const string MonthlyStats = "Thống kê tháng";
+    public const string Month = "Tháng";
+    public const string Year = "Năm";
     public const string DailyStats = "Thống kê theo ngày";
     public const string RecordedDate = "Ngày thống kê";
     public const string RecordedMonth = "Tháng thống kê";

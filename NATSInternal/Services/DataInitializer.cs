@@ -1,4 +1,5 @@
-﻿using NATSInternal.Services.Entities;
+﻿using Bogus;
+using NATSInternal.Services.Entities;
 using System.Security.Claims;
 
 namespace NATSInternal.Services;
@@ -830,7 +831,7 @@ public sealed class DataInitializer
                     Name = name,
                     Description = ValueOrNull(description),
                     Unit = units.Skip(random.Next(units.Length)).Take(1).Single(),
-                    Price = random.Next(75, 500) * 1000,
+                    Price = random.Next(25, 95) * 1000,
                     VatFactor = 0.1M,
                     IsForRetail = random.Next(10) < 7,
                     IsDiscontinued = false,
@@ -1178,7 +1179,7 @@ public sealed class DataInitializer
         _context.SaveChanges();
     }
 
-    private void GenerateLockableEntitiesData()
+    private void GenerateLockableEntitiesData(bool logResult = false)
     {
         List<bool> conditions = new List<bool>
         {
@@ -1210,6 +1211,25 @@ public sealed class DataInitializer
             List<int> customerIds = _context.Customers.Select(c => c.Id).ToList();
             List<Product> products = _context.Products.ToList();
 
+            // Get the starting statsDateTime, based on the existing data in the database.
+            DateTime lastGeneratedStatsDateTime = _context.Supplies
+                .Select(s => s.CreatedDateTime)
+                .Union(_context.Expenses.Select(ex => ex.CreatedDateTime))
+                .Union(_context.Orders.Select(o => o.CreatedDateTime))
+                .Union(_context.Treatments.Select(t => t.CreatedDateTime))
+                .Union(_context.Consultants.Select(c => c.CreatedDateTime))
+                .OrderByDescending(e => e)
+                .FirstOrDefault();
+            if (lastGeneratedStatsDateTime > statsDateTime)
+            {
+                statsDateTime = lastGeneratedStatsDateTime;
+            }
+
+            // Canculate the day differences between 2 ranges in order to calculate
+            // the process in percentage.
+            int totalDaysDifferent = maxStatsDateTime.Subtract(statsDateTime).Days;
+
+            // Function to check if the statsDateTime is still valid for the loop to continue.
             Func<DateTime, bool> isStatsDateTimeValid = delegate(DateTime dateTime)
             {
                 bool isInBusinessHours = dateTime.Hour >= 8
@@ -1218,13 +1238,14 @@ public sealed class DataInitializer
                     || dateTime.DayOfWeek == DayOfWeek.Sunday;
                 return isInBusinessHours && isInBusinessDaysOfWeek;
             };
-
+            Console.WriteLine("");
             while (statsDateTime < maxStatsDateTime)
             {
                 // Determine datetime
+                CheckAndGenerateSupply(statsDateTime, random, faker, products);
                 do
                 {
-                    statsDateTime = statsDateTime.AddMinutes(random.Next(120, 360));
+                    statsDateTime = statsDateTime.AddMinutes(random.Next(300, 420));
                 }
                 while (isStatsDateTimeValid(statsDateTime));
 
@@ -1232,26 +1253,31 @@ public sealed class DataInitializer
                 int randomNumber = random.Next(1, 101);
                 if (randomNumber < 20)
                 {
-                    GenerateExpense(statsDateTime, random, faker);
+                    GenerateExpense(statsDateTime, random, faker, logResult);
                 }
                 else if (randomNumber < 35)
                 {
-                    GenerateConsultant(statsDateTime, random, customerIds);
+                    GenerateConsultant(statsDateTime, customerIds, random, faker, logResult);
                 }
                 else if (randomNumber < 65)
                 {
-                    GenerateOrder(statsDateTime, random, customerIds, products, faker);
+                    GenerateOrder(statsDateTime, customerIds, products, random, faker, logResult);
                 }
                 else
                 {
-                    GenerateTreatment(statsDateTime, random, customerIds, products, faker);
+                    GenerateTreatment(statsDateTime, customerIds, products, random, faker, logResult);
                 }
+
+                // Calculate the process percentage.
+                int remainingDaysDifferent = maxStatsDateTime.Subtract(statsDateTime).Days;
+                Console.SetCursorPosition(0, Console.CursorTop - 1);
+                Console.WriteLine($"{remainingDaysDifferent}/{totalDaysDifferent} days.");
             }
         }
     }
 
     private void CheckAndGenerateSupply(DateTime statsDateTime, Random random,
-            Faker faker, List<Product> products)
+            Faker faker, List<Product> products, bool logResult = false)
     {
         // Fetch a list of users who have permission to create supply.
         List<int> userIds = _context.Users
@@ -1275,7 +1301,7 @@ public sealed class DataInitializer
                 {
                     Amount = (int)Math.Round(product.Price - product.Price * 0.35),
                     SuppliedQuantity = 100 - product.StockingQuantity,
-                    Product = product,
+                    ProductId = product.Id,
                 };
                 items.Add(item);
                 product.StockingQuantity += item.SuppliedQuantity;
@@ -1290,9 +1316,9 @@ public sealed class DataInitializer
                 PaidDateTime = statsDateTime,
                 CreatedDateTime = statsDateTime,
                 ShipmentFee = random.Next(200_000, 500_000),
-                Note = faker.Lorem.Sentences(5),
+                Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
                 CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
-                Items = new List<SupplyItem>()
+                Items = items
             };
             _context.Supplies.Add(supply);
 
@@ -1305,11 +1331,17 @@ public sealed class DataInitializer
             dailyStats.ShipmentCost += supply.ShipmentFee;
             dailyStats.Monthly.SupplyCost += supply.ItemAmount;
             dailyStats.Monthly.ShipmentCost += supply.ShipmentFee;
+
+            _context.SaveChanges();
+            if (logResult)
+            {
+                Console.WriteLine($"Initialized supply with id {supply.Id} at {statsDateTime}");
+            }
         }
     }
 
     private void GenerateExpense(DateTime statsDateTime, Random random,
-            Faker faker)
+            Faker faker, bool logResult = false)
     {
         // Fetch a list of users who have permission to create expense.
         List<int> userIds = _context.Users
@@ -1346,7 +1378,7 @@ public sealed class DataInitializer
             PaidDateTime = statsDateTime,
             CreatedDateTime = statsDateTime,
             Category = category,
-            Note = null,
+            Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
             CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
             Payee = payee
         };
@@ -1378,139 +1410,179 @@ public sealed class DataInitializer
         }
 
         _context.SaveChanges();
-        Console.WriteLine($"Initialized expense with id {expense.Id} at {statsDateTime}");
+
+        if (logResult)
+        {
+            Console.WriteLine($"Initialized expense with id {expense.Id} at {statsDateTime}");
+        }
     }
 
-    private int GenerateOrder(DateTime statsDateTime, Random random,
-            List<int> customerIds, List<Product> products, Faker faker)
+    private void GenerateOrder(DateTime statsDateTime, List<int> customerIds,
+            List<Product> products, Random random, Faker faker, bool logResult = false)
     {
-        // Fetch a list of users who have permission to create order.
-        List<int> userIds = _context.Users
-            .Include(u => u.Roles).ThenInclude(r => r.Claims)
-            .Where(u => u.Roles
-                .Single()
-                .Claims
-                .Select(c => c.ClaimValue)
-                .Contains(PermissionConstants.CreateOrder))
-                .Select(u => u.Id)
-                .ToList();
+        // Calculate the count of the products which are still in stock.
+        int productsInStockCount = _context.Products.Count(p => p.StockingQuantity > 0);
 
-        // Initialize order.
-        Order order = new Order
+        if (productsInStockCount > 0)
         {
-            PaidDateTime = statsDateTime,
-            CreatedDateTime = statsDateTime,
-            Note = null,
-            CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
-            CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
-            Items = new List<OrderItem>()
-        };
-        _context.Orders.Add(order);
+            // Fetch a list of users who have permission to create order.
+            List<int> userIds = _context.Users
+                .Include(u => u.Roles).ThenInclude(r => r.Claims)
+                .Where(u => u.Roles
+                    .Single()
+                    .Claims
+                    .Select(c => c.ClaimValue)
+                    .Contains(PermissionConstants.CreateOrder))
+                    .Select(u => u.Id)
+                    .ToList();
 
-        // Initialize order items.
-        int orderItemCount = random.Next(3, 10);
-        for (int i = 0; i < orderItemCount; i++)
-        {
-            // Get a list of product ids which have been picked ealier.
-            List<int> pickedProductIds = order.Items
-                .Select(i => i.Product.Id)
-                .ToList();
-
-            // Determine product.
-            Product product = products
-                .OrderBy(_ => Guid.NewGuid())
-                .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
-                .First();
-            pickedProductIds.Add(product.Id);
-
-            OrderItem item = new OrderItem
+            // Initialize order.
+            Order order = new Order
             {
-                Amount = product.Price,
-                VatFactor = 0,
-                Quantity = Math.Min(5, product.StockingQuantity),
-                ProductId = product.Id
+                PaidDateTime = statsDateTime,
+                CreatedDateTime = statsDateTime,
+                Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
+                CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
+                CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
+                Items = new List<OrderItem>()
             };
-            order.Items.Add(item);
+            _context.Orders.Add(order);
+
+            // Initialize order items.
+            int orderItemCount = Math.Max(productsInStockCount, random.Next(3, 10));
+            for (int i = 0; i < orderItemCount; i++)
+            {
+                // Get a list of product ids which have been picked ealier.
+                List<int> pickedProductIds = order.Items
+                    .Select(i => i.ProductId)
+                    .ToList();
+
+                // Determine product.
+                Product product = products
+                    .OrderBy(_ => Guid.NewGuid())
+                    .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
+                    .First();
+                pickedProductIds.Add(product.Id);
+
+                OrderItem item = new OrderItem
+                {
+                    Amount = product.Price,
+                    VatFactor = 0,
+                    Quantity = Math.Min(5, product.StockingQuantity),
+                    ProductId = product.Id
+                };
+                order.Items.Add(item);
+                product.StockingQuantity -= item.Quantity;
+            }
+
+            // Generating stats data.
+            DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+            DailyStats dailyStats = _context.DailyStats
+                .Where(ds => ds.RecordedDate == statsDate)
+                .Single();
+            dailyStats.RetailGrossRevenue += order.BeforeVatAmount;
+            dailyStats.VatCollectedAmount += order.VatAmount;
+            dailyStats.Monthly.RetailGrossRevenue += order.BeforeVatAmount;
+            dailyStats.Monthly.VatCollectedAmount += order.VatAmount;
+
+            _context.SaveChanges();
+
+            if (logResult)
+            {
+                Console.WriteLine($"Initialized order with id {order.Id} at {statsDateTime}");
+            }
         }
 
-        // Generating stats data.
-        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
-        DailyStats dailyStats = _context.DailyStats
-            .Where(ds => ds.RecordedDate == statsDate)
-            .Single();
-        dailyStats.RetailGrossRevenue += order.BeforeVatAmount;
-        dailyStats.VatCollectedAmount += order.VatAmount;
-        dailyStats.Monthly.RetailGrossRevenue += order.BeforeVatAmount;
-        dailyStats.Monthly.VatCollectedAmount += order.VatAmount;
-
         // Check the stocking quantities of products.
-        CheckAndGenerateSupply(statsDateTime, random, faker, products);
+        CheckAndGenerateSupply(statsDateTime, random, faker, products, logResult);
     }
 
-    private int GenerateTreatment(DateTime statsDateTime, Random random,
-            List<int> customerIds, List<Product> products, Faker faker)
+    private void GenerateTreatment(DateTime statsDateTime, List<int> customerIds,
+            List<Product> products, Random random, Faker faker, bool logResult = false)
     {
-        // Fetch a list of users who have permission to create treatment.
-        List<int> userIds = _context.Users
-            .Include(u => u.Roles).ThenInclude(r => r.Claims)
-            .Where(u => u.Roles
-                .Single()
-                .Claims
-                .Select(c => c.ClaimValue)
-                .Contains(PermissionConstants.CreateTreatment))
-                .Select(u => u.Id)
-                .ToList();
+        // Calculate the count of the products which are still in stock.
+        int productsInStockCount = _context.Products.Count(p => p.StockingQuantity > 0);
 
-        // Initialize treatment entity.
-        Treatment treatment = new Treatment
+        if (productsInStockCount > 0)
         {
-            PaidDateTime = statsDateTime,
-            CreatedDateTime = statsDateTime,
-            ServiceAmount = random.Next(1_000_000, 2_000_000),
-            ServiceVatFactor = (decimal)random.Next(0, 2) / 10,
-            Note = null,
-            CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
-            CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
-            Items = new List<TreatmentItem>()
-        };
-
-        // Initialize treatment item entities.
-        int treatmentItemCount = random.Next(3, 10);
-        for (int i = 0; i < treatmentItemCount; i++)
-        {
-            // Determine product.
-            List<int> pickedProductIds = treatment.Items.Select(i => i.Product.Id).ToList();
-            Product product = products
+            // Fetch a list of users who have permission to create treatment.
+            List<int> userIds = _context.Users
+                .Include(u => u.Roles).ThenInclude(r => r.Claims)
+                .Where(u => u.Roles
+                    .Single()
+                    .Claims
+                    .Select(c => c.ClaimValue)
+                    .Contains(PermissionConstants.CreateTreatment))
+                    .Select(u => u.Id)
+                    .ToList();
+            int therapistId = _context.Users
                 .OrderBy(_ => Guid.NewGuid())
-                .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
+                .Select(u => u.Id)
                 .First();
 
-            TreatmentItem item = new TreatmentItem
+            // Initialize treatment entity.
+            Treatment treatment = new Treatment
             {
-                Amount = product.Price,
-                VatFactor = 0,
-                Quantity = Math.Min(5, product.StockingQuantity),
-                ProductId = product.Id
+                PaidDateTime = statsDateTime,
+                CreatedDateTime = statsDateTime,
+                ServiceAmount = random.Next(1_000_000, 2_000_000),
+                ServiceVatFactor = (decimal)random.Next(0, 2) / 10,
+                Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
+                CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
+                CreatedUserId = userIds.MinBy(_ => Guid.NewGuid()),
+                TherapistId = therapistId,
+                Items = new List<TreatmentItem>()
             };
-            treatment.Items.Add(item);
+            _context.Treatments.Add(treatment);
+
+            // Initialize treatment item entities.
+            int treatmentItemCount = Math.Max(productsInStockCount, random.Next(3, 10));
+            for (int i = 0; i < treatmentItemCount; i++)
+            {
+                // Determine product.
+                List<int> pickedProductIds = treatment.Items
+                    .Select(i => i.ProductId)
+                    .ToList();
+                Product product = products
+                    .OrderBy(_ => Guid.NewGuid())
+                    .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
+                    .First();
+
+                TreatmentItem item = new TreatmentItem
+                {
+                    Amount = product.Price,
+                    VatFactor = 0,
+                    Quantity = Math.Min(5, product.StockingQuantity),
+                    ProductId = product.Id
+                };
+                treatment.Items.Add(item);
+                product.StockingQuantity -= item.Quantity;
+            }
+
+            // Generating stats data.
+            DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+            DailyStats dailyStats = _context.DailyStats
+                .Where(ds => ds.RecordedDate == statsDate)
+                .Single();
+            dailyStats.TreatmentGrossRevenue += treatment.Amount;
+            dailyStats.VatCollectedAmount += treatment.VatAmount;
+            dailyStats.Monthly.TreatmentGrossRevenue += treatment.Amount;
+            dailyStats.Monthly.VatCollectedAmount += treatment.VatAmount;
+
+            _context.SaveChanges();
+
+            if (logResult)
+            {
+                Console.WriteLine($"Initialized treatment with id {treatment.Id} at {statsDateTime}");
+            }
         }
 
-        // Generating stats data.
-        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
-        DailyStats dailyStats = _context.DailyStats
-            .Where(ds => ds.RecordedDate == statsDate)
-            .Single();
-        dailyStats.TreatmentGrossRevenue += treatment.Amount;
-        dailyStats.VatCollectedAmount += treatment.VatAmount;
-        dailyStats.Monthly.TreatmentGrossRevenue += treatment.Amount;
-        dailyStats.Monthly.VatCollectedAmount += treatment.VatAmount;
-
         // Check the stocking quantities of products.
-        CheckAndGenerateSupply(statsDateTime, random, faker, products);
+        CheckAndGenerateSupply(statsDateTime, random, faker, products, logResult);
     }
 
-    private int GenerateConsultant(DateTime statsDateTime, Random random,
-            List<int> customerIds)
+    private void GenerateConsultant(DateTime statsDateTime, List<int> customerIds,
+            Random random, Faker faker, bool logResult = false)
     {
         // Fetch a list of users who have permission to create consultant.
         List<int> userIds = _context.Users
@@ -1529,7 +1601,7 @@ public sealed class DataInitializer
             PaidDateTime = statsDateTime,
             CreatedDateTime = statsDateTime,
             Amount = random.Next(500_000, 2_500_000),
-            Note = null,
+            Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
             CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
             CreatedUserId = userIds.MinBy(_ => Guid.NewGuid())
         };
@@ -1541,6 +1613,13 @@ public sealed class DataInitializer
             .Single();
         dailyStats.ConsultantGrossRevenue += consultant.Amount;
         dailyStats.Monthly.ConsultantGrossRevenue += consultant.Amount;
+
+        _context.SaveChanges();
+
+        if (logResult)
+        {
+            Console.WriteLine($"Initialized consultant with id {consultant.Id} at {statsDateTime}");
+        }
     }
 
     private static T ValueOrNull<T>(T value)

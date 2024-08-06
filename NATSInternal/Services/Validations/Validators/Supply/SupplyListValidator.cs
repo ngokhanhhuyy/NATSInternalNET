@@ -8,10 +8,17 @@ public class SupplyListValidator : Validator<SupplyListRequestDto>
             .NotEmpty()
             .Must(IsEnumElementName<SupplyListRequestDto.FieldOptions>)
             .WithName(DisplayNames.OrderByField);
-        RuleFor(dto => dto.RangeFrom)
-            .LessThan(dto => dto.RangeTo)
-            .When(dto => dto.RangeFrom.HasValue && dto.RangeTo.HasValue)
-            .WithName(DisplayNames.RangeFrom);
+        RuleFor(dto => dto.Month)
+            .GreaterThanOrEqualTo(1)
+            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Month)
+            .When(dto => dto.Year.HasValue && dto.Year == DateTime.UtcNow.ToApplicationTime().Year)
+            .LessThanOrEqualTo(12)
+            .When(dto => dto.Year.HasValue && dto.Year < DateTime.UtcNow.ToApplicationTime().Year)
+            .WithName(DisplayNames.Month);
+        RuleFor(dto => dto.Year)
+            .GreaterThanOrEqualTo(1)
+            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Year)
+            .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Page)
             .GreaterThanOrEqualTo(1)
             .WithName(DisplayNames.Page);

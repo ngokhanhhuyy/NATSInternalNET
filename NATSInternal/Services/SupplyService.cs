@@ -23,6 +23,16 @@ public class SupplyService : ISupplyService
     /// <inheritdoc />
     public async Task<SupplyListResponseDto> GetListAsync(SupplyListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        int currentYear = currentDateTime.Year;
+        int currentMonth = currentDateTime.Month;
+        List<MonthYearResponseDto> monthYearOptions = await _context.MonthlyStats
+            .OrderBy(ms => ms.RecordedYear).ThenBy(ms => ms.RecordedMonth)
+            .Where(ms => ms.RecordedYear != currentYear || ms.RecordedMonth <= currentMonth)
+            .Select(ms => new MonthYearResponseDto(ms.RecordedYear, ms.RecordedMonth))
+            .ToListAsync();
+
         // Query initialization.
         IQueryable<Supply> query = _context.Supplies
             .Include(s => s.CreatedUser).ThenInclude(u => u.Roles)
@@ -62,20 +72,11 @@ public class SupplyService : ISupplyService
                 break;
         }
 
-        // Filter from range if specified.
-        if (requestDto.RangeFrom.HasValue)
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.PaidDateTime >= rangeFromDateTime);
-        }
-
-        // Filter to range if specified.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.PaidDateTime <= rangeToDateTime);
+            query = query.Where(s => s.PaidDateTime.Year == requestDto.Year)
+                .Where(s => s.PaidDateTime.Month == requestDto.Month);
         }
 
         // Filter by user id if specified.
@@ -85,7 +86,11 @@ public class SupplyService : ISupplyService
         }
 
         // Initialize response dto.
-        SupplyListResponseDto responseDto = new SupplyListResponseDto();
+        SupplyListResponseDto responseDto = new SupplyListResponseDto
+        {
+            MonthYearOptions = monthYearOptions,
+            Authorization = _authorizationService.GetSupplyListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -97,6 +102,7 @@ public class SupplyService : ISupplyService
             .Select(s => new SupplyBasicResponseDto(s))
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
+            .AsSingleQuery()
             .ToListAsync();
 
         return responseDto;
