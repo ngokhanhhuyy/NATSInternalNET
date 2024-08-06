@@ -26,9 +26,10 @@ public sealed class DataInitializer
         InitializeProductCategories();
         InitializeProducts();
         InitializeStats();
-        InitializeSupply();
-        InitializeExpense();
-        InitializeOrders();
+        GenerateLockableEntitiesData();
+        // InitializeSupply();
+        // InitializeExpense();
+        // InitializeOrders();
         _context.SaveChanges();
         transaction.Commit();
     }
@@ -1177,52 +1178,150 @@ public sealed class DataInitializer
         _context.SaveChanges();
     }
 
-    private void GenerateSupply(DateTime statsDateTime, Random random,
-            Faker faker, List<int> userIds, List<Product> products)
+    private void GenerateLockableEntitiesData()
     {
-        // Initialize supply entitiy.
-        Supply supply = new()
+        List<bool> conditions = new List<bool>
         {
-            PaidDateTime = statsDateTime,
-            CreatedDateTime = statsDateTime,
-            ShipmentFee = random.Next(200_000, 500_000),
-            Note = faker.Lorem.Sentences(5),
-            CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
-            Items = new List<SupplyItem>()
+            _context.Supplies.Any(),
+            _context.Expenses.Any(),
+            _context.Orders.Any(),
+            _context.Treatments.Any(),
+            _context.Consultants.Any()
         };
-        _context.Supplies.Add(supply);
+
+        bool shouldGenerate = false;
+        foreach (bool condition in conditions)
+        {
+            if (!condition)
+            {
+                shouldGenerate = true;
+                break;
+            }
+        }
+
+        if (shouldGenerate)
+        {
+            Console.WriteLine("Initializing LockableEntities.");
+            Random random = new Random();
+            Faker faker = new Faker();
+            DateTime maxStatsDateTime = DateTime.UtcNow.ToApplicationTime();
+            DateTime statsDateTime = maxStatsDateTime
+                .AddMonths(-6);
+            List<int> customerIds = _context.Customers.Select(c => c.Id).ToList();
+            List<Product> products = _context.Products.ToList();
+
+            Func<DateTime, bool> isStatsDateTimeValid = delegate(DateTime dateTime)
+            {
+                bool isInBusinessHours = dateTime.Hour >= 8
+                    && dateTime.Hour <= 17;
+                bool isInBusinessDaysOfWeek = dateTime.DayOfWeek == DayOfWeek.Saturday
+                    || dateTime.DayOfWeek == DayOfWeek.Sunday;
+                return isInBusinessHours && isInBusinessDaysOfWeek;
+            };
+
+            while (statsDateTime < maxStatsDateTime)
+            {
+                // Determine datetime
+                do
+                {
+                    statsDateTime = statsDateTime.AddMinutes(random.Next(120, 360));
+                }
+                while (isStatsDateTimeValid(statsDateTime));
+
+                // Determine type of entity that is to be created.
+                int randomNumber = random.Next(1, 101);
+                if (randomNumber < 20)
+                {
+                    GenerateExpense(statsDateTime, random, faker);
+                }
+                else if (randomNumber < 35)
+                {
+                    GenerateConsultant(statsDateTime, random, customerIds);
+                }
+                else if (randomNumber < 65)
+                {
+                    GenerateOrder(statsDateTime, random, customerIds, products, faker);
+                }
+                else
+                {
+                    GenerateTreatment(statsDateTime, random, customerIds, products, faker);
+                }
+            }
+        }
+    }
+
+    private void CheckAndGenerateSupply(DateTime statsDateTime, Random random,
+            Faker faker, List<Product> products)
+    {
+        // Fetch a list of users who have permission to create supply.
+        List<int> userIds = _context.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .Where(u => u.Roles
+                .Single()
+                .Claims
+                .Select(c => c.ClaimValue)
+                .Contains(PermissionConstants.CreateSupply))
+                .Select(u => u.Id)
+                .ToList();
 
         // Initialize supply item entities.
         // Get a list of product which stocking quantities are low.
+        List<SupplyItem> items = new List<SupplyItem>();
         foreach (Product product in products)
         {
             if (product.StockingQuantity <= 20)
             {
                 SupplyItem item = new SupplyItem
                 {
-                    Amount = (int)Math.Round(product.Price - product.Price * 0.1),
+                    Amount = (int)Math.Round(product.Price - product.Price * 0.35),
                     SuppliedQuantity = 100 - product.StockingQuantity,
                     Product = product,
                 };
-                supply.Items.Add(item);
+                items.Add(item);
                 product.StockingQuantity += item.SuppliedQuantity;
             }
         }
 
-        // Generate stats data.
-        DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
-        DailyStats dailyStats = _context.DailyStats
-            .Where(ds => ds.RecordedDate == statsDate)
-            .Single();
-        dailyStats.SupplyCost += supply.ItemAmount;
-        dailyStats.ShipmentCost += supply.ShipmentFee;
-        dailyStats.Monthly.SupplyCost += supply.ItemAmount;
-        dailyStats.Monthly.ShipmentCost += supply.ShipmentFee;
+        // Initialize supply entitiy.
+        if (items.Any())
+        {
+            Supply supply = new()
+            {
+                PaidDateTime = statsDateTime,
+                CreatedDateTime = statsDateTime,
+                ShipmentFee = random.Next(200_000, 500_000),
+                Note = faker.Lorem.Sentences(5),
+                CreatedUserId = userIds.Skip(random.Next(userIds.Count)).Take(1).Single(),
+                Items = new List<SupplyItem>()
+            };
+            _context.Supplies.Add(supply);
+
+            // Generate stats data.
+            DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
+            DailyStats dailyStats = _context.DailyStats
+                .Where(ds => ds.RecordedDate == statsDate)
+                .Single();
+            dailyStats.SupplyCost += supply.ItemAmount;
+            dailyStats.ShipmentCost += supply.ShipmentFee;
+            dailyStats.Monthly.SupplyCost += supply.ItemAmount;
+            dailyStats.Monthly.ShipmentCost += supply.ShipmentFee;
+        }
     }
 
     private void GenerateExpense(DateTime statsDateTime, Random random,
-            Faker faker, List<int> userIds)
+            Faker faker)
     {
+        // Fetch a list of users who have permission to create expense.
+        List<int> userIds = _context.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .Where(u => u.Roles
+                .Single()
+                .Claims
+                .Select(c => c.ClaimValue)
+                .Contains(PermissionConstants.CreateExpense))
+                .Select(u => u.Id)
+                .ToList();
+
         // Generating category.
         ExpenseCategory category = Enum.GetValues(typeof(ExpenseCategory))
             .OfType<ExpenseCategory>()
@@ -1278,11 +1377,24 @@ public sealed class DataInitializer
                 break;
         }
 
+        _context.SaveChanges();
+        Console.WriteLine($"Initialized expense with id {expense.Id} at {statsDateTime}");
     }
 
-    private void GenerateOrder(DateTime statsDateTime, Random random,
-            List<int> customerIds, List<int> userIds, List<Product> products)
+    private int GenerateOrder(DateTime statsDateTime, Random random,
+            List<int> customerIds, List<Product> products, Faker faker)
     {
+        // Fetch a list of users who have permission to create order.
+        List<int> userIds = _context.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .Where(u => u.Roles
+                .Single()
+                .Claims
+                .Select(c => c.ClaimValue)
+                .Contains(PermissionConstants.CreateOrder))
+                .Select(u => u.Id)
+                .ToList();
+
         // Initialize order.
         Order order = new Order
         {
@@ -1297,9 +1409,13 @@ public sealed class DataInitializer
 
         // Initialize order items.
         int orderItemCount = random.Next(3, 10);
-        List<int> pickedProductIds = new List<int>();
         for (int i = 0; i < orderItemCount; i++)
         {
+            // Get a list of product ids which have been picked ealier.
+            List<int> pickedProductIds = order.Items
+                .Select(i => i.Product.Id)
+                .ToList();
+
             // Determine product.
             Product product = products
                 .OrderBy(_ => Guid.NewGuid())
@@ -1326,11 +1442,25 @@ public sealed class DataInitializer
         dailyStats.VatCollectedAmount += order.VatAmount;
         dailyStats.Monthly.RetailGrossRevenue += order.BeforeVatAmount;
         dailyStats.Monthly.VatCollectedAmount += order.VatAmount;
+
+        // Check the stocking quantities of products.
+        CheckAndGenerateSupply(statsDateTime, random, faker, products);
     }
 
-    private void GenerateTreatment(DateTime statsDateTime, Random random,
-            List<int> customerIds, List<int> userIds, List<Product> products)
+    private int GenerateTreatment(DateTime statsDateTime, Random random,
+            List<int> customerIds, List<Product> products, Faker faker)
     {
+        // Fetch a list of users who have permission to create treatment.
+        List<int> userIds = _context.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .Where(u => u.Roles
+                .Single()
+                .Claims
+                .Select(c => c.ClaimValue)
+                .Contains(PermissionConstants.CreateTreatment))
+                .Select(u => u.Id)
+                .ToList();
+
         // Initialize treatment entity.
         Treatment treatment = new Treatment
         {
@@ -1374,11 +1504,25 @@ public sealed class DataInitializer
         dailyStats.VatCollectedAmount += treatment.VatAmount;
         dailyStats.Monthly.TreatmentGrossRevenue += treatment.Amount;
         dailyStats.Monthly.VatCollectedAmount += treatment.VatAmount;
+
+        // Check the stocking quantities of products.
+        CheckAndGenerateSupply(statsDateTime, random, faker, products);
     }
 
-    private void GenerateConsultant(DateTime statsDateTime, Random random,
-            List<int> customerIds, List<int> userIds)
+    private int GenerateConsultant(DateTime statsDateTime, Random random,
+            List<int> customerIds)
     {
+        // Fetch a list of users who have permission to create consultant.
+        List<int> userIds = _context.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .Where(u => u.Roles
+                .Single()
+                .Claims
+                .Select(c => c.ClaimValue)
+                .Contains(PermissionConstants.CreateConsultant))
+                .Select(u => u.Id)
+                .ToList();
+
         // Initialize consultant entity.
         Consultant consultant = new Consultant
         {
