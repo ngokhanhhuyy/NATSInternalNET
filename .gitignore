@@ -368,3 +368,4 @@ MigrationBackup/
 FodyWeavers.xsd
 NATSInternal/Views.zip
 settings.json
+NATSInternal/.config/dotnet-tools.json

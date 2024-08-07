@@ -27,11 +27,36 @@ public class SupplyService : ISupplyService
         DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
         int currentYear = currentDateTime.Year;
         int currentMonth = currentDateTime.Month;
-        List<MonthYearResponseDto> monthYearOptions = await _context.MonthlyStats
-            .OrderBy(ms => ms.RecordedYear).ThenBy(ms => ms.RecordedMonth)
-            .Where(ms => ms.RecordedYear != currentYear || ms.RecordedMonth <= currentMonth)
-            .Select(ms => new MonthYearResponseDto(ms.RecordedYear, ms.RecordedMonth))
-            .ToListAsync();
+        List<MonthYearResponseDto> monthYearOptions = new List<MonthYearResponseDto>();
+        var earliestRecordedMonthYear = await _context.Supplies
+            .OrderBy(s => s.PaidDateTime)
+            .Select(s => new { s.PaidDateTime.Year, s.PaidDateTime.Month })
+            .FirstOrDefaultAsync();
+        if (earliestRecordedMonthYear != null)
+        {
+            int initializingYear = earliestRecordedMonthYear.Year;
+            while (initializingYear <= currentYear)
+            {
+                int initializingMonth = 1;
+                if (initializingYear == earliestRecordedMonthYear.Year)
+                {
+                    initializingMonth = earliestRecordedMonthYear.Month;
+                }
+                while (initializingMonth <= 12)
+                {
+                    MonthYearResponseDto option;
+                    option = new MonthYearResponseDto(initializingYear, initializingMonth);
+                    monthYearOptions.Add(option);
+                    initializingMonth += 1;
+                    if (initializingYear == currentYear && initializingMonth > currentMonth)
+                    {
+                        break;
+                    }
+                }
+                initializingYear += 1;
+            }
+            monthYearOptions.Reverse();
+        }
 
         // Query initialization.
         IQueryable<Supply> query = _context.Supplies

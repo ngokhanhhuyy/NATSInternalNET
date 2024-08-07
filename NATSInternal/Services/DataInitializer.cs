@@ -1325,6 +1325,7 @@ public sealed class DataInitializer
             // Generate stats data.
             DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
             DailyStats dailyStats = _context.DailyStats
+                .Include(ds => ds.Monthly)
                 .Where(ds => ds.RecordedDate == statsDate)
                 .Single();
             dailyStats.SupplyCost += supply.ItemAmount;
@@ -1387,6 +1388,7 @@ public sealed class DataInitializer
         // Generating stats data.
         DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
         DailyStats dailyStats = _context.DailyStats
+            .Include(ds => ds.Monthly)
             .Where(ds => ds.RecordedDate == statsDate)
             .Single();
         switch(expense.Category)
@@ -1478,6 +1480,7 @@ public sealed class DataInitializer
             // Generating stats data.
             DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
             DailyStats dailyStats = _context.DailyStats
+                .Include(ds => ds.Monthly)
                 .Where(ds => ds.RecordedDate == statsDate)
                 .Single();
             dailyStats.RetailGrossRevenue += order.BeforeVatAmount;
@@ -1562,6 +1565,7 @@ public sealed class DataInitializer
             // Generating stats data.
             DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
             DailyStats dailyStats = _context.DailyStats
+                .Include(ds => ds.Monthly)
                 .Where(ds => ds.RecordedDate == statsDate)
                 .Single();
             dailyStats.TreatmentGrossRevenue += treatment.Amount;
@@ -1609,6 +1613,7 @@ public sealed class DataInitializer
         // Generating stats data.
         DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
         DailyStats dailyStats = _context.DailyStats
+            .Include(ds => ds.Monthly)
             .Where(ds => ds.RecordedDate == statsDate)
             .Single();
         dailyStats.ConsultantGrossRevenue += consultant.Amount;
