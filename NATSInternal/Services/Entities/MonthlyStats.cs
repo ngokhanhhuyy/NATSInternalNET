@@ -34,7 +34,7 @@ public class MonthlyStats
     [Required]
     public long ShipmentCost { get; set; }
 
-    [Column("supply_expense")]
+    [Column("supply_cost")]
     [Required]
     public long SupplyCost { get; set; }
 

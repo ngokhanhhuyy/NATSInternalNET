@@ -561,7 +561,7 @@ namespace NATSInternal.Migrations
 
                     b.Property<long>("SupplyCost")
                         .HasColumnType("bigint")
-                        .HasColumnName("supply_expense");
+                        .HasColumnName("supply_cost");
 
                     b.Property<DateTime?>("TemporarilyClosedDateTime")
                         .HasColumnType("datetime(6)")
@@ -1016,7 +1016,7 @@ namespace NATSInternal.Migrations
 
                     b.Property<long>("SupplyCost")
                         .HasColumnType("bigint")
-                        .HasColumnName("supply_expense");
+                        .HasColumnName("supply_cost");
 
                     b.Property<DateTime?>("TemporarilyClosedDateTime")
                         .HasColumnType("datetime(6)")

@@ -1,7 +1,7 @@
 ﻿namespace NATSInternal.Services;
 
 /// <inheritdoc />
-public class SupplyService : ISupplyService
+public class SupplyService : LockableEntityService, ISupplyService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
@@ -24,38 +24,17 @@ public class SupplyService : ISupplyService
     public async Task<SupplyListResponseDto> GetListAsync(SupplyListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        int currentYear = currentDateTime.Year;
-        int currentMonth = currentDateTime.Month;
-        List<MonthYearResponseDto> monthYearOptions = new List<MonthYearResponseDto>();
         var earliestRecordedMonthYear = await _context.Supplies
             .OrderBy(s => s.PaidDateTime)
-            .Select(s => new { s.PaidDateTime.Year, s.PaidDateTime.Month })
-            .FirstOrDefaultAsync();
+            .Select(s => new MonthYearResponseDto
+            {
+                Year = s.PaidDateTime.Year,
+                Month = s.PaidDateTime.Month
+            }).FirstOrDefaultAsync();
+        List<MonthYearResponseDto> monthYearOptions = null;
         if (earliestRecordedMonthYear != null)
         {
-            int initializingYear = earliestRecordedMonthYear.Year;
-            while (initializingYear <= currentYear)
-            {
-                int initializingMonth = 1;
-                if (initializingYear == earliestRecordedMonthYear.Year)
-                {
-                    initializingMonth = earliestRecordedMonthYear.Month;
-                }
-                while (initializingMonth <= 12)
-                {
-                    MonthYearResponseDto option;
-                    option = new MonthYearResponseDto(initializingYear, initializingMonth);
-                    monthYearOptions.Add(option);
-                    initializingMonth += 1;
-                    if (initializingYear == currentYear && initializingMonth > currentMonth)
-                    {
-                        break;
-                    }
-                }
-                initializingYear += 1;
-            }
-            monthYearOptions.Reverse();
+            monthYearOptions = GenerateMonthYearOptions(earliestRecordedMonthYear);
         }
 
         // Query initialization.

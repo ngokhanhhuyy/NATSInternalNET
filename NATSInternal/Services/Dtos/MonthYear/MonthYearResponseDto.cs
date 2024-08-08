@@ -5,6 +5,8 @@ public class MonthYearResponseDto
     public int Month { get; set; }
     public int Year { get; set; }
 
+    public MonthYearResponseDto() { }
+
     public MonthYearResponseDto(int year, int month)
     {
         Month = month;
