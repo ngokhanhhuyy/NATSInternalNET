@@ -19,6 +19,7 @@ public record CustomerDetailResponseDto
     public DateTime CreatedDateTime { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
     public CustomerBasicResponseDto Introducer { get; set; }
+    public long DebtRemainingAmount { get; set; }
 
     public CustomerDetailResponseDto(
             Customer customer,
@@ -40,6 +41,7 @@ public record CustomerDetailResponseDto
         Note = customer.Note;
         CreatedDateTime = customer.CreatedDateTime;
         UpdatedDateTime = customer.UpdatedDateTime;
+        DebtRemainingAmount = customer.DebtRemainingAmount;
 
         if (customer.Introducer != null)
         {

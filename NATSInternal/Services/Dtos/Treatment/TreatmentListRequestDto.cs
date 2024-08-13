@@ -1,17 +1,20 @@
 namespace NATSInternal.Services.Dtos;
 
-public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>
+public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>, ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; }
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
-    public DateOnly? RangeFrom { get; set; }
-    public DateOnly? RangeTo { get; set; }
+    public int? Month { get; set; }
+    public int? Year { get; set; }
     public int Page { get; set; } = 1;
     public int ResultsPerPage { get; set; } = 15;
     
     public TreatmentListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        Month ??= currentDateTime.Month;
+        Year ??= currentDateTime.Year;
         return this;
     }
     

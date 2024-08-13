@@ -8,11 +8,12 @@ public class TreamentListValidator : AbstractValidator<TreatmentListRequestDto>
             .NotNull()
             .IsEnumName(typeof(TreatmentListRequestDto.FieldOptions))
             .WithName(DisplayNames.OrderByField);
-        RuleFor(dto => dto.RangeFrom)
-            .LessThanOrEqualTo(dto => dto.RangeTo)
-            .WithMessage(GetRangeFromErrorMessage)
-            .When(dto => dto.RangeFrom.HasValue && dto.RangeTo.HasValue)
-            .WithName(DisplayNames.RangeFrom);
+        RuleFor(dto => dto.Month)
+            .IsValidQueryStatsMonth()
+            .WithName(DisplayNames.Month);
+        RuleFor(dto => dto.Year)
+            .IsValidQueryStatsYear()
+            .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Page)
             .GreaterThanOrEqualTo(1)
             .WithName(DisplayNames.Page);
@@ -20,11 +21,5 @@ public class TreamentListValidator : AbstractValidator<TreatmentListRequestDto>
             .GreaterThanOrEqualTo(5)
             .LessThanOrEqualTo(50)
             .WithName(DisplayNames.ResultsPerPage);
-    }
-
-    private string GetRangeFromErrorMessage(TreatmentListRequestDto requestDto)
-    {
-        return ErrorMessages.EarlierThanOrEqual
-            .ReplaceComparisonValue(requestDto.RangeTo.Value.ToVietnameseString());
     }
 }

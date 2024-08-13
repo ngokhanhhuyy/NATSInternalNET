@@ -7,6 +7,7 @@ public class SupplyService : LockableEntityService, ISupplyService
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
 
     public SupplyService(
             DatabaseContext context,
@@ -24,18 +25,18 @@ public class SupplyService : LockableEntityService, ISupplyService
     public async Task<SupplyListResponseDto> GetListAsync(SupplyListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        var earliestRecordedMonthYear = await _context.Supplies
-            .OrderBy(s => s.PaidDateTime)
-            .Select(s => new MonthYearResponseDto
-            {
-                Year = s.PaidDateTime.Year,
-                Month = s.PaidDateTime.Month
-            }).FirstOrDefaultAsync();
-        List<MonthYearResponseDto> monthYearOptions = null;
-        if (earliestRecordedMonthYear != null)
+        if (_earliestRecordedMonthYear == null)
         {
-            monthYearOptions = GenerateMonthYearOptions(earliestRecordedMonthYear);
+            _earliestRecordedMonthYear = await _context.Supplies
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
         }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
         // Query initialization.
         IQueryable<Supply> query = _context.Supplies
@@ -79,8 +80,9 @@ public class SupplyService : LockableEntityService, ISupplyService
         // Filter by month and year if specified.
         if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            query = query.Where(s => s.PaidDateTime.Year == requestDto.Year)
-                .Where(s => s.PaidDateTime.Month == requestDto.Month);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by user id if specified.

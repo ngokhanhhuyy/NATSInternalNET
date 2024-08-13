@@ -18,9 +18,11 @@ public class ConsultantUpsertValidator : Validator<ConsultantUpsertRequestDto>
             .GreaterThanOrEqualTo(0)
             .WithName(DisplayNames.Customer);
 
+        RuleSet("Create", () => { });
         RuleSet("Update", () =>
         {
-            RuleFor(dto => dto.UpdatingReason)
+            RuleFor(dto => dto.UpdateReason)
+                .NotEmpty()
                 .MaximumLength(255)
                 .WithName(DisplayNames.Reason);
         });

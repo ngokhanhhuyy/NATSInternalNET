@@ -260,7 +260,8 @@ public class AuthorizationService : IAuthorizationService
         {
             CanEdit = CanEditConsultant(consultant),
             CanDelete = CanDeleteConsultant(),
-            CanSetPaidDateTime = CanSetConsultantPaidDateTime()
+            CanSetPaidDateTime = CanSetConsultantPaidDateTime(),
+            CanAccessUpdateHistories = CanAccessConsultantUpdateHistories()
         };
     }
 

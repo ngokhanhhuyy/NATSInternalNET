@@ -1,12 +1,13 @@
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
-public class TreatmentService : ITreatmentService
+public class TreatmentService : LockableEntityService, ITreatmentService
 {
     private readonly DatabaseContext _context;
     private readonly IAuthorizationService _authorizationService;
     private readonly IPhotoService _photoService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
 
     public TreatmentService(
             DatabaseContext context,
@@ -23,6 +24,20 @@ public class TreatmentService : ITreatmentService
     /// <inheritdoc />
     public async Task<TreatmentListResponseDto> GetListAsync(TreatmentListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        if (_earliestRecordedMonthYear == null)
+        {
+            _earliestRecordedMonthYear = await _context.Treatments
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+        }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+
         // Initialize query.
         IQueryable<Treatment> query = _context.Treatments
             .Include(t => t.Customer)
@@ -52,20 +67,12 @@ public class TreatmentService : ITreatmentService
                 break;
         }
 
-        // Filter from range if specified.
-        if (requestDto.RangeFrom.HasValue)
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.PaidDateTime >= rangeFromDateTime);
-        }
-
-        // Filter to range if specified.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.PaidDateTime <= rangeToDateTime);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by not being soft deleted.
@@ -74,6 +81,7 @@ public class TreatmentService : ITreatmentService
         // Initialize response dto.
         TreatmentListResponseDto responseDto = new TreatmentListResponseDto
         {
+            MonthYearOptions = monthYearOptions,
             Authorization = _authorizationService.GetTreatmentListAuthorization()
         };
         int resultCount = await query.CountAsync();

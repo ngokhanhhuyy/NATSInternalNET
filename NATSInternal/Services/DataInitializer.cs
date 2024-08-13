@@ -1234,12 +1234,14 @@ public sealed class DataInitializer
             {
                 bool isInBusinessHours = dateTime.Hour >= 8
                     && dateTime.Hour <= 17;
-                bool isInBusinessDaysOfWeek = dateTime.DayOfWeek == DayOfWeek.Saturday
-                    || dateTime.DayOfWeek == DayOfWeek.Sunday;
+                bool isInBusinessDaysOfWeek = dateTime.DayOfWeek != DayOfWeek.Saturday
+                    && dateTime.DayOfWeek != DayOfWeek.Sunday;
                 return isInBusinessHours && isInBusinessDaysOfWeek;
             };
             Console.WriteLine("");
-            while (statsDateTime < maxStatsDateTime)
+            int oldRemainingDaysDifferent = 0;
+            Task completedTask = Task.CompletedTask;
+            while (true)
             {
                 // Determine datetime
                 CheckAndGenerateSupply(statsDateTime, random, faker, products);
@@ -1247,7 +1249,12 @@ public sealed class DataInitializer
                 {
                     statsDateTime = statsDateTime.AddMinutes(random.Next(300, 420));
                 }
-                while (isStatsDateTimeValid(statsDateTime));
+                while (!isStatsDateTimeValid(statsDateTime));
+
+                if (statsDateTime > maxStatsDateTime)
+                {
+                    break;
+                }
 
                 // Determine type of entity that is to be created.
                 int randomNumber = random.Next(1, 101);
@@ -1270,8 +1277,15 @@ public sealed class DataInitializer
 
                 // Calculate the process percentage.
                 int remainingDaysDifferent = maxStatsDateTime.Subtract(statsDateTime).Days;
-                Console.SetCursorPosition(0, Console.CursorTop - 1);
-                Console.WriteLine($"{remainingDaysDifferent}/{totalDaysDifferent} days.");
+                if (remainingDaysDifferent != oldRemainingDaysDifferent)
+                {
+                    completedTask.ContinueWith(_ =>
+                    {
+                        Console.SetCursorPosition(0, Console.CursorTop - 1);
+                        Console.Out.WriteLineAsync($"{remainingDaysDifferent}/{totalDaysDifferent} days.");
+                    });
+                }
+                oldRemainingDaysDifferent = remainingDaysDifferent;
             }
         }
     }
@@ -1451,7 +1465,7 @@ public sealed class DataInitializer
             _context.Orders.Add(order);
 
             // Initialize order items.
-            int orderItemCount = Math.Max(productsInStockCount, random.Next(3, 10));
+            int orderItemCount = Math.Min(productsInStockCount, random.Next(3, 10));
             for (int i = 0; i < orderItemCount; i++)
             {
                 // Get a list of product ids which have been picked ealier.
@@ -1470,7 +1484,7 @@ public sealed class DataInitializer
                 {
                     Amount = product.Price,
                     VatFactor = 0,
-                    Quantity = Math.Min(5, product.StockingQuantity),
+                    Quantity = Math.Min(random.Next(1, 5), product.StockingQuantity),
                     ProductId = product.Id
                 };
                 order.Items.Add(item);
@@ -1528,7 +1542,7 @@ public sealed class DataInitializer
             {
                 PaidDateTime = statsDateTime,
                 CreatedDateTime = statsDateTime,
-                ServiceAmount = random.Next(1_000_000, 2_000_000),
+                ServiceAmount = random.Next(1_000, 2_000) * 1000,
                 ServiceVatFactor = (decimal)random.Next(0, 2) / 10,
                 Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
                 CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
@@ -1539,7 +1553,7 @@ public sealed class DataInitializer
             _context.Treatments.Add(treatment);
 
             // Initialize treatment item entities.
-            int treatmentItemCount = Math.Max(productsInStockCount, random.Next(3, 10));
+            int treatmentItemCount = Math.Min(productsInStockCount, random.Next(3, 10));
             for (int i = 0; i < treatmentItemCount; i++)
             {
                 // Determine product.
@@ -1555,7 +1569,7 @@ public sealed class DataInitializer
                 {
                     Amount = product.Price,
                     VatFactor = 0,
-                    Quantity = Math.Min(5, product.StockingQuantity),
+                    Quantity = Math.Min(random.Next(1, 5), product.StockingQuantity),
                     ProductId = product.Id
                 };
                 treatment.Items.Add(item);
@@ -1604,11 +1618,12 @@ public sealed class DataInitializer
         {
             PaidDateTime = statsDateTime,
             CreatedDateTime = statsDateTime,
-            Amount = random.Next(500_000, 2_500_000),
+            Amount = random.Next(500, 2_500) * 1000,
             Note = random.Next(0, 2) == 0 ? null : SliceIfTooLong(faker.Lorem.Sentences(4), 255),
             CustomerId = customerIds.MinBy(_ => Guid.NewGuid()),
             CreatedUserId = userIds.MinBy(_ => Guid.NewGuid())
         };
+        _context.Consultants.Add(consultant);
 
         // Generating stats data.
         DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);

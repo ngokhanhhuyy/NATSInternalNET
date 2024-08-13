@@ -1,12 +1,13 @@
 ﻿namespace NATSInternal.Services;
 
-/// <inheritdoc />
-public class DebtService : IDebtService
+/// <inheritdoc cref="IDebtService" />
+public class DebtService : LockableEntityService, IDebtService
 {
     private readonly DatabaseContext _context;
     private readonly IStatsService _statsService;
     private readonly IAuthorizationService _authorizationService;
-    
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
+
     public DebtService(
             DatabaseContext context,
             IStatsService statsService,
@@ -20,10 +21,24 @@ public class DebtService : IDebtService
     /// <inheritdoc />
     public async Task<DebtListResponseDto> GetListAsync(DebtListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        if (_earliestRecordedMonthYear == null)
+        {
+            _earliestRecordedMonthYear = await _context.Debts
+                .OrderBy(s => s.IncurredDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.IncurredDateTime.Year,
+                    Month = s.IncurredDateTime.Month
+                }).FirstOrDefaultAsync();
+        }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+
         // Initialize query.
         IQueryable<Debt> query = _context.Debts;
         
-        // Filter by fields.
+        // Order by fields.
         switch (requestDto.OrderByField)
         {
             case nameof(DebtListRequestDto.FieldOptions.IncurredDateTime):
@@ -41,21 +56,13 @@ public class DebtService : IDebtService
                         .ThenBy(d => d.IncurredDateTime);
                 break;
         }
-        
-        // Filter by range from if specified in the request.
-        if (requestDto.RangeFrom.HasValue)
+
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(d => d.CreatedDateTime >= rangeFromDateTime);
-        }
-        
-        // Filter by range to if specified in the request.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value.AddDays(1), new TimeOnly(0, 0, 0));
-            query = query.Where(d => d.CreatedDateTime < rangeToDateTime);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.IncurredDateTime >= startDateTime && s.IncurredDateTime < endDateTime);
         }
 
         // Filter by not being soft deleted.
@@ -64,6 +71,7 @@ public class DebtService : IDebtService
         // Initialize repsonse dto.
         DebtListResponseDto responseDto = new DebtListResponseDto
         {
+            MonthYearOptions = monthYearOptions,
             Authorization = _authorizationService.GetDebtListAuthorization()
         };
         int resultCount = await query.CountAsync();
@@ -85,6 +93,82 @@ public class DebtService : IDebtService
         return responseDto;
     }
     
+    public async Task<DebtByCustomerListResponseDto> GetRemainingAmountListByCustomersAsync(
+            DebtByCustomerListRequestDto requestDto)
+    {
+        // Initialize query.
+        IQueryable<Customer> query = _context.Customers
+            .Include(c => c.Debts)
+            .Include(c => c.DebtPayments);
+        
+        // Order by field.
+        switch (requestDto.OrderByField)
+        {
+            case nameof(DebtByCustomerListRequestDto.FieldOptions.RemainingAmount):
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount) - c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount) - c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenByDescending(c => c.Id);
+                break;
+            case nameof(DebtByCustomerListRequestDto.FieldOptions.PaidAmount):
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(c => c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenByDescending(c => c.Id);
+                break;
+            default:
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount))
+                        .ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount))
+                        .ThenByDescending(c => c.Id);
+                break;
+        }
+        
+        // Filter by not being soft deleted.
+        query = query.Where(c => !c.IsDeleted);
+        
+        // Initialize response dto.
+        DebtByCustomerListResponseDto responseDto = new DebtByCustomerListResponseDto
+        {
+            DebtAuthorization = _authorizationService.GetDebtListAuthorization(),
+            DebtPaymentAuthorization = _authorizationService.GetDebtPaymentListAuthorization()
+        };
+        int resultCount = await query.CountAsync();
+        if (resultCount == 0)
+        {
+            responseDto.PageCount = 0;
+            return responseDto;
+        }
+        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        responseDto.Items = await query
+            .Select(c => new DebtByCustomerBasicResponseDto(c))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Take(requestDto.ResultsPerPage)
+            .AsSplitQuery()
+            .ToListAsync();
+        
+        return responseDto;
+    }
+
     /// <inheritdoc />
     public async Task<DebtDetailResponseDto> GetDetailAsync(int id)
     {
@@ -114,7 +198,7 @@ public class DebtService : IDebtService
             debt,
             _authorizationService.GetDebtAuthorization(debt),
             mapUpdateHistories: shouldIncludeUpdateHistories);
-}
+    }
     
     /// <inheritdoc />
     public async Task<int> CreateAsync(DebtUpsertRequestDto requestDto)
@@ -223,7 +307,7 @@ public class DebtService : IDebtService
                 if (requestDto.Amount != debt.Amount)
                 {
                     long amountDifference = requestDto.Amount - debt.Amount;
-                    if (debt.Customer.RemainingDebtAmount + amountDifference < 0)
+                    if (debt.Customer.DebtRemainingAmount + amountDifference < 0)
                     {
                         throw new OperationException(
                             nameof(requestDto.Amount),
@@ -306,7 +390,7 @@ public class DebtService : IDebtService
             ?? throw new ResourceNotFoundException(nameof(Debt), nameof(id), id.ToString());
         
         // Verify that if this debt is deleted, will the remaining debt amount be negative.
-        if (debt.Customer.RemainingDebtAmount - debt.Amount < 0)
+        if (debt.Customer.DebtRemainingAmount - debt.Amount < 0)
         {
             throw new OperationException(ErrorMessages.NegativeRemainingDebtAmount);
         }

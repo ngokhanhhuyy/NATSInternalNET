@@ -41,7 +41,7 @@ public class Consultant : LockableEntity
     [NotMapped]
     public DateTime? LastUpdatedDateTime => UpdateHistories
         .OrderBy(uh => uh.UpdatedDateTime)
-        .Select(uh => uh.UpdatedDateTime)
+        .Select(uh => (DateTime?)uh.UpdatedDateTime)
         .LastOrDefault();
 
     [NotMapped]

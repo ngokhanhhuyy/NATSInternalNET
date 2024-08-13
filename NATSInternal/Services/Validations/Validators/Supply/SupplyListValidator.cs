@@ -9,15 +9,10 @@ public class SupplyListValidator : Validator<SupplyListRequestDto>
             .Must(IsEnumElementName<SupplyListRequestDto.FieldOptions>)
             .WithName(DisplayNames.OrderByField);
         RuleFor(dto => dto.Month)
-            .GreaterThanOrEqualTo(1)
-            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Month)
-            .When(dto => dto.Year.HasValue && dto.Year == DateTime.UtcNow.ToApplicationTime().Year)
-            .LessThanOrEqualTo(12)
-            .When(dto => dto.Year.HasValue && dto.Year < DateTime.UtcNow.ToApplicationTime().Year)
+            .IsValidQueryStatsMonth()
             .WithName(DisplayNames.Month);
         RuleFor(dto => dto.Year)
-            .GreaterThanOrEqualTo(1)
-            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Year)
+            .IsValidQueryStatsYear()
             .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Page)
             .GreaterThanOrEqualTo(1)

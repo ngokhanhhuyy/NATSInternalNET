@@ -1,11 +1,12 @@
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
-public class DebtPaymentService : IDebtPaymentService
+public class DebtPaymentService : LockableEntityService, IDebtPaymentService
 {
     private readonly DatabaseContext _context;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
 
     public DebtPaymentService(
             DatabaseContext context,
@@ -21,9 +22,23 @@ public class DebtPaymentService : IDebtPaymentService
     public async Task<DebtPaymentListResponseDto> GetListAsync(
             DebtPaymentListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        if (_earliestRecordedMonthYear == null)
+        {
+            _earliestRecordedMonthYear = await _context.DebtPayments
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+        }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+
         // Initialize query.
         IQueryable<DebtPayment> query = _context.DebtPayments;
-        
+
         // Filter by fields.
         switch (requestDto.OrderByField)
         {
@@ -42,21 +57,13 @@ public class DebtPaymentService : IDebtPaymentService
                         .ThenBy(d => d.PaidDateTime);
                 break;
         }
-        
-        // Filter by range from if specified in the request.
-        if (requestDto.RangeFrom.HasValue)
+
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(d => d.PaidDateTime >= rangeFromDateTime);
-        }
-        
-        // Filter by range to if specified in the request.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value.AddDays(1), new TimeOnly(0, 0, 0));
-            query = query.Where(d => d.PaidDateTime < rangeToDateTime);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by not being soft deleted.
@@ -65,6 +72,7 @@ public class DebtPaymentService : IDebtPaymentService
         // Initialize repsonse dto.
         DebtPaymentListResponseDto responseDto = new DebtPaymentListResponseDto
         {
+            MonthYearOptions = monthYearOptions,
             Authorization = _authorizationService.GetDebtPaymentListAuthorization()
         };
         int resultCount = await query.CountAsync();
@@ -145,7 +153,7 @@ public class DebtPaymentService : IDebtPaymentService
             .Include(c => c.DebtPayments)
             .SingleOrDefaultAsync(c => c.Id == requestDto.CustomerId)
             ?? throw new OperationException(nameof(requestDto.CustomerId), customerNotFoundErrorMessage);
-        if (customer.RemainingDebtAmount - requestDto.Amount < 0)
+        if (customer.DebtRemainingAmount - requestDto.Amount < 0)
         {
             string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
             throw new OperationException(nameof(requestDto.Amount), amountErrorMessage);
@@ -243,7 +251,7 @@ public class DebtPaymentService : IDebtPaymentService
                 if (requestDto.Amount != debtPayment.Amount)
                 {
                     long amountDifference = requestDto.Amount - debtPayment.Amount;
-                    if (debtPayment.Customer.RemainingDebtAmount + amountDifference < 0)
+                    if (debtPayment.Customer.DebtRemainingAmount + amountDifference < 0)
                     {
                         throw new OperationException(
                             nameof(requestDto.Amount),
@@ -274,7 +282,7 @@ public class DebtPaymentService : IDebtPaymentService
 
         // Verify that with the new paid amount, the customer's remaining debt amount will
         // not be negative.
-        if (debtPayment.Customer.RemainingDebtAmount - requestDto.Amount < 0)
+        if (debtPayment.Customer.DebtRemainingAmount - requestDto.Amount < 0)
         {
             const string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
             throw new OperationException(nameof(requestDto.Amount), amountErrorMessage);
@@ -378,7 +386,7 @@ public class DebtPaymentService : IDebtPaymentService
         }
         
         // Verify that if this debt payment is deleted, will the remaining debt amount be negative.
-        if (debtPayment.Customer.RemainingDebtAmount - debtPayment.Amount < 0)
+        if (debtPayment.Customer.DebtRemainingAmount - debtPayment.Amount < 0)
         {
             throw new OperationException(ErrorMessages.NegativeRemainingDebtAmount);
         }

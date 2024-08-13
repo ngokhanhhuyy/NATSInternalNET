@@ -1,12 +1,13 @@
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
-public class OrderService : IOrderService
+public class OrderService : LockableEntityService, IOrderService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear { get; set; }
         
     public OrderService(
         DatabaseContext context,
@@ -23,6 +24,20 @@ public class OrderService : IOrderService
     /// <inheritdoc />
     public async Task<OrderListResponseDto> GetListAsync(OrderListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        if (_earliestRecordedMonthYear == null)
+        {
+            _earliestRecordedMonthYear = await _context.Orders
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+        }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+
         // Initialize query.
         IQueryable<Order> query = _context.Orders
             .Include(o => o.Customer)
@@ -48,21 +63,13 @@ public class OrderService : IOrderService
                         .ThenByDescending(o => o.Items.Sum(i => i.Amount));
                 break;
         }
-            
-        // Filter from range if specified.
-        if (requestDto.RangeFrom.HasValue)
+
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.PaidDateTime >= rangeFromDateTime);
-        }
-            
-        // Filter to range if specified.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(o => o.PaidDateTime <= rangeToDateTime);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by not being soft deleted.
@@ -71,6 +78,7 @@ public class OrderService : IOrderService
         // Initialize response dto.
         OrderListResponseDto responseDto = new OrderListResponseDto
         {
+            MonthYearOptions = monthYearOptions,
             Authorization = _authorizationService.GetOrderListAuthorization()
         };
         int resultCount = await query.CountAsync();
@@ -100,7 +108,7 @@ public class OrderService : IOrderService
             .Include(o => o.Items).ThenInclude(oi => oi.Product)
             .Include(o => o.Photos)
             .Include(o => o.Customer)
-            .Include(o => o.CreatedUser);
+            .Include(o => o.CreatedUser).ThenInclude(u => u.Roles);
 
         // Determine if the update histories should be fetched.
         bool shouldIncludeUpdateHistories = _authorizationService
@@ -159,7 +167,7 @@ public class OrderService : IOrderService
         _context.Orders.Add(order);
 
         // Initialize order items entities.
-       await CreateItems(order, requestDto.Items);
+        await CreateItems(order, requestDto.Items);
         
         // Initialize photos.
         if (requestDto.Photos != null)

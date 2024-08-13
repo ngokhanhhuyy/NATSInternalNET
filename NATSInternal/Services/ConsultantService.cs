@@ -1,11 +1,12 @@
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
-public class ConsultantService : IConsultantService
+public class ConsultantService : LockableEntityService, IConsultantService
 {
     private readonly DatabaseContext _context;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
 
     public ConsultantService(
             DatabaseContext context,
@@ -21,8 +22,23 @@ public class ConsultantService : IConsultantService
     public async Task<ConsultantListResponseDto> GetListAsync(
             ConsultantListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        if (_earliestRecordedMonthYear == null)
+        {
+            _earliestRecordedMonthYear = await _context.Consultants
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+        }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+
         // Initialize query.
-        IQueryable<Consultant> query = _context.Consultants;
+        IQueryable<Consultant> query = _context.Consultants
+            .Include(c => c.Customer);
         
         // Sorting direction and sorting by field.
         switch (requestDto.OrderByField)
@@ -43,25 +59,18 @@ public class ConsultantService : IConsultantService
                 break;
         }
 
-        // Filter from range if specified.
-        if (requestDto.RangeFrom.HasValue)
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.PaidDateTime >= rangeFromDateTime);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
-        // Filter to range if specified.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.PaidDateTime <= rangeToDateTime);
-        }
-        
         // Initialize response dto.
         ConsultantListResponseDto responseDto = new ConsultantListResponseDto
         {
+            MonthYearOptions = monthYearOptions,
             Authorization = _authorizationService.GetConsultantListAuthorization()
         };
         int resultCount = await query.CountAsync();
@@ -77,6 +86,7 @@ public class ConsultantService : IConsultantService
                 _authorizationService.GetConsultantAuthorization(c)))
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
+            .AsSplitQuery()
             .ToListAsync();
         
         return responseDto;
@@ -267,7 +277,7 @@ public class ConsultantService : IConsultantService
         newData = new ConsultantUpdateHistoryDataDto(consultant);
         
         // Initialize update history.
-        LogUpdateHistory(consultant, oldData, newData, requestDto.UpdatingReason);
+        LogUpdateHistory(consultant, oldData, newData, requestDto.UpdateReason);
         
         // Perform the updating operation.
         try

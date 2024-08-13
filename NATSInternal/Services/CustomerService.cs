@@ -22,6 +22,8 @@ public class CustomerService : ICustomerService
     {
         // Initialize query.
         IQueryable<Customer> query = _context.Customers
+            .Include(c => c.Debts)
+            .Include(c => c.DebtPayments)
             .Where(c => !c.IsDeleted);
 
         // Determine the field and the direction the sort.
@@ -42,7 +44,21 @@ public class CustomerService : ICustomerService
                     ? query.OrderBy(c => c.CreatedDateTime)
                     : query.OrderByDescending(c => c.CreatedDateTime);
                 break;
-            case nameof(CustomerListRequestDto.FieldToBeOrdered.LastName):
+            case nameof(CustomerListRequestDto.FieldToBeOrdered.DebtRemainingAmount):
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount) - c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount) - c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenByDescending(c => c.Id);
+                break;
             default:
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(c => c.LastName)
@@ -59,6 +75,16 @@ public class CustomerService : ICustomerService
                 c.PhoneNumber.Contains(requestDto.SearchByContent) ||
                 (isValidBirthday && c.Birthday.HasValue && c.Birthday.Value == birthday));
         }
+        
+        // Filter by remaining debt amount.
+        if (requestDto.HasRemainingDebtAmountOnly)
+        {
+            query = query.Where(c => c.Debts
+                .Where(d => !d.IsDeleted)
+                .Sum(d => d.Amount) - c.DebtPayments
+                .Where(dp => !dp.IsDeleted)
+                .Sum(dp => dp.Amount) > 0);
+}
 
         // Initialize response dto.
         CustomerListResponseDto responseDto = new CustomerListResponseDto

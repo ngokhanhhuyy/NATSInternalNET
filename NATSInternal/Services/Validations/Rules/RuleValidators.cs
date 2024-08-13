@@ -80,7 +80,12 @@ public static class RuleValidators
                 }
             }
             return true;
-        }).WithMessage(ErrorMessages.EarlierThanOrEqualToNow)
+        }).WithMessage(_ =>
+        {
+            DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+            return ErrorMessages.EarlierThanOrEqualToNow
+                .ReplaceComparisonValue(currentDateTime.ToVietnameseString());
+        })
         .Must(dateTime =>
         {
             if (dateTime != null)
@@ -94,6 +99,25 @@ public static class RuleValidators
             return true;
         }).WithMessage(ErrorMessages.LaterThanOrEqual.ReplaceComparisonValue(
             MinimumStatsDateTime.ToVietnameseString()));
+    }
+
+    public static IRuleBuilderOptions<T, int?> IsValidQueryStatsYear<T>(
+            this IRuleBuilder<T, int?> ruleBuilder) where T : ILockableEntityListRequestDto
+    {
+        return ruleBuilder
+            .GreaterThanOrEqualTo(1)
+            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Year);
+    }
+
+    public static IRuleBuilderOptions<T, int?> IsValidQueryStatsMonth<T>(
+            this IRuleBuilder<T, int?> ruleBuilder) where T : ILockableEntityListRequestDto
+    {
+        return ruleBuilder
+            .GreaterThanOrEqualTo(1)
+            .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Month)
+            .When(dto => dto.Year.HasValue && dto.Year == DateTime.UtcNow.ToApplicationTime().Year)
+            .LessThanOrEqualTo(12)
+            .When(dto => dto.Year.HasValue && dto.Year < DateTime.UtcNow.ToApplicationTime().Year);
     }
     
     private static DateTime MinimumStatsDateTime

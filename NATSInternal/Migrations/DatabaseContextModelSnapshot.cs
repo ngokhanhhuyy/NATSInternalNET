@@ -631,7 +631,7 @@ namespace NATSInternal.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedDateTime")
-                        .HasDatabaseName("IX__debts__created_datetime");
+                        .HasDatabaseName("IX__debts__incurred_datetime");
 
                     b.HasIndex("CreatedUserId");
 
@@ -1092,7 +1092,7 @@ namespace NATSInternal.Migrations
                         .HasDatabaseName("IX__orders__is_deleted");
 
                     b.HasIndex("PaidDateTime")
-                        .HasDatabaseName("IX__orders__ordered_datetime");
+                        .HasDatabaseName("IX__orders__paid_datetime");
 
                     b.ToTable("orders", (string)null);
                 });
@@ -1454,11 +1454,11 @@ namespace NATSInternal.Migrations
                     b.HasIndex("CreatedUserId");
 
                     b.HasIndex("IsDeleted")
-                        .HasDatabaseName("IX__supplies__supplied_datetime");
+                        .HasDatabaseName("IX__supplies__is_deleted");
 
                     b.HasIndex("PaidDateTime")
                         .IsUnique()
-                        .HasDatabaseName("UX__supply_supplied_datetime");
+                        .HasDatabaseName("UX__supply_paid_datetime");
 
                     b.ToTable("supplies", (string)null);
                 });

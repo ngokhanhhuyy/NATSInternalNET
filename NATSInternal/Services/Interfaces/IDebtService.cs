@@ -16,6 +16,19 @@ public interface IDebtService
     /// The task result contains the debt list response DTO.
     /// </returns>
     Task<DebtListResponseDto> GetListAsync(DebtListRequestDto requestDto);
+    
+    /// <summary>
+    /// Retrieves a paginated list of customers who have remaining debt based on the specified request criteria.
+    /// </summary>
+    /// <param name="requestDto">
+    /// The request criteria for retrieving the debt list.
+    /// </param>
+    /// <returns>
+    /// A task that represents the asynchronous operation.
+    /// The task result contains the list of customers with remaining debt amount response DTO.
+    /// </returns>
+    Task<DebtByCustomerListResponseDto> GetRemainingAmountListByCustomersAsync(
+            DebtByCustomerListRequestDto requestDto);
 
     /// <summary>
     /// Retrieves the details of a specific debt by its ID.

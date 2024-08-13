@@ -38,10 +38,13 @@ public class DebtPayment : LockableEntity
     public virtual List<DebtPaymentUpdateHistory> UpdateHistories { get; set; }
 
     // Properties for convinience.
+    [NotMapped]
     public DateTime? LastUpdatedDateTime => UpdateHistories
         .OrderBy(uh => uh.UpdatedDateTime)
-        .Select(uh => uh.UpdatedDateTime)
+        .Select(uh => (DateTime?)uh.UpdatedDateTime)
         .LastOrDefault();
+
+    [NotMapped]
     public User LastUpdatedUser => UpdateHistories
         .OrderBy(uh => uh.UpdatedDateTime)
         .Select(uh => uh.User)

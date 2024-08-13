@@ -8,14 +8,12 @@ public class OrderListValidator : Validator<OrderListRequestDto>
             .NotEmpty()
             .Must(IsEnumElementName<OrderListRequestDto.FieldOptions>)
             .WithName(DisplayNames.OrderByField);
-        RuleFor(dto => dto.RangeFrom)
-            .LessThanOrEqualTo(dto => dto.RangeTo)
-            .When(dto => dto.RangeFrom.HasValue && dto.RangeTo.HasValue)
-            .WithName(DisplayNames.RangeFrom);
-        RuleFor(dto => dto.RangeTo)
-            .GreaterThanOrEqualTo(dto => dto.RangeFrom)
-            .When(dto => dto.RangeTo.HasValue && dto.RangeFrom.HasValue)
-            .WithName(DisplayNames.RangeTo);
+        RuleFor(dto => dto.Month)
+            .IsValidQueryStatsMonth()
+            .WithName(DisplayNames.Month);
+        RuleFor(dto => dto.Year)
+            .IsValidQueryStatsYear()
+            .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Page)
             .GreaterThanOrEqualTo(1)
             .WithName(DisplayNames.Page);

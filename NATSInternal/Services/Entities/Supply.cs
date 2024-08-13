@@ -62,7 +62,7 @@ public class Supply : LockableEntity
     [NotMapped]
     public DateTime? LastUpdatedDateTime => UpdateHistories
         .OrderBy(uh => uh.UpdatedDateTime)
-        .Select(uh => uh.UpdatedDateTime)
+        .Select(uh => (DateTime?)uh.UpdatedDateTime)
         .LastOrDefault();
 
     [NotMapped]

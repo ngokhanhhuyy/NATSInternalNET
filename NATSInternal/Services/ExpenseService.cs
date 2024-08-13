@@ -1,12 +1,13 @@
 namespace NATSInternal.Services;
 
 /// <inheritdoc/>
-public class ExpenseService : IExpenseService
+public class ExpenseService : LockableEntityService, IExpenseService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
     
     public ExpenseService(
             DatabaseContext context,
@@ -23,6 +24,20 @@ public class ExpenseService : IExpenseService
     /// <inheritdoc/>
     public async Task<ExpenseListResponseDto> GetListAsync(ExpenseListRequestDto requestDto)
     {
+        // Initialize list of month and year options.
+        if (_earliestRecordedMonthYear == null)
+        {
+            _earliestRecordedMonthYear = await _context.Expenses
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+        }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+
         // Initialize query.
         IQueryable<Expense> query = _context.Expenses
             .Include(e => e.Photos);
@@ -46,22 +61,14 @@ public class ExpenseService : IExpenseService
                 break;
         }
 
-        // Filter from range if specified.
-        if (requestDto.RangeFrom.HasValue)
+        // Filter by month and year if specified.
+        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.PaidDateTime >= rangeFromDateTime);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
-        // Filter to range if specified.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(s => s.PaidDateTime <= rangeToDateTime);
-        }
-        
         // Filter by category.
         if (requestDto.Category.HasValue)
         {
@@ -69,7 +76,11 @@ public class ExpenseService : IExpenseService
         }
         
         // Initialize response dto.
-        ExpenseListResponseDto responseDto = new ExpenseListResponseDto();
+        ExpenseListResponseDto responseDto = new ExpenseListResponseDto
+        {
+            MonthYearOptions = monthYearOptions,
+            Authorization = _authorizationService.GetExpenseListAuthorization()
+        };
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
@@ -83,6 +94,7 @@ public class ExpenseService : IExpenseService
                 _authorizationService.GetExpenseAuthorization(e)))
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
             .Take(requestDto.ResultsPerPage)
+            .AsSplitQuery()
             .ToListAsync();
         
         return responseDto;

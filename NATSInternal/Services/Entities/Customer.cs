@@ -116,5 +116,5 @@ public class Customer
     // Property for convinience.
     public long DebtAmount => Debts.Sum(d => d.Amount);
     public long DebtPaidAmount => DebtPayments.Sum(dp => dp.Amount);
-    public long RemainingDebtAmount =>  DebtAmount - DebtPaidAmount;
+    public long DebtRemainingAmount =>  DebtAmount - DebtPaidAmount;
 }

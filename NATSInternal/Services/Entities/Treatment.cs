@@ -83,8 +83,14 @@ public class Treatment : LockableEntity
     public long TotalAmountAfterVAT => ProductAmount + ProductVatAmount + ServiceAmount + ServiceVatAmount;
 
     [NotMapped]
-    public DateTime? LastUpdatedDateTime => UpdateHistories.Select(uh => uh.UpdatedDateTime).FirstOrDefault();
+    public DateTime? LastUpdatedDateTime => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => (DateTime?)uh.UpdatedDateTime)
+        .LastOrDefault();
 
     [NotMapped]
-    public User LastUpdatedUser => UpdateHistories.Select(uh => uh.User).FirstOrDefault();
+    public User LastUpdatedUser => UpdateHistories
+        .OrderBy(uh => uh.UpdatedDateTime)
+        .Select(uh => uh.User)
+        .FirstOrDefault();
 }
