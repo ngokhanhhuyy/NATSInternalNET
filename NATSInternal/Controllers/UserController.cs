@@ -3,7 +3,7 @@
 [Route("/Api/User")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class UserApiController : ControllerBase
+public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IValidator<UserListRequestDto> _listValidator;
@@ -12,7 +12,7 @@ public class UserApiController : ControllerBase
     private readonly IValidator<UserPasswordChangeRequestDto> _passwordChangeValidator;
     private readonly IValidator<UserPasswordResetRequestDto> _passwordResetValidator;
 
-    public UserApiController(
+    public UserController(
             IUserService userService,
             IValidator<UserListRequestDto> listValidator,
             IValidator<UserCreateRequestDto> createValidator,

@@ -562,7 +562,7 @@ public class AuthorizationService : IAuthorizationService
 
     public bool CanDeleteDebtPayment()
     {
-        return !_user.HasPermission(PermissionConstants.DeleteDebt);
+        return _user.HasPermission(PermissionConstants.DeleteDebtPayment);
     }
 
     public bool CanSetDebtPaymentPaidDateTime()

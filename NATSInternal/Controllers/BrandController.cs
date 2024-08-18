@@ -1,14 +1,14 @@
-﻿namespace NATSInternal.Controllers.Api;
+﻿namespace NATSInternal.Controllers;
 
 [Route("Api/Brand")]
 [ApiController]
-[Authorize]
-public class BrandApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class BrandController : ControllerBase
 {
     private readonly IBrandService _service;
     private readonly IValidator<BrandRequestDto> _validator;
 
-    public BrandApiController(
+    public BrandController(
             IBrandService service,
             IValidator<BrandRequestDto> validator)
     {
@@ -16,14 +16,14 @@ public class BrandApiController : ControllerBase
         _validator = validator;
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> BrandList()
     {
         return Ok(await _service.GetListAsync());
     }
 
-    [HttpGet("{id:int}/Detail")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> BrandDetail(int id)
@@ -39,7 +39,7 @@ public class BrandApiController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
+    [HttpPost]
     [Authorize(Policy = "CanCreateBrand")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -57,7 +57,7 @@ public class BrandApiController : ControllerBase
         try
         {
             int createdBrandId = await _service.CreateAsync(requestDto);
-            string createdResourceUrl = Url.Action("Detail", "BrandApi", new { id = createdBrandId });
+            string createdResourceUrl = Url.Action("BrandDetail", "Brand", new { id = createdBrandId });
             return Created(createdResourceUrl, createdBrandId);
         }
         catch (OperationException exception)
@@ -67,7 +67,7 @@ public class BrandApiController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Update")]
+    [HttpPut("{id:int}")]
     [Authorize(Policy = "CanEditBrand")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -100,7 +100,7 @@ public class BrandApiController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Delete")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteBrand")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

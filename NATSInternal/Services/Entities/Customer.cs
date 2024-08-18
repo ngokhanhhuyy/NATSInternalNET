@@ -114,7 +114,7 @@ public class Customer
     public virtual List<DebtPayment> DebtPayments { get; set; }
 
     // Property for convinience.
-    public long DebtAmount => Debts.Sum(d => d.Amount);
-    public long DebtPaidAmount => DebtPayments.Sum(dp => dp.Amount);
+    public long DebtAmount => Debts.Where(d => !d.IsDeleted).Sum(d => d.Amount);
+    public long DebtPaidAmount => DebtPayments.Where(dp => !dp.IsDeleted).Sum(dp => dp.Amount);
     public long DebtRemainingAmount =>  DebtAmount - DebtPaidAmount;
 }

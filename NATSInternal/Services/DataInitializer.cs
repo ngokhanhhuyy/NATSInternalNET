@@ -1,6 +1,4 @@
-﻿using Bogus;
-using NATSInternal.Services.Entities;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
 namespace NATSInternal.Services;
 
@@ -1029,8 +1027,7 @@ public sealed class DataInitializer
                     // Determine product.
                     Product product = products
                         .OrderBy(_ => Guid.NewGuid())
-                        .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
-                        .First();
+                        .First(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id));
                     pickedProductIds.Add(product.Id);
 
                     OrderItem item = new OrderItem
@@ -1558,12 +1555,11 @@ public sealed class DataInitializer
             {
                 // Determine product.
                 List<int> pickedProductIds = treatment.Items
-                    .Select(i => i.ProductId)
+                    .Select(pi => pi.ProductId)
                     .ToList();
                 Product product = products
                     .OrderBy(_ => Guid.NewGuid())
-                    .Where(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id))
-                    .First();
+                    .First(p => p.StockingQuantity > 0 && !pickedProductIds.Contains(p.Id));
 
                 TreatmentItem item = new TreatmentItem
                 {
@@ -1580,8 +1576,7 @@ public sealed class DataInitializer
             DateOnly statsDate = DateOnly.FromDateTime(statsDateTime);
             DailyStats dailyStats = _context.DailyStats
                 .Include(ds => ds.Monthly)
-                .Where(ds => ds.RecordedDate == statsDate)
-                .Single();
+                .Single(ds => ds.RecordedDate == statsDate);
             dailyStats.TreatmentGrossRevenue += treatment.Amount;
             dailyStats.VatCollectedAmount += treatment.VatAmount;
             dailyStats.Monthly.TreatmentGrossRevenue += treatment.Amount;

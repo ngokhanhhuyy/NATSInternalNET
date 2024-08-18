@@ -1,47 +1,47 @@
-namespace NATSInternal.Controller;
+﻿namespace NATSInternal.Controllers;
 
+[Route("Api/Expense")]
 [ApiController]
-[Route("Api/Consultant")]
-[Authorize]
-public class ConsultantApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class ExpenseController : ControllerBase
 {
-    private readonly IConsultantService _service;
-    private readonly IValidator<ConsultantListRequestDto> _listValidator;
-    private readonly IValidator<ConsultantUpsertRequestDto> _upsertValidator;
+    private readonly IExpenseService _service;
+    private readonly IValidator<ExpenseListRequestDto> _listValidator;
+    private readonly IValidator<ExpenseUpsertRequestDto> _upsertValidator;
 
-    public ConsultantApiController(
-            IConsultantService service,
-            IValidator<ConsultantListRequestDto> listValidator,
-            IValidator<ConsultantUpsertRequestDto> upsertValidator)
+    public ExpenseController(
+            IExpenseService service,
+            IValidator<ExpenseListRequestDto> listValidator,
+            IValidator<ExpenseUpsertRequestDto> upsertValidator)
     {
         _service = service;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
     }
 
-    [HttpGet]
+    [HttpGet("List")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ConsultantList(
-            [FromQuery] ConsultantListRequestDto requestDto)
+    public async Task<IActionResult> ExpenseList(
+            [FromQuery] ExpenseListRequestDto requestDto)
     {
-        // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _listValidator.Validate(requestDto.TransformValues());
+        // Validate data from request.
+        ValidationResult validationResult = _listValidator
+            .Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
 
-        // Fetch the data of the list.
+        // Fetch the list data.
         return Ok(await _service.GetListAsync(requestDto));
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:int}/Detail")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ConsultantDetail(int id)
+    public async Task<IActionResult> ExpenseDetail(int id)
     {
         try
         {
@@ -54,19 +54,19 @@ public class ConsultantApiController : ControllerBase
         }
     }
 
-    [HttpPost]
+    [HttpPost("Create")]
+    [Authorize(Policy = "CanCreateExpense")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ConsultantCreate(
-            [FromBody] ConsultantUpsertRequestDto requestDto)
+    public async Task<IActionResult> ExpenseCreate(
+            [FromBody] ExpenseUpsertRequestDto requestDto)
     {
         // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues(), options =>
-            options.IncludeRuleSets("Create").IncludeRulesNotInRuleSet());
+        ValidationResult validationResult = _upsertValidator
+            .Validate(requestDto.TransformValues(), options => options
+                .IncludeRuleSets("Create").IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
@@ -77,20 +77,8 @@ public class ConsultantApiController : ControllerBase
         try
         {
             int createdId = await _service.CreateAsync(requestDto);
-            string createdResourceUrl = Url.Action(
-                "ConsultantDetail",
-                "ConsultantApi",
-                new { id = createdId });
-            return Created(createdResourceUrl, createdId);
-        }
-        catch (AuthorizationException)
-        {
-            return Forbid();
-        }
-        catch (OperationException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(ModelState);
+            string createdUrl = Url.Action("ExpenseDetail", "Expense", new { id = createdId });
+            return Created(createdUrl, createdId); 
         }
         catch (ConcurrencyException)
         {
@@ -98,28 +86,28 @@ public class ConsultantApiController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:int}/Update")]
+    [Authorize(Policy = "CanEditExpense")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ConsultantUpdate(
+    public async Task<IActionResult> ExpenseUpdate(
             int id,
-            [FromBody] ConsultantUpsertRequestDto requestDto)
+            [FromBody] ExpenseUpsertRequestDto requestDto)
     {
         // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues(), options =>
-            options.IncludeRuleSets("Update").IncludeRulesNotInRuleSet());
+        ValidationResult validationResult = _upsertValidator
+            .Validate(requestDto.TransformValues(), options => options
+                .IncludeRuleSets("Update").IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
 
-        // Perform the updating operation.
+        // Perform updating operation.
         try
         {
             await _service.UpdateAsync(id, requestDto);
@@ -134,24 +122,18 @@ public class ConsultantApiController : ControllerBase
         {
             return Forbid();
         }
-        catch (OperationException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(exception);
-        }
         catch (ConcurrencyException)
         {
             return Conflict();
         }
     }
 
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:int}/Delete")]
+    [Authorize(Policy = "CanDeleteExpense")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ConsultantDelete(int id)
+    public async Task<IActionResult> ExpenseDelete(int id)
     {
         try
         {
@@ -162,11 +144,6 @@ public class ConsultantApiController : ControllerBase
         {
             ModelState.AddModelErrorsFromServiceException(exception);
             return NotFound(ModelState);
-        }
-        catch (OperationException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(ModelState);
         }
         catch (ConcurrencyException)
         {

@@ -16,24 +16,16 @@ public interface IDebtService
     /// The task result contains the debt list response DTO.
     /// </returns>
     Task<DebtListResponseDto> GetListAsync(DebtListRequestDto requestDto);
-    
-    /// <summary>
-    /// Retrieves a paginated list of customers who have remaining debt based on the specified request criteria.
-    /// </summary>
-    /// <param name="requestDto">
-    /// The request criteria for retrieving the debt list.
-    /// </param>
-    /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// The task result contains the list of customers with remaining debt amount response DTO.
-    /// </returns>
-    Task<DebtByCustomerListResponseDto> GetRemainingAmountListByCustomersAsync(
-            DebtByCustomerListRequestDto requestDto);
 
     /// <summary>
     /// Retrieves the details of a specific debt by its ID.
     /// </summary>
-    /// <param name="id">The ID of the debt to retrieve.</param>
+    /// <param name="customerId">
+    /// The ID of customer to which the retreiving debt belongs.
+    /// </param>
+    /// <param name="debtId">
+    /// The ID of the debt to retrieve.
+    /// </param>
     /// <returns>
     /// A task that represents the asynchronous operation.
     /// The task result contains the debt detail response DTO.
@@ -41,11 +33,14 @@ public interface IDebtService
     /// <exception cref="ResourceNotFoundException">
     /// Thrown when the debt with the given id doesn't exist.
     /// </exception>
-    Task<DebtDetailResponseDto> GetDetailAsync(int id);
+    Task<DebtDetailResponseDto> GetDetailAsync(int customerId, int debtId);
     
     /// <summary>
     /// Creates a new debt based on the specified request DTO.
     /// </summary>
+    /// <param name="customerId">
+    /// The ID of the customer to which the creating debt belongs.
+    /// </param>
     /// <param name="requestDto">
     /// The request DTO containing the details for the new debt.
     /// </param>
@@ -60,12 +55,15 @@ public interface IDebtService
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.
     /// </exception>
-    Task<int> CreateAsync(DebtUpsertRequestDto requestDto);
+    Task<int> CreateAsync(int customerId, DebtUpsertRequestDto requestDto);
     
     /// <summary>
     /// Updates an existing debt by its ID based on the specified request DTO.
     /// </summary>
-    /// <param name="id">
+    /// <param name="customerId">
+    /// The ID of the customer to which the updating debt belongs.
+    /// </param>
+    /// <param name="debtId">
     /// The ID of the debt to update.
     /// </param>
     /// <param name="requestDto">
@@ -85,12 +83,13 @@ public interface IDebtService
     /// <exception cref="ConcurrencyException">
     /// Thrown when there is concurrent conflict during the operation.
     /// </exception>
-    Task UpdateAsync(int id, DebtUpsertRequestDto requestDto);
+    Task UpdateAsync(int customerId, int debtId, DebtUpsertRequestDto requestDto);
     
     /// <summary>
     /// Deletes an existing debt by its ID.
     /// </summary>
-    /// <param name="id">The ID of the debt to delete.</param>
+    /// <param name="customerId">The ID of the customer to which the debt belongs.</param>
+    /// <param name="debtId">The ID of the debt to delete.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ResourceNotFoundException">
     /// Thrown when the debt with the given id doesn't exist or has been deleted.
@@ -101,5 +100,5 @@ public interface IDebtService
     /// <exception cref="ConcurrencyException">
     /// Thrown when there is concurrent conflict during the operation.
     /// </exception>
-    Task DeleteAsync(int id);
+    Task DeleteAsync(int customerId, int debtId);
 }
