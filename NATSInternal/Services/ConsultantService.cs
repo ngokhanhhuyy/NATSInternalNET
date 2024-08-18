@@ -1,6 +1,6 @@
 namespace NATSInternal.Services;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IConsultantService" />
 public class ConsultantService : LockableEntityService, IConsultantService
 {
     private readonly DatabaseContext _context;
@@ -376,7 +376,7 @@ public class ConsultantService : LockableEntityService, IConsultantService
     }
     
     /// <summary>
-    /// Lg the update history for the specified consultant entity.
+    /// Log the update history for the specified consultant entity.
     /// </summary>
     /// <param name="consultant">The consultant to be logged a new update history.</param>
     /// <param name="oldData">The old data before updating of the consultant.</param>
