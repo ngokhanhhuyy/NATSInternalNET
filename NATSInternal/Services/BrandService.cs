@@ -28,7 +28,7 @@ public class BrandService : IBrandService
                     b,
                     _authorizationService.GetBrandAuthorization()))
                 .ToListAsync(),
-            Authorization = _authorizationService.GetBrandAuthorization()
+            Authorization = _authorizationService.GetBrandListAuthorization()
         };
     }
 
@@ -69,7 +69,7 @@ public class BrandService : IBrandService
             Email = requestDto.Email,
             Address = requestDto.Address,
             ThumbnailUrl = thumbnailUrl,
-            CountryId = requestDto.Country == null ? null : requestDto.Country.Id
+            CountryId = requestDto.Country?.Id
         };
         
         try
@@ -80,9 +80,10 @@ public class BrandService : IBrandService
         }
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            _photoService.Delete(brand.ThumbnailUrl);
+            if (exception.InnerException is MySqlException sqlException)
             {
-                HandleDbUpdateException(exception.InnerException as MySqlException);
+                HandleDbUpdateException(sqlException);
             }
             throw;
         }
@@ -99,21 +100,23 @@ public class BrandService : IBrandService
                 id.ToString());
 
         // Update thumbnail if changed.
-        string thumbnailUrl = brand.ThumbnailUrl;
+        string urlToBeDeletedWhenFailed = null;
+        string urlToBeDeletedWhenSucceeded = null;
         if (requestDto.ThumbnailChanged)
         {
             // Delete the current thumbnail if exists.
             if (brand.ThumbnailUrl != null)
             {
-                _photoService.Delete(brand.ThumbnailUrl);
+                urlToBeDeletedWhenSucceeded = brand.ThumbnailUrl;
             }
 
             if (requestDto.ThumbnailFile != null)
             {
-                thumbnailUrl = await _photoService.CreateAsync(
+                brand.ThumbnailUrl = await _photoService.CreateAsync(
                     requestDto.ThumbnailFile,
                     "brands",
                     true);
+                urlToBeDeletedWhenFailed = brand.ThumbnailUrl;
             }
         }
 
@@ -128,12 +131,16 @@ public class BrandService : IBrandService
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The brand has been updated successfully, delete the old photos.
+            _photoService.Delete(urlToBeDeletedWhenSucceeded);
         }
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            _photoService.Delete(urlToBeDeletedWhenFailed);
+            if (exception.InnerException is MySqlException sqlException)
             {
-                HandleDbUpdateException(exception.InnerException as MySqlException);
+                HandleDbUpdateException(sqlException);
             }
 
             throw;
@@ -159,19 +166,31 @@ public class BrandService : IBrandService
 
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Handle the <c>MySqlException</c> that is thrown by the database during the updating
+    /// operation and convert into the corresponding meaningful expcetion.
+    /// </summary>
+    /// <param name="exception">
+    /// The exception thrown by the database during the updating operation.
+    /// </param>
+    /// <exception cref="OperationException">
+    /// Thrown when the <c>Country</c> with the specified ID doesn't exist or when
+    /// the specified name is duplicated.
+    /// </exception>
     private void HandleDbUpdateException(MySqlException exception)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
         string errorMessage;
+        
         if (exceptionHandler.IsForeignKeyNotFound)
         {
             errorMessage = ErrorMessages.NotFound
                 .ReplaceResourceName(DisplayNames.Country);
             throw new OperationException("country.id", errorMessage);
         }
-        else if (exceptionHandler.IsUniqueConstraintViolated)
+        
+        if (exceptionHandler.IsUniqueConstraintViolated)
         {
             errorMessage = ErrorMessages.UniqueDuplicated
                 .ReplaceResourceName(DisplayNames.Name);

@@ -1,55 +1,33 @@
 namespace NATSInternal.Controllers;
 
-[Route("Api/DebtPayment")]
+[Route("Api/Customer/{customerId:int}/DebtPayment")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class CustomerDebtPaymentController : ControllerBase
 {
     private readonly IDebtPaymentService _service;
-    private readonly IValidator<DebtPaymentListRequestDto> _listValidator;
     private readonly IValidator<DebtPaymentUpsertRequestDto> _upsertValidator;
 
     public CustomerDebtPaymentController(
             IDebtPaymentService service,
-            IValidator<DebtPaymentListRequestDto> listValidator,
             IValidator<DebtPaymentUpsertRequestDto> upsertValidator)
     {
         _service = service;
-        _listValidator = listValidator;
         _upsertValidator = upsertValidator;
     }
     
-    [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DebtPaymentList([FromQuery] DebtPaymentListRequestDto requestDto)
-    {
-        // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _listValidator.Validate(requestDto.TransformValues());
-        if (!validationResult.IsValid)
-        {
-            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
-            return BadRequest(ModelState);
-        }
-        
-        // Fetch data.
-        return Ok(await _service.GetListAsync(requestDto));
-    }
-    
-    [HttpGet("{id:int}")]
+    [HttpGet("{debtPaymentId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DebtPaymentDetail(int id)
+    public async Task<IActionResult> DebtPaymentDetail(int customerId, int debtPaymentId)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(id));
+            return Ok(await _service.GetDetailAsync(customerId, debtPaymentId));
         }
-        catch (ResourceNotFoundException exception)
+        catch (ResourceNotFoundException)
         {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
+            return NotFound();
         }
     }
     
@@ -58,8 +36,11 @@ public class CustomerDebtPaymentController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtPaymentCreate([FromBody] DebtPaymentUpsertRequestDto requestDto)
+    public async Task<IActionResult> DebtPaymentCreate(
+            int customerId,
+            [FromBody] DebtPaymentUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -73,7 +54,7 @@ public class CustomerDebtPaymentController : ControllerBase
         // Perform the creating operation.
         try
         {
-            int createdId = await _service.CreateAsync(requestDto);
+            int createdId = await _service.CreateAsync(customerId, requestDto);
             string createdResourceUrl = Url.Action(
                 "DebtPaymentDetail",
                 "CustomerDebtPayment",
@@ -84,6 +65,10 @@ public class CustomerDebtPaymentController : ControllerBase
         {
             return Forbid();
         }
+        catch (ResourceNotFoundException)
+        {
+            return NotFound();
+        }
         catch (OperationException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
@@ -91,7 +76,7 @@ public class CustomerDebtPaymentController : ControllerBase
         }
     }
     
-    [HttpPut("{id:int}")]
+    [HttpPut("{debtPaymentId:int}")]
     [Authorize(Policy = "CanEditDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -100,7 +85,8 @@ public class CustomerDebtPaymentController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> DebtPaymentUpdate(
-            int id,
+            int customerId,
+            int debtPaymentId,
             [FromBody] DebtPaymentUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -115,17 +101,16 @@ public class CustomerDebtPaymentController : ControllerBase
         // Perform the updating operation.
         try
         {
-            await _service.UpdateAsync(id, requestDto);
+            await _service.UpdateAsync(customerId, debtPaymentId, requestDto);
             return Ok();
         }
         catch (AuthorizationException)
         {
             return Forbid();
         }
-        catch (ResourceNotFoundException exception)
+        catch (ResourceNotFoundException)
         {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
+            return NotFound();
         }
         catch (OperationException exception)
         {
@@ -138,28 +123,27 @@ public class CustomerDebtPaymentController : ControllerBase
         }
     }
     
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{debtPaymentId:int}")]
     [Authorize(Policy = "CanDeleteDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtPaymentDelete(int id)
+    public async Task<IActionResult> DebtPaymentDelete(int customerId, int debtPaymentId)
     {
         try
         {
-            await _service.DeleteAsync(id);
+            await _service.DeleteAsync(customerId, debtPaymentId);
             return Ok();
         }
         catch (AuthorizationException)
         {
             return Forbid();
         }
-        catch (ResourceNotFoundException exception)
+        catch (ResourceNotFoundException)
         {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
+            return NotFound();
         }
         catch (ConcurrencyException)
         {

@@ -44,11 +44,9 @@ public interface IAuthorizationService
     TreatmentAuthorizationResponseDto GetTreatmentAuthorization(Treatment treatment);
 
     // Authorization for debts.
-    DebtListAuthorizationResponseDto GetDebtListAuthorization();
     DebtAuthorizationResponseDto GetDebtAuthorization(Debt debt);
 
     // Authorization for debt payments.
-    DebtPaymentListAuthorizationResponseDto GetDebtPaymentListAuthorization();
     DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment);
 
     // Authorization for consultants.
@@ -65,7 +63,7 @@ public interface IAuthorizationService
     bool CanAssignToRole(Role role);
 
     // Permissions to interact with supplies.
-    bool CanCreateSupply();
+    bool CanCreateSupply(); 
     bool CanEditSupply(Supply supply);
     bool CanDeleteSupply(Supply supply);
     bool CanSetSupplyPaidDateTime();
@@ -96,7 +94,7 @@ public interface IAuthorizationService
     bool CanCreateDebt();
     bool CanEditDebt(Debt debt);
     bool CanDeleteDebt();
-    bool CanSetDebtCreatedDateTime();
+    bool CanSetDebtIncurredDateTime();
     bool CanAccessDebtUpdateHistories();
 
     // Permissions to interact with debt payments.

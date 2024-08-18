@@ -36,6 +36,7 @@ public class CustomerDebtController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> DebtCreate(int customerId, [FromBody] DebtUpsertRequestDto requestDto)
     {
@@ -58,6 +59,10 @@ public class CustomerDebtController : ControllerBase
         catch (AuthorizationException)
         {
             return Forbid();
+        }
+        catch (ResourceNotFoundException)
+        {
+            return NotFound();
         }
         catch (OperationException exception)
         {
@@ -98,10 +103,9 @@ public class CustomerDebtController : ControllerBase
         {
             return Forbid();
         }
-        catch (ResourceNotFoundException exception)
+        catch (ResourceNotFoundException)
         {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
+            return NotFound();
         }
         catch (OperationException exception)
         {
@@ -132,10 +136,9 @@ public class CustomerDebtController : ControllerBase
         {
             return Forbid();
         }
-        catch (ResourceNotFoundException exception)
+        catch (ResourceNotFoundException)
         {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
+            return NotFound();
         }
         catch (ConcurrencyException)
         {

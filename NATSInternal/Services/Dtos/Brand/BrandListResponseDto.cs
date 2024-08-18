@@ -3,5 +3,5 @@
 public class BrandListResponseDto
 {
     public List<BrandBasicResponseDto> Items { get; set; }
-    public BrandAuthorizationResponseDto Authorization { get; set; }
+    public BrandListAuthorizationResponseDto Authorization { get; set; }
 }

@@ -6,7 +6,6 @@ public class DebtService : LockableEntityService, IDebtService
     private readonly DatabaseContext _context;
     private readonly IStatsService _statsService;
     private readonly IAuthorizationService _authorizationService;
-    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public DebtService(
             DatabaseContext context,
@@ -16,81 +15,6 @@ public class DebtService : LockableEntityService, IDebtService
         _context = context;
         _statsService = statsService;
         _authorizationService = authorizationService;
-    }
-    
-    /// <inheritdoc />
-    public async Task<DebtListResponseDto> GetListAsync(DebtListRequestDto requestDto)
-    {
-        // Initialize list of month and year options.
-        if (_earliestRecordedMonthYear == null)
-        {
-            _earliestRecordedMonthYear = await _context.Debts
-                .OrderBy(s => s.IncurredDateTime)
-                .Select(s => new MonthYearResponseDto
-                {
-                    Year = s.IncurredDateTime.Year,
-                    Month = s.IncurredDateTime.Month
-                }).FirstOrDefaultAsync();
-        }
-        List<MonthYearResponseDto> monthYearOptions;
-        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
-
-        // Initialize query.
-        IQueryable<Debt> query = _context.Debts;
-        
-        // Order by fields.
-        switch (requestDto.OrderByField)
-        {
-            case nameof(DebtListRequestDto.FieldOptions.IncurredDateTime):
-                query = requestDto.OrderByAscending
-                    ? query.OrderBy(d => d.IncurredDateTime)
-                        .ThenBy(d => d.Amount)
-                    : query.OrderByDescending(d => d.IncurredDateTime)
-                        .ThenByDescending(d => d.Amount);
-                break;
-            default:
-                query = requestDto.OrderByAscending
-                    ? query.OrderBy(d => d.Amount)
-                        .ThenBy(d => d.IncurredDateTime)
-                    : query.OrderByDescending(d => d.Amount)
-                        .ThenBy(d => d.IncurredDateTime);
-                break;
-        }
-
-        // Filter by month and year if specified.
-        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
-        {
-            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
-            DateTime endDateTime = startDateTime.AddMonths(1);
-            query = query.Where(s => s.IncurredDateTime >= startDateTime && s.IncurredDateTime < endDateTime);
-        }
-
-        // Filter by not being soft deleted.
-        query = query.Where(o => !o.IsDeleted);
-        
-        // Initialize repsonse dto.
-        DebtListResponseDto responseDto = new DebtListResponseDto
-        {
-            MonthYearOptions = monthYearOptions,
-            Authorization = _authorizationService.GetDebtListAuthorization()
-        };
-        int resultCount = await query.CountAsync();
-        if (resultCount == 0)
-        {
-            responseDto.PageCount = 0;
-            return responseDto;
-        }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
-        responseDto.Items = await query
-            .Select(d => new DebtBasicResponseDto(
-                d,
-                _authorizationService.GetDebtAuthorization(d)))
-            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
-            .Take(requestDto.ResultsPerPage)
-            .AsSplitQuery()
-            .ToListAsync();
-        
-        return responseDto;
     }
 
     /// <inheritdoc />
@@ -132,7 +56,7 @@ public class DebtService : LockableEntityService, IDebtService
         if (requestDto.IncurredDateTime.HasValue)
         {
             // Check if the current user has permission to specify the created datetime for the debt.
-            if (!_authorizationService.CanSetDebtCreatedDateTime())
+            if (!_authorizationService.CanSetDebtIncurredDateTime())
             {
                 throw new AuthorizationException();
             }
@@ -210,7 +134,7 @@ public class DebtService : LockableEntityService, IDebtService
         if (requestDto.IncurredDateTime.HasValue)
         {
             // Check if the current user has permission to change the created datetime.
-            if (!_authorizationService.CanSetDebtCreatedDateTime())
+            if (!_authorizationService.CanSetDebtIncurredDateTime())
             {
                 throw new AuthorizationException();
             }
@@ -319,6 +243,14 @@ public class DebtService : LockableEntityService, IDebtService
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
+        // Ensure the user has permission to delete this debt.
+        if (!_authorizationService.CanDeleteDebt())
+        {
+            throw new AuthorizationException();
+        }
+        
+        //
+        
         // Verify that if this debt is deleted, will the remaining debt amount be negative.
         if (debt.Customer.DebtRemainingAmount - debt.Amount < 0)
         {
@@ -377,6 +309,9 @@ public class DebtService : LockableEntityService, IDebtService
     /// </summary>
     /// <param name="exception">The exception thrown by the database.</param>
     /// <param name="userId">The user id of the debt.</param>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the customer with the specified id doesn't exist.
+    /// </exception>
     /// <exception cref="OperationException">
     /// Thrown when there is any exception which is related to the data during the operation.
     /// </exception>

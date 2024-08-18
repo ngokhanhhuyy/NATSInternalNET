@@ -145,6 +145,10 @@ public class ExpenseController : ControllerBase
             ModelState.AddModelErrorsFromServiceException(exception);
             return NotFound(ModelState);
         }
+        catch (AuthorizationException)
+        {
+            return Forbid();
+        }
         catch (ConcurrencyException)
         {
             return Conflict();

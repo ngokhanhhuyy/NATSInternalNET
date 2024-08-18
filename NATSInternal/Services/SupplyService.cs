@@ -1,13 +1,13 @@
 ﻿namespace NATSInternal.Services;
 
-/// <inheritdoc />
+/// <inheritdoc cref="ISupplyService" />
 public class SupplyService : LockableEntityService, ISupplyService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
-    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public SupplyService(
             DatabaseContext context,
@@ -169,7 +169,7 @@ public class SupplyService : LockableEntityService, ISupplyService
         // Initialize entity.
         Supply supply = new Supply
         {
-            PaidDateTime = requestDto.PaidDateTime ?? DateTime.UtcNow.ToApplicationTime(),
+            PaidDateTime = paidDateTime,
             ShipmentFee = requestDto.ShipmentFee,
             Note = requestDto.Note,
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
@@ -461,7 +461,7 @@ public class SupplyService : LockableEntityService, ISupplyService
 
             // Fetch the product entity with the specified id in the request.
             Product product = products
-                .SingleOrDefault(i => i.Id == itemRequestDto.ProductId);
+                .SingleOrDefault(p => p.Id == itemRequestDto.ProductId);
 
             // Ensure the product exists.
             if (product == null)

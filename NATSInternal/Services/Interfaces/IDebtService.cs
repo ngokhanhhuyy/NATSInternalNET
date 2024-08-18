@@ -6,18 +6,6 @@ namespace NATSInternal.Services.Interfaces;
 public interface IDebtService
 {
     /// <summary>
-    /// Retrieves a paginated list of debts based on the specified request criteria.
-    /// </summary>
-    /// <param name="requestDto">
-    /// The request criteria for retrieving the debt list.
-    /// </param>
-    /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// The task result contains the debt list response DTO.
-    /// </returns>
-    Task<DebtListResponseDto> GetListAsync(DebtListRequestDto requestDto);
-
-    /// <summary>
     /// Retrieves the details of a specific debt by its ID.
     /// </summary>
     /// <param name="customerId">
@@ -31,7 +19,7 @@ public interface IDebtService
     /// The task result contains the debt detail response DTO.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the debt with the given id doesn't exist.
+    /// Thrown when the customer or the debt with the given id doesn't exist.
     /// </exception>
     Task<DebtDetailResponseDto> GetDetailAsync(int customerId, int debtId);
     
@@ -52,6 +40,9 @@ public interface IDebtService
     /// Thrown when the current user doesn't have enough permission to
     /// specify some of the new entity's properties.
     /// </exception>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the customer with the specified id doesn't exist.
+    /// </exception>
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.
     /// </exception>
@@ -71,7 +62,7 @@ public interface IDebtService
     /// </param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the debt with the given id doesn't exist or has been deleted.
+    /// Thrown when the customer or the debt with the specified id doesn't exist or has been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
     /// Thrown when the current user doesn't have enough permission to
@@ -92,7 +83,10 @@ public interface IDebtService
     /// <param name="debtId">The ID of the debt to delete.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the debt with the given id doesn't exist or has been deleted.
+    /// Thrown when the customer or the debt with the specified id doesn't exist or has been deleted.
+    /// </exception>
+    /// <exception cref="AuthorizationException">
+    /// Thrown when the user doesn't have permission to delete the specified debt.
     /// </exception>
     /// <exception cref="OperationException">
     /// Thrown when there is some business logic violation during the operation.

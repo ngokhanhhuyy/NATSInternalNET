@@ -1,6 +1,6 @@
 namespace NATSInternal.Services;
 
-/// <inheritdoc/>
+/// <inheritdoc cref="IExpenseService" />
 public class ExpenseService : LockableEntityService, IExpenseService
 {
     private readonly DatabaseContext _context;
@@ -421,6 +421,12 @@ public class ExpenseService : LockableEntityService, IExpenseService
             .Include(e => e.Photos)
             .SingleOrDefaultAsync(e => e.Id == id)
             ?? throw new ResourceNotFoundException(nameof(Expense), nameof(id), id.ToString());
+        
+        // Ensure the user has permission to delete this expense.
+        if (!_authorizationService.CanDeleteExpense(expense))
+        {
+            throw new AuthorizationException();
+        }
         
         // Remove expense.
         _context.Expenses.Remove(expense);

@@ -342,6 +342,10 @@ public class ConsultantService : LockableEntityService, IConsultantService
                 nameof(id),
                 id.ToString());
         
+        // Ensure the 
+        
+        
+        
         // Remove expense.
         _context.Consultants.Remove(consultant);
         
