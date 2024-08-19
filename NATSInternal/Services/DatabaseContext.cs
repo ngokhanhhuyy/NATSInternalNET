@@ -9,6 +9,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<Brand> Brands { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
     public DbSet<Product> Products { get; set; }
+    public DbSet<ProductPhoto> ProductPhotos { get; set; } 
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Supply> Supplies { get; set; }
     public DbSet<SupplyUpdateHistory> supplyUpdateHistories { get; set; }
