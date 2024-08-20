@@ -82,6 +82,12 @@ public class SupplyService : LockableEntityService, ISupplyService
             query = query.Where(s => s.PaidDateTime.Year == requestDto.Year)
                 .Where(s => s.PaidDateTime.Month == requestDto.Month);
         }
+        else
+        {
+            DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+            query = query.Where(s => s.PaidDateTime.Year == currentDateTime.Year)
+                .Where(s => s.PaidDateTime.Month == currentDateTime.Month);
+        }
 
         // Filter by user id if specified.
         if (requestDto.UserId.HasValue)
