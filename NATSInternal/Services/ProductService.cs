@@ -300,6 +300,7 @@ public class ProductService : IProductService
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception.InnerException as MySqlException);
+        // Handle foreign key exception.
         if (exceptionHandler.IsForeignKeyNotFound)
         {
             string errorMessage;
@@ -309,15 +310,15 @@ public class ProductService : IProductService
                     .ReplaceResourceName(DisplayNames.Get(nameof(Brand)));
                 throw new OperationException(errorMessage);
             }
-            else
-            {
-                errorMessage = ErrorMessages.NotFound
-                    .ReplaceResourceName(DisplayNames.Get(nameof(Brand)));
-            }
+            
+            errorMessage = ErrorMessages.NotFound
+                .ReplaceResourceName(DisplayNames.Get(nameof(Brand)));
 
             throw new OperationException(errorMessage);
         }
-        else if (exceptionHandler.IsUniqueConstraintViolated)
+        
+        // Handle unique conflict exception.
+        if (exceptionHandler.IsUniqueConstraintViolated)
         {
             string errorMessage = ErrorMessages.UniqueDuplicated
                 .ReplacePropertyName(DisplayNames.Get(nameof(Product.Name)));
