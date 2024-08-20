@@ -84,6 +84,7 @@ public class ProductService : IProductService
     /// <inheritdoc />
     public async Task<int> CreateAsync(ProductUpsertRequestDto requestDto)
     {
+        // Initialize product entity.
         Product product = new Product
         {
             Name = requestDto.Name,
@@ -97,9 +98,12 @@ public class ProductService : IProductService
             UpdatedDateTime = null,
             StockingQuantity = 0,
             BrandId = requestDto.Brand?.Id,
-            CategoryId = requestDto.Category?.Id
+            CategoryId = requestDto.Category?.Id,
+            Photos = new List<ProductPhoto>()
         };
+        _context.Products.Add(product);
 
+        // Create thumbnail if specified.
         if (requestDto.ThumbnailFile != null)
         {
             string thumbnailUrl = await _photoService
@@ -107,15 +111,34 @@ public class ProductService : IProductService
             product.ThumbnailUrl = thumbnailUrl;
         }
 
+        // Create photos if specified.
+        if (requestDto.Photos != null)
+        {
+            await CreatePhotosAsync(product, requestDto.Photos);
+        }
+
         try
         {
-            _context.Products.Add(product);
             await _context.SaveChangesAsync();
             return product.Id;
         }
         catch (DbUpdateException exception)
         {
-            _photoService.Delete(product.ThumbnailUrl);
+            // Delete the recently created thumbnail if exists.
+            if (product.ThumbnailUrl != null)
+            {
+                _photoService.Delete(product.ThumbnailUrl);
+            }
+
+            // Delete the recently created photos if exists.
+            if (product.Photos != null && product.Photos.Any())
+            {
+                foreach (ProductPhoto photo in product.Photos)
+                {
+                    _photoService.Delete(photo.Url);
+                }
+            }
+
             if (exception.InnerException is MySqlException sqlException)
             {
                 HandleDeleteOrUpdateException(sqlException);
@@ -147,9 +170,12 @@ public class ProductService : IProductService
         product.BrandId = requestDto.Brand?.Id;
         product.UpdatedDateTime = DateTime.UtcNow.ToApplicationTime();
 
-        // Update the thumbnail if changed.
+        // Prepare lists of urls to be deleted later when the operation
+        // is succeeded or failed.
         List<string> urlsToBeDeletedWhenFailed = new List<string>();
         List<string> urlsToBeDeletedWhenSucceeded = new List<string>();
+
+        // Update the thumbnail if changed.
         if (requestDto.ThumbnailChanged)
         {
             // Delete the current thumbnail if exists.
@@ -166,6 +192,15 @@ public class ProductService : IProductService
                 product.ThumbnailUrl = thumbnailUrl;
                 urlsToBeDeletedWhenFailed.Add(product.ThumbnailUrl);
             }
+        }
+
+        // Update the photos if changed.
+        if (requestDto.Photos != null && requestDto.Photos.Any())
+        {
+            (List<string>, List<string>) photoUpdateResult;
+            photoUpdateResult = await UpdatePhotosAsync(product, requestDto.Photos);
+            urlsToBeDeletedWhenSucceeded.AddRange(photoUpdateResult.Item1);
+            urlsToBeDeletedWhenFailed.AddRange(photoUpdateResult.Item2);
         }
 
         // Save changes or throw exeption if any error occurs.
@@ -288,5 +323,95 @@ public class ProductService : IProductService
                 .ReplacePropertyName(DisplayNames.Get(nameof(Product.Name)));
             throw new OperationException(nameof(Product.Name), errorMessage);
         }
+    }
+
+    /// <summary>
+    /// Create photos which are associated to the specified product with the data
+    /// provided in the request.
+    /// </summary>
+    /// <param name="product">
+    /// The <c>Product</c> entity to which the photos are associated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A list of objects containing the data for the new photos.
+    /// </param>
+    /// <returns>
+    /// A <c>Task</c> object reprensenting the asynchronous operation.
+    /// </returns>
+    private async Task CreatePhotosAsync(
+            Product product,
+            List<ProductPhotoRequestDto> requestDtos)
+    {
+        foreach (ProductPhotoRequestDto requestDto in requestDtos)
+        {
+            string url = await _photoService.CreateAsync(
+                requestDto.File, "products", false);
+            ProductPhoto photo = new ProductPhoto
+            {
+                Url = url
+            };
+            product.Photos.Add(photo);
+        }
+    }
+
+    /// <summary>
+    /// Update the specified product's photos with the data provided in the request.
+    /// </summary>
+    /// <param name="product">
+    /// The product to which the updating photos are associated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// An object containing the data for the photos to be updated.
+    /// </param>
+    /// <returns>
+    /// A <c>Tuple</c> containing 2 lists of strings. The first one contains the urls
+    /// of the photos which must be deleted when the update operation succeeded. The
+    /// other one contains the urls of the photos which must be deleted when the
+    /// updating operation failed.
+    /// </returns>
+    /// <exception cref="OperationException">
+    /// Thrown when the photo with the given id which is associated to the specified
+    /// product in the request cannot be found.
+    /// </exception>
+    private async Task<(List<string>, List<string>)> UpdatePhotosAsync(
+            Product product,
+            List<ProductPhotoRequestDto> requestDtos)
+    {
+        product.Photos ??= new List<ProductPhoto>();
+        List<string> urlsToBeDeletedWhenSucceeded = new List<string>();
+        List<string> urlsToBeDeletedWhenFailed = new List<string>();
+        for (int i = 0; i < requestDtos.Count; i++)
+        {
+            ProductPhotoRequestDto photoRequestDto = requestDtos[i];
+            if (photoRequestDto.HasBeenChanged)
+            {
+                // Fetch the photo entity and ensure it exists.
+                ProductPhoto productPhoto = product.Photos
+                    .SingleOrDefault(p => p.Id == photoRequestDto.Id);
+                if (productPhoto == null)
+                {
+                    string errorMessage = ErrorMessages.NotFoundByProperty
+                        .ReplaceResourceName(DisplayNames.ProductPhoto)
+                        .ReplacePropertyName(DisplayNames.Id)
+                        .ReplaceAttemptedValue(photoRequestDto.Id.ToString());
+                    throw new OperationException($"photos[{i}].id", errorMessage);
+                }
+                
+                // Add to list to be deleted later if the transaction succeeds.
+                urlsToBeDeletedWhenSucceeded.Add(productPhoto.Url);
+                product.Photos.Remove(productPhoto);
+
+                if (photoRequestDto.HasBeenChanged)
+                {
+                    string url = await _photoService
+                        .CreateAsync(photoRequestDto.File, "supplies", false);
+                    // Add to list to be deleted later if the transaction fails.
+                    urlsToBeDeletedWhenFailed.Add(url);
+                    productPhoto.Url = url;
+                }
+            }
+        }
+        
+        return (urlsToBeDeletedWhenSucceeded, urlsToBeDeletedWhenFailed);
     }
 }

@@ -635,7 +635,7 @@ public class SupplyService : LockableEntityService, ISupplyService
     /// Update the specified supply's photos with the data provided in the request.
     /// </summary>
     /// <param name="supply">
-    /// The supply associated to the items to be updated.
+    /// The supply to which the updating photos are associated.
     /// </param>
     /// <param name="requestDtos">
     /// An object containing the data for the photos to be updated.

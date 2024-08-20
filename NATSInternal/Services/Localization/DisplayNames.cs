@@ -8,6 +8,7 @@ public static class DisplayNames
     public const string Country = "Quốc gia";
     public const string Brand = "Thương hiệu";
     public const string Product = "Sản phẩm";
+    public const string ProductPhoto = "Hình ảnh sản phẩm";
     public const string Payment = "Thanh toán";
     public const string Supply = "Đơn nhập hàng";
     public const string SupplyItem = "Mục nhập hàng";

@@ -14,9 +14,6 @@ public class DebtUpsertValidator : Validator<DebtUpsertRequestDto>
         RuleFor(dto => dto.IncurredDateTime)
             .IsValidStatsDateTime()
             .WithName(DisplayNames.IncurredDateTime);
-        RuleFor(dto => dto.CustomerId)
-            .NotEmpty()
-            .WithName(DisplayNames.Customer);
         
         RuleSet("Create", () => { });
         RuleSet("Update", () =>

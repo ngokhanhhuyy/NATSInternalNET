@@ -14,6 +14,7 @@ public class ProductUpsertRequestDto
     public bool ThumbnailChanged { get; set; }
     public ProductCategoryRequestDto Category { get; set; }
     public ProductUpsertBrandRequestDto Brand { get; set; }
+    public List<ProductPhotoRequestDto> Photos { get; set; }
 
     public ProductUpsertRequestDto TransformValues()
     {

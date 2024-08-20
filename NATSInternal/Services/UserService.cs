@@ -1,7 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿namespace NATSInternal.Services;
 
-namespace NATSInternal.Services;
-
+/// <inheritdoc />
 public class UserService : IUserService
 {
     private readonly DatabaseContext _context;
@@ -27,11 +26,7 @@ public class UserService : IUserService
         _exceptionHandler = exceptionHandler;
     }
 
-    /// <summary>
-    /// Get a list of users with pagination, filtering and sorting options.
-    /// </summary>
-    /// <param name="requestDto">An object containing all the options for the list results.</param>
-    /// <returns>An object containing the results and page count (for pagination calculation).</returns>
+    /// <inheritdoc />
     public async Task<UserListResponseDto> GetListAsync(UserListRequestDto requestDto)
     {
         // Initialize query.
@@ -118,10 +113,7 @@ public class UserService : IUserService
         return responseDto;
     }
 
-    /// <summary>
-    /// Get a list of users who have just joined (within 1 month from joining date).
-    /// </summary>
-    /// <returns>An object containing the users who have just joined.</returns>
+    /// <inheritdoc />
     public async Task<UserListResponseDto> GetJoinedRecentlyListAsync()
     {
         DateOnly minimumJoiningDate = DateOnly
@@ -143,10 +135,7 @@ public class UserService : IUserService
         };
     }
 
-    /// <summary>
-    /// Get a list of users who have upcoming birthday (within 1 month from now).
-    /// </summary>
-    /// <returns>An object containing the users who have upcoming birthday.</returns>
+    /// <inheritdoc />
     public async Task<UserListResponseDto> GetUpcomingBirthdayListAsync()
     {
         DateOnly minRange = DateOnly.FromDateTime(DateTime.Today);
@@ -173,11 +162,7 @@ public class UserService : IUserService
         };
     }
 
-    /// <summary>
-    /// Get the role information which is associated to the user with given id.
-    /// </summary>
-    /// <param name="id">The id of the user.</param>
-    /// <returns>The full detail of the user's role.</returns>
+    /// <inheritdoc />
     public async Task<RoleDetailResponseDto> GetRoleAsync(int id)
     {
         RoleDetailResponseDto responseDto = await _context.UserRoles
@@ -188,15 +173,7 @@ public class UserService : IUserService
         return responseDto;
     }
 
-    /// <summary>
-    /// Get fully detailed information, including role, claims (permissions)
-    /// of the user with given id.
-    /// </summary>
-    /// <param name="id">The id of the user.</param>
-    /// <returns>An object containing all details of the user.</returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The user with the given id cannot be found in the database.
-    /// </exception>
+    /// <inheritdoc />
     public async Task<UserDetailResponseDto> GetDetailAsync(int id)
     {
         User user = await _context.Users
@@ -212,25 +189,7 @@ public class UserService : IUserService
             _authorizationService.GetUserDetailAuthorization(user));
     }
 
-    /// <summary>
-    /// Create user with given information.
-    /// </summary>
-    /// <param name="requestDto">
-    /// An object containing all the information for a new user.
-    /// </param>
-    /// <returns>The id of the created user.</returns>
-    /// <exception cref="DuplicatedException">
-    /// The username in the provided data already exists.
-    /// </exception>
-    /// <exception cref="ResourceNotFoundException">
-    /// The role name in the provided data doesn't exist.
-    /// </exception>
-    /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to create a new user.
-    /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// Business rules violation during assign the new user to the specified role.
-    /// </exception>
+    /// <inheritdoc />
     public async Task<UserCreateResponseDto> CreateAsync(UserCreateRequestDto requestDto)
     {
         string fullName = PersonNameUtility.GetFullNameFromNameElements(
@@ -338,19 +297,7 @@ public class UserService : IUserService
             .First());
     }
 
-    /// <summary>
-    /// Update a user with given id.
-    /// </summary>
-    /// <param name="id">The id of the user to be updated.</param>
-    /// <param name="requestDto">An object containing new data to be updated.</param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
-    /// </exception>
-    /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have enough permission to
-    /// perform the updating action.
-    /// </exception>
+    /// <inheritdoc />
     public async Task UpdateAsync(int id, UserUpdateRequestDto requestDto)
     {
         // Fetch the entity from the database.
@@ -452,23 +399,7 @@ public class UserService : IUserService
         await transaction.CommitAsync();
     }
     
-    /// <summary>
-    /// Change the password of the user with given id.
-    /// </summary>
-    /// <param name="id">The id of the user to be changed his password.</param>
-    /// <param name="requestDto">
-    /// An object containing the current password, the new one and the confirmation one.
-    /// </param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
-    /// </exception>
-    /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have enough permission to perform this action.
-    /// </exception>
-    /// <exception cref="OperationException">
-    /// The current password is incorrect.
-    /// </exception>
+    /// <inheritdoc />
     public async Task ChangePasswordAsync(int id, [FromBody] UserPasswordChangeRequestDto requestDto)
     {
         // Fetch the entity with given id and ensure the entity exists.
@@ -495,24 +426,7 @@ public class UserService : IUserService
         }
     }
 
-    /// <summary>
-    /// Reset the password of the user with given id (without the need of providing
-    /// the current password).
-    /// </summary>
-    /// <param name="id">The id of the user to be reset password.</param>
-    /// <param name="requestDto">
-    /// An object containing new password and confirmation password.
-    /// </param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
-    /// </exception>
-    /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to perform this action.
-    /// </exception>
-    /// <exception cref="OperationException">
-    /// New password's complexity doesn't meet requirement.
-    /// </exception>
+    /// <inheritdoc />
     public async Task ResetPasswordAsync(int id, [FromBody] UserPasswordResetRequestDto requestDto)
     {
         // Fetch the entity with given id and ensure the entity exists.
@@ -541,17 +455,7 @@ public class UserService : IUserService
         }
     }
 
-    /// <summary>
-    /// Delete the user with given id.
-    /// </summary>
-    /// <param name="id">The id of the user to be deleted.</param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
-    /// </exception>
-    /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to perform this action.
-    /// </exception>
+    /// <inheritdoc />
     public async Task DeleteAsync(int id)
     {
         // Fetch the user entity with given id from the database and ensure the entity exists.
@@ -576,17 +480,7 @@ public class UserService : IUserService
         await _context.SaveChangesAsync(); 
     }
 
-    /// <summary>
-    /// Restore the user with given id who has been marked as deleted.
-    /// </summary>
-    /// <param name="id">The id of the user to be restored.</param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The user who has given id and is marked as deleted cannot be found in the database.
-    /// </exception>
-    /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to perform this action.
-    /// </exception>
+    /// <inheritdoc />
     public async Task RestoreAsync(int id)
     {
         // Fetch the user entity from the database and ensure the entity exists.
