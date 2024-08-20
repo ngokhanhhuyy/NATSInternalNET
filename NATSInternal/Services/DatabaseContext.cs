@@ -501,9 +501,9 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
         {
             e.ToTable("announcements");
             e.HasKey(a => a.Id);
-            e.HasOne(a => a.User)
+            e.HasOne(a => a.CreatedUser)
                 .WithMany(u => u.Announcements)
-                .HasForeignKey(a => a.UserId)
+                .HasForeignKey(a => a.CreatedUserId)
                 .HasConstraintName("FK__announcements__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.Property(c => c.RowVersion)

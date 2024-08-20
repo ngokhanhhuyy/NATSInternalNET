@@ -30,13 +30,13 @@ public class Announcement
     public DateTime EndingDateTime { get; set; }
 
     // Foreign keys
-    [Column("user_id")]
-    public int UserId { get; set; }
+    [Column("created_user_id")]
+    public int CreatedUserId { get; set; }
 
     // Concurrency operation tracking field
     [Timestamp]
     public byte[] RowVersion { get; set; }
 
     // Navigation properties
-    public virtual User User { get; set; }
+    public virtual User CreatedUser { get; set; }
 }

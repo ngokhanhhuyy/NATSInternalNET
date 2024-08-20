@@ -8,5 +8,16 @@ public class AnnouncementResponseDto
     public string Content { get; set; }
     public DateTime StartingDateTime { get; set; }
     public DateTime EndingDateTime { get; set; }
-    public UserWithNamesOnlyResponseDto User { get; set; }
+    public UserBasicResponseDto User { get; set; }
+
+    public AnnouncementResponseDto(Announcement announcement)
+    {
+        Id = announcement.Id;
+        Category = announcement.Category;
+        Title = announcement.Title;
+        Content = announcement.Content;
+        StartingDateTime = announcement.StartingDateTime;
+        EndingDateTime = announcement.EndingDateTime;
+        User = new UserBasicResponseDto(announcement.CreatedUser);
+    }
 }
