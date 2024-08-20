@@ -35,6 +35,10 @@ public class LockableEntityService
             }
             monthYearOptions.Reverse();
         }
+        else
+        {
+            monthYearOptions.Add(new MonthYearResponseDto(currentYear, currentMonth));
+        }
 
         return monthYearOptions;
     }

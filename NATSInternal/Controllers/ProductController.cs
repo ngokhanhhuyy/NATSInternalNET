@@ -1,36 +1,40 @@
-﻿namespace NATSInternal.Controllers.Api;
+﻿namespace NATSInternal.Controllers;
 
-[Route("Api/ProductCategory")]
+[Route("Api/Product")]
 [ApiController]
-[Authorize]
-public class ProductCategoryApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class ProductController : ControllerBase
 {
-    private readonly IProductCategoryService _service;
-    private readonly IValidator<ProductCategoryRequestDto> _validator;
+    private readonly IProductService _service;
+    private readonly IValidator<ProductUpsertRequestDto> _validator;
 
-    public ProductCategoryApiController(
-            IProductCategoryService service,
-            IValidator<ProductCategoryRequestDto> validator)
+    public ProductController(
+            IProductService productService,
+            IValidator<ProductUpsertRequestDto> upsertValidator)
     {
-        _service = service;
-        _validator = validator;
+        _service = productService;
+        _validator = upsertValidator;
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ProductCategoryList()
+    public async Task<IActionResult> ProductList([FromQuery] ProductListRequestDto requestDto)
     {
-        return Ok(await _service.GetListAsync());
+        ProductListResponseDto responseDto;
+        responseDto = await _service.GetListAsync(requestDto.TransformValues());
+        return Ok(responseDto);
     }
 
-    [HttpGet("{id:int}/Detail")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ProductCategoryDetail(int id)
+    public async Task<IActionResult> ProductDetail(int id)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(id));
+            ProductDetailResponseDto responseDto;
+            responseDto = await _service.GetDetailAsync(id);
+            return Ok(responseDto);
         }
         catch (ResourceNotFoundException exception)
         {
@@ -39,14 +43,14 @@ public class ProductCategoryApiController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
-    [Authorize(Policy = "CanCreateProductCategory")]
+    [HttpPost]
+    [Authorize(Policy = "CanCreateProduct")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ProductCategoryCreate(
-            [FromBody] ProductCategoryRequestDto requestDto)
+    public async Task<IActionResult> ProductCreate([FromBody] ProductUpsertRequestDto requestDto)
     {
+        // Validate the data from the request.
         ValidationResult validationResult;
         validationResult = _validator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -55,31 +59,29 @@ public class ProductCategoryApiController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Performing creating operation.
         try
         {
-            int createdId = await _service.CreateAsyns(requestDto);
-            string createdResourceUrl = Url.Action(
-                "ProductCategoryDetail",
-                "ProductCategoryApi",
-                new { id = createdId });
-            return Created(createdResourceUrl, createdId);
+            int createdId = await _service.CreateAsync(requestDto);
+            return Created(Url.Action("ProductDetail", "Product", new { id = createdId }), createdId);
         }
         catch (OperationException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(exception);
+            return UnprocessableEntity(ModelState);
         }
     }
 
-    [HttpPut("{id:int}/Update")]
-    [Authorize(Policy = "CanEditProductCategory")]
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "CanEditProduct")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ProductCategoryUpdate(
+    public async Task<IActionResult> ProductUpdate(
             int id,
-            [FromBody] ProductCategoryRequestDto requestDto)
+            [FromBody] ProductUpsertRequestDto requestDto)
     {
+        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _validator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -88,6 +90,7 @@ public class ProductCategoryApiController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Perform updating operation.
         try
         {
             await _service.UpdateAsync(id, requestDto);
@@ -105,15 +108,16 @@ public class ProductCategoryApiController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Delete")]
-    [Authorize(Policy = "CanDeleteProductCategory")]
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "CanDeleteProduct")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ProductCategoryDelete(int id)
+    public async Task<IActionResult> ProductDelete(int id)
     {
         try
         {
             await _service.DeleteAsync(id);
-            return Ok();
+            return NoContent();
         }
         catch (ResourceNotFoundException exception)
         {

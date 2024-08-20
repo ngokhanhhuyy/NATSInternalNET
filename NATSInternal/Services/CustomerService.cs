@@ -1,5 +1,6 @@
 ﻿namespace NATSInternal.Services;
 
+/// <inheritdoc />
 public class CustomerService : ICustomerService
 {
     private readonly DatabaseContext _context;
@@ -13,15 +14,13 @@ public class CustomerService : ICustomerService
         _authorizationService = authorizationService;
     }
 
-    /// <summary>
-    /// Get a list of customers with pagination, filtering and sorting options.
-    /// </summary>
-    /// <param name="requestDto">An object containing all the options for the list results.</param>
-    /// <returns>An object containing the results and page count (for pagination calculation).</returns>
+    /// <inheritdoc />
     public async Task<CustomerListResponseDto> GetListAsync(CustomerListRequestDto requestDto)
     {
         // Initialize query.
         IQueryable<Customer> query = _context.Customers
+            .Include(c => c.Debts)
+            .Include(c => c.DebtPayments)
             .Where(c => !c.IsDeleted);
 
         // Determine the field and the direction the sort.
@@ -42,7 +41,21 @@ public class CustomerService : ICustomerService
                     ? query.OrderBy(c => c.CreatedDateTime)
                     : query.OrderByDescending(c => c.CreatedDateTime);
                 break;
-            case nameof(CustomerListRequestDto.FieldToBeOrdered.LastName):
+            case nameof(CustomerListRequestDto.FieldToBeOrdered.DebtRemainingAmount):
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount) - c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.Debts
+                            .Where(d => !d.IsDeleted)
+                            .Sum(d => d.Amount) - c.DebtPayments
+                            .Where(dp => !dp.IsDeleted)
+                            .Sum(dp => dp.Amount))
+                        .ThenByDescending(c => c.Id);
+                break;
             default:
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(c => c.LastName)
@@ -58,6 +71,16 @@ public class CustomerService : ICustomerService
                 c.NormalizedFullName.Contains(requestDto.SearchByContent.ToUpper()) ||
                 c.PhoneNumber.Contains(requestDto.SearchByContent) ||
                 (isValidBirthday && c.Birthday.HasValue && c.Birthday.Value == birthday));
+        }
+        
+        // Filter by remaining debt amount.
+        if (requestDto.HasRemainingDebtAmountOnly)
+        {
+            query = query.Where(c => c.Debts
+                .Where(d => !d.IsDeleted)
+                .Sum(d => d.Amount) - c.DebtPayments
+                .Where(dp => !dp.IsDeleted)
+                .Sum(dp => dp.Amount) > 0);
         }
 
         // Initialize response dto.
@@ -78,22 +101,18 @@ public class CustomerService : ICustomerService
             .Select(c => new CustomerBasicResponseDto(
                 c,
                 _authorizationService.GetCustomerAuthorization(c)))
+            .AsSplitQuery()
             .ToListAsync();
 
         return responseDto;
     }
 
-    /// <summary>
-    /// Get basic information of the customer with given id.
-    /// </summary>
-    /// <param name="id">The id of the customer</param>
-    /// <returns>An object containing the basic information of the customer.</returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The customer with the given id doesn't exist in the database.
-    /// </exception>
+    /// <inheritdoc />
     public async Task<CustomerBasicResponseDto> GetBasicAsync(int id)
     {
         return await _context.Customers
+            .Include(c => c.Debts)
+            .Include(c => c.DebtPayments)
             .Where(c => c.Id == id)
             .Select(c => new CustomerBasicResponseDto(
                 c,
@@ -105,22 +124,17 @@ public class CustomerService : ICustomerService
                 id.ToString());
     }
 
-    /// <summary>
-    /// Get fully detailed information of the customer with given id.
-    /// </summary>
-    /// <param name="id">The id of the customer.</param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The customer with the given id doesn't exist in the database.
-    /// </exception>
+    /// <inheritdoc />
     public async Task<CustomerDetailResponseDto> GetDetailAsync(int id)
     {
         return await _context.Customers
             .Include(c => c.Introducer)
+            .Include(c => c.Debts)
+            .Include(c => c.DebtPayments)
             .Where(c => !c.IsDeleted && c.Id == id)
             .Select(c => new CustomerDetailResponseDto(
                 c,
-                _authorizationService.GetCustomerAuthorization(c)))
+                _authorizationService))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Customer),
@@ -128,15 +142,8 @@ public class CustomerService : ICustomerService
                 id.ToString());
     }
 
-    /// <summary>
-    /// Create a customer with provided data.
-    /// </summary>
-    /// <param name="requestDto">An object containing data for a new customer.</param>
-    /// <returns>An object containing the id of the created customer.</returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The introducer (customer) with the given id doesn't exist in the database.
-    /// </exception>
-    public async Task<CustomerCreateResponseDto> CreateAsync(CustomerUpsertRequestDto requestDto)
+    /// <inheritdoc />
+    public async Task<int> CreateAsync(CustomerUpsertRequestDto requestDto)
     {
         string fullName = PersonNameUtility.GetFullNameFromNameElements(
             requestDto.FirstName,
@@ -170,14 +177,14 @@ public class CustomerService : ICustomerService
         try
         {
             await _context.SaveChangesAsync();
-            return new CustomerCreateResponseDto { Id = customer.Id };
+            return customer.Id;
         }
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            if (exception.InnerException is MySqlException sqlException)
             {
                 SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
-                exceptionHandler.Handle(exception.InnerException as MySqlException);
+                exceptionHandler.Handle(sqlException);
                 if (exceptionHandler.IsForeignKeyNotFound)
                 {
                     throw new OperationException(
@@ -191,17 +198,7 @@ public class CustomerService : ICustomerService
         }
     }
 
-    /// <summary>
-    /// Update a customer who has the given id with the provided data.
-    /// </summary>
-    /// <param name="id">The id of the customer to be updated.</param>
-    /// <param name="requestDto">
-    /// An object containing new data for the customer to be updated.
-    /// </param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The customer or the introducer with given id doesn't exist in the database.
-    /// </exception>
+    /// <inheritdoc />
     public async Task UpdateAsync(int id, CustomerUpsertRequestDto requestDto)
     {
         string fullName = PersonNameUtility.GetFullNameFromNameElements(
@@ -269,14 +266,7 @@ public class CustomerService : ICustomerService
         }
     }
 
-    /// <summary>
-    /// Delete a customer who has given id.
-    /// </summary>
-    /// <param name="id">The id of the customer to be deleted.</param>
-    /// <returns></returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// The customer with given id doesn't exist in the database.
-    /// </exception>
+    /// <inheritdoc />
     public async Task DeleteAsync(int id)
     {
         int affectedRows = await _context.Customers

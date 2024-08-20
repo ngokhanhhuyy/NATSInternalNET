@@ -1,6 +1,67 @@
-@NATSInternal_HostAddress = http://localhost:5279
+// Authentication
+// @no-log
+POST {{host}}/authentication/getAccessToken
+Content-Type: application/json
 
-GET {{NATSInternal_HostAddress}}/weatherforecast/
-Accept: application/json
+{
+    "userName": "ngokhanhhuyy",
+    "password": "Huyy47b1"
+}
+
+> {% 
+if (response.status === 200) {
+    const accessToken = response.body["accessToken"];
+    client.global.set("accessToken", accessToken);
+}
+ %}
 
 ###
+
+// Customer list
+// @no-log
+GET {{host}}/customer/list
+    ?orderByAscending=False
+    &orderByField=DebtRemainingAmount
+    &page=1
+    &resultsPerPage=15
+    &hasRemainingDebtAmountOnly=False
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+// Customer detail
+// @no-log
+GET {{host}}/customer/100/detail
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+// DebtCreate
+// @no-log
+POST {{host}}/debt
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 500000,
+    "note": null,
+    "incurredDateTime": null,
+    "customerId": 100
+}
+
+###
+// DebtPaymentCreate
+// @no-log
+POST {{host}}/debtPayment
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 2000000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 100
+}
+
+

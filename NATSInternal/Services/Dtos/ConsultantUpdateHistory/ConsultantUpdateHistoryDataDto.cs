@@ -5,6 +5,8 @@ public class ConsultantUpdateHistoryDataDto
     public long Amount { get; set; }
     public string Note { get; set; }
     public DateTime PaidDateTime { get; set; }
+
+    public ConsultantUpdateHistoryDataDto() { }
     
     public ConsultantUpdateHistoryDataDto(Consultant consultant)
     {

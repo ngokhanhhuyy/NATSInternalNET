@@ -72,6 +72,9 @@ public interface IExpenseService
     /// </summary>
     /// <param name="id">The ID of the expense to delete.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="AuthorizationException">
+    /// Thrown when the user doesn't have permission to delete the specifed expense.
+    /// </exception>
     /// <exception cref="ResourceNotFoundException">
     /// Thrown when the expense with the specified ID is not found.
     /// </exception>

@@ -7,6 +7,7 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     private readonly IAuthorizationService _authorizationService;
     private readonly IPhotoService _photoService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
 
     public TreatmentService(
             DatabaseContext context,
@@ -24,18 +25,18 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     public async Task<TreatmentListResponseDto> GetListAsync(TreatmentListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        var earliestRecordedMonthYear = await _context.Supplies
-            .OrderBy(s => s.PaidDateTime)
-            .Select(s => new MonthYearResponseDto
-            {
-                Year = s.PaidDateTime.Year,
-                Month = s.PaidDateTime.Month
-            }).FirstOrDefaultAsync();
-        List<MonthYearResponseDto> monthYearOptions = null;
-        if (earliestRecordedMonthYear != null)
+        if (_earliestRecordedMonthYear == null)
         {
-            monthYearOptions = GenerateMonthYearOptions(earliestRecordedMonthYear);
+            _earliestRecordedMonthYear = await _context.Treatments
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
         }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
         // Initialize query.
         IQueryable<Treatment> query = _context.Treatments
@@ -69,14 +70,9 @@ public class TreatmentService : LockableEntityService, ITreatmentService
         // Filter by month and year if specified.
         if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            query = query.Where(s => s.PaidDateTime.Year == requestDto.Year)
-                .Where(s => s.PaidDateTime.Month == requestDto.Month);
-        }
-        else
-        {
-            DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-            query = query.Where(s => s.PaidDateTime.Year == currentDateTime.Year)
-                .Where(s => s.PaidDateTime.Month == currentDateTime.Month);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by not being soft deleted.

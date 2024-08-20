@@ -3,23 +3,23 @@
 [Route("/Api/Customer")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class CustomerApiController : ControllerBase
+public class CustomerController : ControllerBase
 {
-    private ICustomerService _customerService;
-    private IValidator<CustomerListRequestDto> _listValidator;
-    private IValidator<CustomerUpsertRequestDto> _upsertValidator;
+    private readonly ICustomerService _service;
+    private readonly IValidator<CustomerListRequestDto> _listValidator;
+    private readonly IValidator<CustomerUpsertRequestDto> _upsertValidator;
 
-    public CustomerApiController(
-            ICustomerService customerService,
+    public CustomerController(
+            ICustomerService service,
             IValidator<CustomerListRequestDto> listValidator,
             IValidator<CustomerUpsertRequestDto> upsertValidator)
     {
-        _customerService = customerService;
+        _service = service;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CustomerList([FromQuery] CustomerListRequestDto requestDto)
@@ -35,7 +35,7 @@ public class CustomerApiController : ControllerBase
 
         // Call service for data fetching.
         CustomerListResponseDto responseDto;
-        responseDto = await _customerService.GetListAsync(requestDto);
+        responseDto = await _service.GetListAsync(requestDto);
         return Ok(responseDto);
     }
 
@@ -44,10 +44,9 @@ public class CustomerApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CustomerBasic(int id)
     {
-        CustomerBasicResponseDto responseDto;
         try
-        {
-            responseDto = await _customerService.GetBasicAsync(id);
+        {////mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+            CustomerBasicResponseDto responseDto = await _service.GetBasicAsync(id);
             return Ok(responseDto);
         }
         catch (ResourceNotFoundException exception)
@@ -57,16 +56,15 @@ public class CustomerApiController : ControllerBase
         }
     }
 
-    [HttpGet("{id:int}/Detail")]
+    [HttpGet("{customerId:int}")]
     [Authorize(Policy = "CanGetCustomerDetail")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CustomerDetail(int id)
+    public async Task<IActionResult> CustomerDetail(int customerId)
     {
-        CustomerDetailResponseDto responseDto;
         try
         {
-            responseDto = await _customerService.GetDetailAsync(id);
+            CustomerDetailResponseDto responseDto = await _service.GetDetailAsync(customerId);
             return Ok(responseDto);
         }
         catch (ResourceNotFoundException exception)
@@ -76,9 +74,9 @@ public class CustomerApiController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
+    [HttpPost]
     [Authorize(Policy = "CanCreateCustomer")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> CustomerCreate(
@@ -96,9 +94,9 @@ public class CustomerApiController : ControllerBase
         // Call service for creating operation.
         try
         {
-            CustomerCreateResponseDto responseDto;
-            responseDto = await _customerService.CreateAsync(requestDto);
-            return Ok(responseDto);
+            int createdCustomerId = await _service.CreateAsync(requestDto);
+            string createdCustomerUrl = Url.Action("CustomerDetail", new { id = createdCustomerId });
+            return Created(createdCustomerUrl, createdCustomerId);
         }
         catch (OperationException exception)
         {
@@ -107,13 +105,13 @@ public class CustomerApiController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Update")]
+    [HttpPut("{customerId:int}")]
     [Authorize(Policy = "CanEditCustomer")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> CustomerUpdate(
-            int id,
+            int customerId,
             [FromBody] CustomerUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -128,7 +126,7 @@ public class CustomerApiController : ControllerBase
         // Call service for updating operation.
         try
         {
-            await _customerService.UpdateAsync(id, requestDto);
+            await _service.UpdateAsync(customerId, requestDto);
             return Ok();
         }
         catch (OperationException exception)
@@ -138,15 +136,15 @@ public class CustomerApiController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Delete")]
+    [HttpDelete("{customerId:int}")]
     [Authorize(Policy = "CanDeleteCustomer")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CustomerDelete(int id)
+    public async Task<IActionResult> CustomerDelete(int customerId)
     {
         try
         {
-            await _customerService.DeleteAsync(id);
+            await _service.DeleteAsync(customerId);
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -155,5 +153,4 @@ public class CustomerApiController : ControllerBase
             return NotFound(ModelState);
         }
     }
-
 }

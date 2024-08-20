@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Services.Dtos;
 
-public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>
+public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>, ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; }
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
@@ -13,6 +13,9 @@ public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>
     public SupplyListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        Year ??= currentDateTime.Year;
+        Month ??= currentDateTime.Month;
         return this;
     }
 

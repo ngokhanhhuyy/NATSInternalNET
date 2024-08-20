@@ -8,12 +8,12 @@ public class DebtPaymentListValidator : Validator<DebtPaymentListRequestDto>
             .NotEmpty()
             .IsEnumName(typeof(DebtListRequestDto.FieldOptions))
             .WithName(DisplayNames.OrderByField);
-        RuleFor(dto => dto.RangeTo)
-            .GreaterThanOrEqualTo(dto => dto.RangeFrom)
-            .When(dto => dto.RangeFrom.HasValue && dto.RangeTo.HasValue)
-            .WithMessage(dto => ErrorMessages.LaterThanOrEqual
-                .ReplaceComparisonValue(dto.RangeFrom?.ToVietnameseString()))
-            .WithName(DisplayNames.RangeTo);
+        RuleFor(dto => dto.Month)
+            .IsValidQueryStatsMonth()
+            .WithName(DisplayNames.Month);
+        RuleFor(dto => dto.Year)
+            .IsValidQueryStatsYear()
+            .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Page)
             .GreaterThanOrEqualTo(1)
             .WithName(DisplayNames.Page);

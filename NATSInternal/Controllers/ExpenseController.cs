@@ -1,15 +1,15 @@
-﻿namespace NATSInternal.Controllers.Api;
+﻿namespace NATSInternal.Controllers;
 
 [Route("Api/Expense")]
 [ApiController]
-[Authorize]
-public class ExpenseApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class ExpenseController : ControllerBase
 {
     private readonly IExpenseService _service;
     private readonly IValidator<ExpenseListRequestDto> _listValidator;
     private readonly IValidator<ExpenseUpsertRequestDto> _upsertValidator;
 
-    public ExpenseApiController(
+    public ExpenseController(
             IExpenseService service,
             IValidator<ExpenseListRequestDto> listValidator,
             IValidator<ExpenseUpsertRequestDto> upsertValidator)
@@ -77,7 +77,7 @@ public class ExpenseApiController : ControllerBase
         try
         {
             int createdId = await _service.CreateAsync(requestDto);
-            string createdUrl = Url.Action("ExpenseDetail", "ExpenseApi", new { id = createdId });
+            string createdUrl = Url.Action("ExpenseDetail", "Expense", new { id = createdId });
             return Created(createdUrl, createdId); 
         }
         catch (ConcurrencyException)
@@ -144,6 +144,10 @@ public class ExpenseApiController : ControllerBase
         {
             ModelState.AddModelErrorsFromServiceException(exception);
             return NotFound(ModelState);
+        }
+        catch (AuthorizationException)
+        {
+            return Forbid();
         }
         catch (ConcurrencyException)
         {

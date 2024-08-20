@@ -1,12 +1,13 @@
 ﻿namespace NATSInternal.Services;
 
-/// <inheritdoc />
+/// <inheritdoc cref="ISupplyService" />
 public class SupplyService : LockableEntityService, ISupplyService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public SupplyService(
             DatabaseContext context,
@@ -24,18 +25,18 @@ public class SupplyService : LockableEntityService, ISupplyService
     public async Task<SupplyListResponseDto> GetListAsync(SupplyListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        var earliestRecordedMonthYear = await _context.Supplies
-            .OrderBy(s => s.PaidDateTime)
-            .Select(s => new MonthYearResponseDto
-            {
-                Year = s.PaidDateTime.Year,
-                Month = s.PaidDateTime.Month
-            }).FirstOrDefaultAsync();
-        List<MonthYearResponseDto> monthYearOptions = null;
-        if (earliestRecordedMonthYear != null)
+        if (_earliestRecordedMonthYear == null)
         {
-            monthYearOptions = GenerateMonthYearOptions(earliestRecordedMonthYear);
+            _earliestRecordedMonthYear = await _context.Supplies
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
         }
+        List<MonthYearResponseDto> monthYearOptions;
+        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
         // Query initialization.
         IQueryable<Supply> query = _context.Supplies
@@ -79,8 +80,9 @@ public class SupplyService : LockableEntityService, ISupplyService
         // Filter by month and year if specified.
         if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            query = query.Where(s => s.PaidDateTime.Year == requestDto.Year)
-                .Where(s => s.PaidDateTime.Month == requestDto.Month);
+            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
         else
         {
@@ -173,7 +175,7 @@ public class SupplyService : LockableEntityService, ISupplyService
         // Initialize entity.
         Supply supply = new Supply
         {
-            PaidDateTime = requestDto.PaidDateTime ?? DateTime.UtcNow.ToApplicationTime(),
+            PaidDateTime = paidDateTime,
             ShipmentFee = requestDto.ShipmentFee,
             Note = requestDto.Note,
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
@@ -465,7 +467,7 @@ public class SupplyService : LockableEntityService, ISupplyService
 
             // Fetch the product entity with the specified id in the request.
             Product product = products
-                .SingleOrDefault(i => i.Id == itemRequestDto.ProductId);
+                .SingleOrDefault(p => p.Id == itemRequestDto.ProductId);
 
             // Ensure the product exists.
             if (product == null)

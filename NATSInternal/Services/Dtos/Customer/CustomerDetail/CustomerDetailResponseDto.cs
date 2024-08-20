@@ -19,10 +19,13 @@ public record CustomerDetailResponseDto
     public DateTime CreatedDateTime { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
     public CustomerBasicResponseDto Introducer { get; set; }
+    public long DebtRemainingAmount { get; set; }
+    public List<CustomerDebtOperationResponseDto> DebtOperations { get; set; }
+    public CustomerAuthorizationResponseDto Authorization { get; set; }
 
     public CustomerDetailResponseDto(
             Customer customer,
-            CustomerAuthorizationResponseDto authorization)
+            IAuthorizationService authorizationService)
     {
         Id = customer.Id;
         FirstName = customer.FirstName;
@@ -40,10 +43,32 @@ public record CustomerDetailResponseDto
         Note = customer.Note;
         CreatedDateTime = customer.CreatedDateTime;
         UpdatedDateTime = customer.UpdatedDateTime;
+        DebtRemainingAmount = customer.DebtRemainingAmount;
+        Authorization = authorizationService.GetCustomerAuthorization(customer);
 
         if (customer.Introducer != null)
         {
             Introducer = new CustomerBasicResponseDto(customer.Introducer);
         }
+        
+        if (customer.Debts != null)
+        {
+            DebtOperations = new List<CustomerDebtOperationResponseDto>();
+            foreach (Debt debt in customer.Debts)
+            {
+                DebtOperations.Add(new CustomerDebtOperationResponseDto(debt, authorizationService));
+            }
+        }
+        
+        if (customer.DebtPayments != null)
+        {
+            DebtOperations ??= new List<CustomerDebtOperationResponseDto>();
+            foreach (DebtPayment payment in customer.DebtPayments)
+            {
+                DebtOperations.Add(new CustomerDebtOperationResponseDto(payment, authorizationService));
+            }
+        }
+
+        DebtOperations = DebtOperations?.OrderBy(dp => dp.OperatedDateTime).ToList();
     }
 }

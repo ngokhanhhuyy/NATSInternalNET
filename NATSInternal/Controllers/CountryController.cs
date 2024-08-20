@@ -2,17 +2,17 @@
 
 [Route("Api/Country")]
 [ApiController]
-[Authorize]
-public class CountryApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class CountryController : ControllerBase
 {
     private readonly ICountryService _service;
 
-    public CountryApiController(ICountryService service)
+    public CountryController(ICountryService service)
     {
         _service = service;
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> CountryList()
     {

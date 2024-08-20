@@ -2,14 +2,14 @@ namespace NATSInternal.Controller;
 
 [ApiController]
 [Route("Api/Consultant")]
-[Authorize]
-public class ConsultantApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class ConsultantController : ControllerBase
 {
     private readonly IConsultantService _service;
     private readonly IValidator<ConsultantListRequestDto> _listValidator;
     private readonly IValidator<ConsultantUpsertRequestDto> _upsertValidator;
 
-    public ConsultantApiController(
+    public ConsultantController(
             IConsultantService service,
             IValidator<ConsultantListRequestDto> listValidator,
             IValidator<ConsultantUpsertRequestDto> upsertValidator)
@@ -79,7 +79,7 @@ public class ConsultantApiController : ControllerBase
             int createdId = await _service.CreateAsync(requestDto);
             string createdResourceUrl = Url.Action(
                 "ConsultantDetail",
-                "ConsultantApi",
+                "Consultant",
                 new { id = createdId });
             return Created(createdResourceUrl, createdId);
         }

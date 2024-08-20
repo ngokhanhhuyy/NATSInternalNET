@@ -9,6 +9,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<Brand> Brands { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
     public DbSet<Product> Products { get; set; }
+    public DbSet<ProductPhoto> ProductPhotos { get; set; } 
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Supply> Supplies { get; set; }
     public DbSet<SupplyUpdateHistory> supplyUpdateHistories { get; set; }
@@ -127,9 +128,9 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(s => s.PaidDateTime)
                 .IsUnique()
-                .HasDatabaseName("UX__supply_supplied_datetime");
+                .HasDatabaseName("UX__supply_paid_datetime");
             e.HasIndex(s => s.IsDeleted)
-                .HasDatabaseName("IX__supplies__supplied_datetime");
+                .HasDatabaseName("IX__supplies__is_deleted");
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });
@@ -194,7 +195,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasConstraintName("FK__orders__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(o => o.PaidDateTime)
-                .HasDatabaseName("IX__orders__ordered_datetime");
+                .HasDatabaseName("IX__orders__paid_datetime");
             e.HasIndex(o => o.IsDeleted)
                 .HasDatabaseName("IX__orders__is_deleted");
             e.Property(c => c.RowVersion)
@@ -439,7 +440,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .HasConstraintName("FK__debts__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(d => d.CreatedDateTime)
-                .HasDatabaseName("IX__debts__created_datetime");
+                .HasDatabaseName("IX__debts__incurred_datetime");
             e.HasIndex(d => d.IsDeleted)
                 .HasDatabaseName("IX__debts__is_deleted");
         });

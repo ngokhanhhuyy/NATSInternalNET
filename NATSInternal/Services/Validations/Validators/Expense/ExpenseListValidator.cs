@@ -9,14 +9,12 @@ public class ExpenseListValidator : Validator<ExpenseListRequestDto>
             .Must(IsEnumElementName<ExpenseListRequestDto.FieldOptions>)
             .WithMessage(ErrorMessages.Invalid)
             .WithName(DisplayNames.OrderByField);
-        RuleFor(dto => dto.RangeFrom)
-            .LessThan(dto => dto.RangeTo)
-            .When(dto => dto.RangeFrom.HasValue && dto.RangeTo.HasValue)
-            .WithName(DisplayNames.RangeFrom);
-        RuleFor(dto => dto.RangeTo)
-            .GreaterThan(dto => dto.RangeFrom)
-            .When(dto => dto.RangeTo.HasValue && dto.RangeFrom.HasValue)
-            .WithName(DisplayNames.RangeTo);
+        RuleFor(dto => dto.Month)
+            .IsValidQueryStatsMonth()
+            .WithName(DisplayNames.Month);
+        RuleFor(dto => dto.Year)
+            .IsValidQueryStatsYear()
+            .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Category)
             .IsInEnum().WithMessage(ErrorMessages.Invalid)
             .When(dto => dto.Category.HasValue)

@@ -1,20 +1,20 @@
-﻿namespace NATSInternal.Controllers.Api;
+﻿namespace NATSInternal.Controllers;
 
-[Route("Api/Treatment")]
+[Route("Api/Order")]
 [ApiController]
-[Authorize]
-public class TreatmentApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class OrderController : ControllerBase
 {
-    private readonly ITreatmentService _service;
-    private readonly IValidator<TreatmentListRequestDto> _listValidator;
-    private readonly IValidator<TreatmentUpsertRequestDto> _upsertValidator;
+    private readonly IOrderService _orderService;
+    private readonly IValidator<OrderListRequestDto> _listValidator;
+    private readonly IValidator<OrderUpsertRequestDto> _upsertValidator;
 
-    public TreatmentApiController(
-            ITreatmentService service,
-            IValidator<TreatmentListRequestDto> listValidator,
-            IValidator<TreatmentUpsertRequestDto> upsertValidator)
+    public OrderController(
+            IOrderService orderService,
+            IValidator<OrderListRequestDto> listValidator,
+            IValidator<OrderUpsertRequestDto> upsertValidator)
     {
-        _service = service;
+        _orderService = orderService;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
     }
@@ -22,10 +22,8 @@ public class TreatmentApiController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> TreatmentList(
-            [FromQuery] TreatmentListRequestDto requestDto)
+    public async Task<IActionResult> GetListAsync([FromQuery] OrderListRequestDto requestDto)
     {
-        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _listValidator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -34,17 +32,17 @@ public class TreatmentApiController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        return Ok(await _service.GetListAsync(requestDto));
+        return Ok(await _orderService.GetListAsync(requestDto));
     }
 
     [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> TreatmentDetail(int id)
+    public async Task<IActionResult> GetDetailAsync(int id)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(id));
+            return Ok(await _orderService.GetDetailAsync(id));
         }
         catch (ResourceNotFoundException exception)
         {
@@ -54,32 +52,64 @@ public class TreatmentApiController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = "CanCreateTreatment")]
+    [Authorize(Policy = "CanCreateOrder")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> TreatmentCreate([FromBody] TreatmentUpsertRequestDto requestDto)
+    public async Task<IActionResult> CreateAsync([FromBody] OrderUpsertRequestDto requestDto)
     {
-        // Validate the data from the request.
         ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues());
+        validationResult = _upsertValidator.Validate(
+            requestDto.TransformValues(),
+            options => options.IncludeRuleSets("Create").IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
 
-        // Perform the creating operation.
         try
         {
-            int createdId = await _service.CreateAsync(requestDto);
-            string createdResourceUrl = Url.Action(
-                "TreatmentDetail",
-                "TreatmentApi",
-                new { id = createdId });
-            return Created(createdResourceUrl, createdId);
+            int createdId = await _orderService.CreateAsync(requestDto);
+            string createdUrl = Url.Action("OrderDetail", "Order", new { id = createdId });
+            return Created(createdUrl, createdId);
+        }
+        catch (OperationException exception)
+        {
+            ModelState.AddModelErrorsFromServiceException(exception);
+            return UnprocessableEntity(exception);
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "CanEditOrder")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateAsync(
+            int id,
+            [FromBody] OrderUpsertRequestDto requestDto)
+    {
+        ValidationResult validationResult;
+        validationResult = _upsertValidator.Validate(
+            requestDto.TransformValues(),
+            options => options.IncludeRuleSets("Update").IncludeRulesNotInRuleSet());
+        if (!validationResult.IsValid)
+        {
+            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            await _orderService.UpdateAsync(id, requestDto);
+            return Ok();
+        }
+        catch (ResourceNotFoundException exception)
+        {
+            ModelState.AddModelErrorsFromServiceException(exception);
+            return NotFound(ModelState);
         }
         catch (AuthorizationException)
         {
@@ -90,36 +120,18 @@ public class TreatmentApiController : ControllerBase
             ModelState.AddModelErrorsFromServiceException(exception);
             return UnprocessableEntity(ModelState);
         }
-        catch (ConcurrencyException)
-        {
-            return Conflict();
-        }
     }
 
-
-    [HttpPut("{id:int}")]
-    [Authorize(Policy = "CanEditTreatment")]
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "CanDeleteOrder")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> TreatmentUpdate(int id, [FromBody] TreatmentUpsertRequestDto requestDto)
+    public async Task<IActionResult> DeleteAsync(int id)
     {
-        // Validate the data from the request.
-        ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues());
-        if (!validationResult.IsValid)
-        {
-            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
-            return BadRequest(ModelState);
-        }
-
-        // Perform the updating operation.
         try
         {
-            await _service.UpdateAsync(id, requestDto);
+            await _orderService.DeleteAsync(id);
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -134,39 +146,7 @@ public class TreatmentApiController : ControllerBase
         catch (OperationException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(exception);
-        }
-        catch (ConcurrencyException)
-        {
-            return Conflict();
-        }
-    }
-
-    [HttpDelete("{id:int}")]
-    [Authorize(Policy = "CanDeleteTreatment")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> TreatmentDelete(int id)
-    {
-        try
-        {
-            await _service.DeleteAsync(id);
-            return Ok();
-        }
-        catch (ResourceNotFoundException exception)
-        {
-            ModelState.AddModelErrorsFromServiceException(exception);
-            return NotFound(ModelState);
-        }
-        catch (AuthorizationException)
-        {
-            return Forbid();
-        }
-        catch (ConcurrencyException)
-        {
-            return Conflict();
+            return UnprocessableEntity(ModelState);
         }
     }
 }

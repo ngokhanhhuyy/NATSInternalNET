@@ -80,7 +80,9 @@ public class AuthorizationService : IAuthorizationService
         return new CustomerAuthorizationResponseDto
         {
             CanEdit = _user.HasPermission(PermissionConstants.EditCustomer),
-            CanDelete = _user.HasPermission(PermissionConstants.DeleteCustomer)
+            CanDelete = _user.HasPermission(PermissionConstants.DeleteCustomer),
+            CanCreateDebt = CanCreateDebt(),
+            CanCreateDebtPayment = CanCreateDebtPayment()
         };
     }
 
@@ -155,7 +157,7 @@ public class AuthorizationService : IAuthorizationService
     {
         return new ExpenseListAuthorizationResponseDto
         {
-            CanCreate = _user.HasPermission(PermissionConstants.CreateExpense)
+            CanCreate = CanCreateExpense()
         };
     }
 
@@ -208,33 +210,17 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Authorization for debts.
-    public DebtListAuthorizationResponseDto GetDebtListAuthorization()
-    {
-        return new DebtListAuthorizationResponseDto
-        {
-            CanCreate = CanCreateDebt()
-        };
-    }
-    
     public DebtAuthorizationResponseDto GetDebtAuthorization(Debt debt)
     {
         return new DebtAuthorizationResponseDto
         {
             CanEdit = CanEditDebt(debt),
             CanDelete = CanDeleteDebt(),
-            CanSetCreatedDateTime = CanSetDebtCreatedDateTime()
+            CanSetCreatedDateTime = CanSetDebtIncurredDateTime()
         };
     }
 
     // Authorization for debt payments.
-    public DebtPaymentListAuthorizationResponseDto GetDebtPaymentListAuthorization()
-    {
-        return new DebtPaymentListAuthorizationResponseDto
-        {
-            CanCreate = CanCreateDebtPayment()
-        };
-    }
-
     public DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment)
     {
         return new DebtPaymentAuthorizationResponseDto
@@ -260,7 +246,8 @@ public class AuthorizationService : IAuthorizationService
         {
             CanEdit = CanEditConsultant(consultant),
             CanDelete = CanDeleteConsultant(),
-            CanSetPaidDateTime = CanSetConsultantPaidDateTime()
+            CanSetPaidDateTime = CanSetConsultantPaidDateTime(),
+            CanAccessUpdateHistories = CanAccessConsultantUpdateHistories()
         };
     }
 
@@ -528,7 +515,7 @@ public class AuthorizationService : IAuthorizationService
         return _user.HasPermission(PermissionConstants.DeleteDebt);
     }
     
-    public bool CanSetDebtCreatedDateTime()
+    public bool CanSetDebtIncurredDateTime()
     {
         return _user.HasPermission(PermissionConstants.SetDebtIncurredDateTime);
     }
@@ -561,7 +548,7 @@ public class AuthorizationService : IAuthorizationService
 
     public bool CanDeleteDebtPayment()
     {
-        return !_user.HasPermission(PermissionConstants.DeleteDebt);
+        return _user.HasPermission(PermissionConstants.DeleteDebtPayment);
     }
 
     public bool CanSetDebtPaymentPaidDateTime()

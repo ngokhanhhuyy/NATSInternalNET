@@ -96,10 +96,8 @@ public class ProductService : IProductService
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             UpdatedDateTime = null,
             StockingQuantity = 0,
-            BrandId = requestDto.Brand == null ? null
-                : requestDto.Brand.Id,
-            CategoryId = requestDto.Category == null ? null
-                : requestDto.Category.Id
+            BrandId = requestDto.Brand?.Id,
+            CategoryId = requestDto.Category?.Id
         };
 
         if (requestDto.ThumbnailFile != null)
@@ -117,9 +115,10 @@ public class ProductService : IProductService
         }
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            _photoService.Delete(product.ThumbnailUrl);
+            if (exception.InnerException is MySqlException sqlException)
             {
-                HandleDeleteOrUpdateException(exception.InnerException as MySqlException);
+                HandleDeleteOrUpdateException(sqlException);
             }
 
             throw;
@@ -144,17 +143,19 @@ public class ProductService : IProductService
         product.VatFactor = requestDto.VatFactor;
         product.IsForRetail = requestDto.IsForRetail;
         product.IsDiscontinued = requestDto.IsDiscontinued;
-        product.CategoryId = requestDto.Category == null ? null : requestDto.Category.Id;
-        product.BrandId = requestDto.Brand == null ? null : requestDto.Brand.Id;
+        product.CategoryId = requestDto.Category?.Id;
+        product.BrandId = requestDto.Brand?.Id;
         product.UpdatedDateTime = DateTime.UtcNow.ToApplicationTime();
 
         // Update the thumbnail if changed.
+        List<string> urlsToBeDeletedWhenFailed = new List<string>();
+        List<string> urlsToBeDeletedWhenSucceeded = new List<string>();
         if (requestDto.ThumbnailChanged)
         {
             // Delete the current thumbnail if exists.
             if (product.ThumbnailUrl != null)
             {
-                _photoService.Delete(product.ThumbnailUrl);
+                urlsToBeDeletedWhenSucceeded.Add(product.ThumbnailUrl);
             }
 
             // Create a new one if the request contains data for it.
@@ -163,6 +164,7 @@ public class ProductService : IProductService
                 string thumbnailUrl = await _photoService
                     .CreateAsync(requestDto.ThumbnailFile, "products", true);
                 product.ThumbnailUrl = thumbnailUrl;
+                urlsToBeDeletedWhenFailed.Add(product.ThumbnailUrl);
             }
         }
 
@@ -170,12 +172,26 @@ public class ProductService : IProductService
         try
         {
             await _context.SaveChangesAsync();
+            
+            // The product can be updated successfully.
+            // Delete the specified thumbnail and associated photos.
+            foreach (string url in urlsToBeDeletedWhenSucceeded)
+            {
+                _photoService.Delete(url);
+            }
         }
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            // Delete the recently added thumbnail and photos.
+            foreach (string url in urlsToBeDeletedWhenFailed)
             {
-                HandleDeleteOrUpdateException(exception.InnerException as MySqlException);
+                _photoService.Delete(url);
+            }
+            
+            // Handle the exception.
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                HandleDeleteOrUpdateException(sqlException);
             }
 
             throw;
@@ -186,21 +202,43 @@ public class ProductService : IProductService
     public async Task DeleteAsync(int id)
     {
         // Fetch the entity from the database and ensure the entity exists.
-        Product product = await _context.Products.FindAsync(id)
-            ?? throw new ResourceNotFoundException(nameof(Product), nameof(id), id.ToString());
+        Product product = await _context.Products
+            .Include(p => p.Photos)
+            .SingleOrDefaultAsync(p => p.Id == id && !p.IsDeleted)
+            ?? throw new ResourceNotFoundException();
+        
+        // Remove the product and all associated photos.
+        _context.Products.Remove(product);
+        
+        foreach (ProductPhoto photo in product.Photos)
+        {
+            _context.ProductPhotos.Remove(photo);
+        }
 
         // Performing deleting operation.
         try
         {
-            _context.Products.Remove(product);
             await _context.SaveChangesAsync();
+            
+            // The product can be deleted successfully.
+            // Delete the thumbnail.
+            if (product.ThumbnailUrl != null)
+            {
+                _photoService.Delete(product.ThumbnailUrl);
+            }
+            
+            // Delete the photos.
+            foreach (ProductPhoto photo in product.Photos)
+            {
+                _photoService.Delete(photo.Url);
+            }
         }
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            if (exception.InnerException is MySqlException sqlException)
             {
                 SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
-                exceptionHandler.Handle(exception.InnerException as MySqlException);
+                exceptionHandler.Handle(sqlException);
                 // Entity is referenced by some other column's entity, perform soft delete instead.
                 if (exceptionHandler.IsDeleteOrUpdateRestricted)
                 {

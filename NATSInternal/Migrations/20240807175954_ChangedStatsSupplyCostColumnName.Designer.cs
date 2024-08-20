@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NATSInternal.Services;
 
@@ -11,9 +12,11 @@ using NATSInternal.Services;
 namespace NATSInternal.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20240807175954_ChangedStatsSupplyCostColumnName")]
+    partial class ChangedStatsSupplyCostColumnName
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -631,7 +634,7 @@ namespace NATSInternal.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedDateTime")
-                        .HasDatabaseName("IX__debts__incurred_datetime");
+                        .HasDatabaseName("IX__debts__created_datetime");
 
                     b.HasIndex("CreatedUserId");
 
@@ -1092,7 +1095,7 @@ namespace NATSInternal.Migrations
                         .HasDatabaseName("IX__orders__is_deleted");
 
                     b.HasIndex("PaidDateTime")
-                        .HasDatabaseName("IX__orders__paid_datetime");
+                        .HasDatabaseName("IX__orders__ordered_datetime");
 
                     b.ToTable("orders", (string)null);
                 });
@@ -1454,11 +1457,11 @@ namespace NATSInternal.Migrations
                     b.HasIndex("CreatedUserId");
 
                     b.HasIndex("IsDeleted")
-                        .HasDatabaseName("IX__supplies__is_deleted");
+                        .HasDatabaseName("IX__supplies__supplied_datetime");
 
                     b.HasIndex("PaidDateTime")
                         .IsUnique()
-                        .HasDatabaseName("UX__supply_paid_datetime");
+                        .HasDatabaseName("UX__supply_supplied_datetime");
 
                     b.ToTable("supplies", (string)null);
                 });

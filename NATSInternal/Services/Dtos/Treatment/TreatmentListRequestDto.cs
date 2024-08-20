@@ -1,6 +1,6 @@
 namespace NATSInternal.Services.Dtos;
 
-public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>
+public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>, ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; }
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
@@ -12,6 +12,9 @@ public class TreatmentListRequestDto : IRequestDto<TreatmentListRequestDto>
     public TreatmentListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
+        DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+        Month ??= currentDateTime.Month;
+        Year ??= currentDateTime.Year;
         return this;
     }
     

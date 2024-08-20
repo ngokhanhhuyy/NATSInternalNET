@@ -7,9 +7,11 @@ public class CustomerListRequestDto : IRequestDto<CustomerListRequestDto>
     public string SearchByContent { get; set; }
     public int Page { get; set; } = 1;
     public int ResultsPerPage { get; set; } = 15;
+    public bool HasRemainingDebtAmountOnly { get; set; }
 
     public CustomerListRequestDto TransformValues()
     {
+        OrderByField = OrderByField?.ToNullIfEmpty();
         SearchByContent = SearchByContent?.ToNullIfEmpty();
         return this;
     }
@@ -19,6 +21,7 @@ public class CustomerListRequestDto : IRequestDto<CustomerListRequestDto>
         LastName,
         FirstName,
         Birthday,
-        CreatedDateTime
+        CreatedDateTime,
+        DebtRemainingAmount
     }
 }

@@ -1,12 +1,12 @@
 ﻿namespace NATSInternal.Services;
 
-/// <inheritdoc />
-public class DebtService : IDebtService
+/// <inheritdoc cref="IDebtService" />
+public class DebtService : LockableEntityService, IDebtService
 {
     private readonly DatabaseContext _context;
     private readonly IStatsService _statsService;
     private readonly IAuthorizationService _authorizationService;
-    
+
     public DebtService(
             DatabaseContext context,
             IStatsService statsService,
@@ -16,77 +16,9 @@ public class DebtService : IDebtService
         _statsService = statsService;
         _authorizationService = authorizationService;
     }
-    
-    /// <inheritdoc />
-    public async Task<DebtListResponseDto> GetListAsync(DebtListRequestDto requestDto)
-    {
-        // Initialize query.
-        IQueryable<Debt> query = _context.Debts;
-        
-        // Filter by fields.
-        switch (requestDto.OrderByField)
-        {
-            case nameof(DebtListRequestDto.FieldOptions.IncurredDateTime):
-                query = requestDto.OrderByAscending
-                    ? query.OrderBy(d => d.IncurredDateTime)
-                        .ThenBy(d => d.Amount)
-                    : query.OrderByDescending(d => d.IncurredDateTime)
-                        .ThenByDescending(d => d.Amount);
-                break;
-            default:
-                query = requestDto.OrderByAscending
-                    ? query.OrderBy(d => d.Amount)
-                        .ThenBy(d => d.IncurredDateTime)
-                    : query.OrderByDescending(d => d.Amount)
-                        .ThenBy(d => d.IncurredDateTime);
-                break;
-        }
-        
-        // Filter by range from if specified in the request.
-        if (requestDto.RangeFrom.HasValue)
-        {
-            DateTime rangeFromDateTime;
-            rangeFromDateTime = new DateTime(requestDto.RangeFrom.Value, new TimeOnly(0, 0, 0));
-            query = query.Where(d => d.CreatedDateTime >= rangeFromDateTime);
-        }
-        
-        // Filter by range to if specified in the request.
-        if (requestDto.RangeTo.HasValue)
-        {
-            DateTime rangeToDateTime;
-            rangeToDateTime = new DateTime(requestDto.RangeTo.Value.AddDays(1), new TimeOnly(0, 0, 0));
-            query = query.Where(d => d.CreatedDateTime < rangeToDateTime);
-        }
 
-        // Filter by not being soft deleted.
-        query = query.Where(o => !o.IsDeleted);
-        
-        // Initialize repsonse dto.
-        DebtListResponseDto responseDto = new DebtListResponseDto
-        {
-            Authorization = _authorizationService.GetDebtListAuthorization()
-        };
-        int resultCount = await query.CountAsync();
-        if (resultCount == 0)
-        {
-            responseDto.PageCount = 0;
-            return responseDto;
-        }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
-        responseDto.Items = await query
-            .Select(d => new DebtBasicResponseDto(
-                d,
-                _authorizationService.GetDebtAuthorization(d)))
-            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
-            .Take(requestDto.ResultsPerPage)
-            .AsSplitQuery()
-            .ToListAsync();
-        
-        return responseDto;
-    }
-    
     /// <inheritdoc />
-    public async Task<DebtDetailResponseDto> GetDetailAsync(int id)
+    public async Task<DebtDetailResponseDto> GetDetailAsync(int customerId, int debtId)
     {
         // Initialize query.
         IQueryable<Debt> query = _context.Debts
@@ -104,32 +36,32 @@ public class DebtService : IDebtService
         // Fetch the entity with the given id and ensure it exists in the database.
         Debt debt = await query
             .AsSplitQuery()
-            .SingleOrDefaultAsync(d => d.Id == id && !d.IsDeleted)
-            ?? throw new ResourceNotFoundException(
-                nameof(Debt),
-                nameof(id),
-                id.ToString());
+            .Where(d => d.CustomerId == customerId)
+            .Where(d => d.Id == debtId)
+            .Where(d => !d.IsDeleted)
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException();
         
         return new DebtDetailResponseDto(
             debt,
             _authorizationService.GetDebtAuthorization(debt),
             mapUpdateHistories: shouldIncludeUpdateHistories);
-}
+    }
     
     /// <inheritdoc />
-    public async Task<int> CreateAsync(DebtUpsertRequestDto requestDto)
+    public async Task<int> CreateAsync(int customerId, DebtUpsertRequestDto requestDto)
     {
-        // Determining the created datetime.
-        DateTime createdDateTime = DateTime.UtcNow.ToApplicationTime();
+        // Determining the incurred datetime.
+        DateTime incurredDateTime = DateTime.UtcNow.ToApplicationTime();
         if (requestDto.IncurredDateTime.HasValue)
         {
             // Check if the current user has permission to specify the created datetime for the debt.
-            if (!_authorizationService.CanSetDebtCreatedDateTime())
+            if (!_authorizationService.CanSetDebtIncurredDateTime())
             {
                 throw new AuthorizationException();
             }
 
-            createdDateTime = requestDto.IncurredDateTime.Value;
+            incurredDateTime = requestDto.IncurredDateTime.Value;
         }
         
         // Initialize debt entity.
@@ -137,8 +69,8 @@ public class DebtService : IDebtService
         {
             Amount = requestDto.Amount,
             Note = requestDto.Note,
-            CreatedDateTime = createdDateTime,
-            CustomerId = requestDto.CustomerId,
+            IncurredDateTime = incurredDateTime,
+            CustomerId = customerId,
             CreatedUserId = _authorizationService.GetUserId()
         };
         _context.Debts.Add(debt);
@@ -165,20 +97,23 @@ public class DebtService : IDebtService
         catch (DbUpdateException exception)
         when (exception.InnerException is MySqlException sqlException)
         {
-            HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debt.CreatedUserId);
+            HandleCreateOrUpdateException(sqlException, debt.CreatedUserId);
             throw;
         }
     }
     
     /// <inheritdoc />
-    public async Task UpdateAsync(int id, DebtUpsertRequestDto requestDto)
+    public async Task UpdateAsync(int customerId, int debtId, DebtUpsertRequestDto requestDto)
     {
         // Fetch and ensure the entity with the given id exists in the database.
         Debt debt = await _context.Debts
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
             .Include(d => d.CreatedUser)
-            .SingleOrDefaultAsync(d => d.Id == id && !d.IsDeleted)
-            ?? throw new ResourceNotFoundException(nameof(Debt), nameof(id), id.ToString());
+            .Where(d => d.CustomerId == customerId)
+            .Where(d => d.Id == debtId)
+            .Where(d => !d.IsDeleted)
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException();
         
         // Check if the current user has permission to edit the debt.
         if (!_authorizationService.CanEditDebt(debt))
@@ -199,7 +134,7 @@ public class DebtService : IDebtService
         if (requestDto.IncurredDateTime.HasValue)
         {
             // Check if the current user has permission to change the created datetime.
-            if (!_authorizationService.CanSetDebtCreatedDateTime())
+            if (!_authorizationService.CanSetDebtIncurredDateTime())
             {
                 throw new AuthorizationException();
             }
@@ -223,7 +158,7 @@ public class DebtService : IDebtService
                 if (requestDto.Amount != debt.Amount)
                 {
                     long amountDifference = requestDto.Amount - debt.Amount;
-                    if (debt.Customer.RemainingDebtAmount + amountDifference < 0)
+                    if (debt.Customer.DebtRemainingAmount + amountDifference < 0)
                     {
                         throw new OperationException(
                             nameof(requestDto.Amount),
@@ -289,7 +224,7 @@ public class DebtService : IDebtService
             // Handling data exception.
             if (exception.InnerException is MySqlException sqlException)
             {
-                HandleCreateOrUpdateException(sqlException, requestDto.CustomerId, debt.CreatedUserId);
+                HandleCreateOrUpdateException(sqlException, debt.CreatedUserId);
             }
             
             throw;
@@ -297,16 +232,27 @@ public class DebtService : IDebtService
     }
     
     /// <inheritdoc />
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int customerId, int debtId)
     {
         // Fetch and ensure the entity with the given id exists in the database.
         Debt debt = await _context.Debts
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
-            .SingleOrDefaultAsync(d => d.Id == id && !d.IsDeleted)
-            ?? throw new ResourceNotFoundException(nameof(Debt), nameof(id), id.ToString());
+            .Where(d => d.CustomerId == customerId)
+            .Where(d => d.Id == debtId)
+            .Where(d => !d.IsDeleted)
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException();
+        
+        // Ensure the user has permission to delete this debt.
+        if (!_authorizationService.CanDeleteDebt())
+        {
+            throw new AuthorizationException();
+        }
+        
+        //
         
         // Verify that if this debt is deleted, will the remaining debt amount be negative.
-        if (debt.Customer.RemainingDebtAmount - debt.Amount < 0)
+        if (debt.Customer.DebtRemainingAmount - debt.Amount < 0)
         {
             throw new OperationException(ErrorMessages.NegativeRemainingDebtAmount);
         }
@@ -362,36 +308,32 @@ public class DebtService : IDebtService
     /// Handle exception thrown by the database during the creating or updating operation.
     /// </summary>
     /// <param name="exception">The exception thrown by the database.</param>
-    /// <param name="customerId">The customer id of the debt.</param>
     /// <param name="userId">The user id of the debt.</param>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the customer with the specified id doesn't exist.
+    /// </exception>
     /// <exception cref="OperationException">
     /// Thrown when there is any exception which is related to the data during the operation.
     /// </exception>
     private void HandleCreateOrUpdateException(
             MySqlException exception,
-            int customerId,
             int userId)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
         if (exceptionHandler.IsForeignKeyNotFound)
         {
-            string errorMessage = ErrorMessages.NotFoundByProperty
-                .ReplacePropertyName(DisplayNames.Id);
             switch (exceptionHandler.ViolatedFieldName)
             {
                 case "customer_id":
-                    errorMessage = errorMessage
-                        .ReplaceResourceName(DisplayNames.Customer)
-                        .ReplaceAttemptedValue(customerId.ToString());
-                    break;
+                    throw new ResourceNotFoundException();
                 default:
-                    errorMessage = errorMessage
+                    string errorMessage = ErrorMessages.NotFoundByProperty
+                        .ReplacePropertyName(DisplayNames.Id)
                         .ReplaceResourceName(DisplayNames.User)
                         .ReplaceAttemptedValue(userId.ToString());
-                    break;
+                    throw new OperationException("id", errorMessage);
             }
-            throw new OperationException("id", errorMessage);
         }
     }
     

@@ -1,30 +1,29 @@
-namespace NATSInternal.Controllers;
+﻿namespace NATSInternal.Controllers.Api;
 
-[Route("Api/Debt")]
+[Route("/Api/Supply")]
 [ApiController]
-[Authorize]
-public class DebtApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public class SupplyController : ControllerBase
 {
-    private readonly IDebtService _service;
-    private readonly IValidator<DebtListRequestDto> _listValidator;
-    private readonly IValidator<DebtUpsertRequestDto> _upsertValidator;
-    
-    public DebtApiController(
-            IDebtService service,
-            IValidator<DebtListRequestDto> listValidator,
-            IValidator<DebtUpsertRequestDto> upsertValidator)
+    private readonly ISupplyService _service;
+    private readonly IValidator<SupplyListRequestDto> _listValidator;
+    private readonly IValidator<SupplyUpsertRequestDto> _upsertValidator;
+
+    public SupplyController(
+            ISupplyService service,
+            IValidator<SupplyListRequestDto> listValidator,
+            IValidator<SupplyUpsertRequestDto> validator)
     {
         _service = service;
         _listValidator = listValidator;
-        _upsertValidator = upsertValidator;
+        _upsertValidator = validator;
     }
-    
-    [HttpGet]
+
+    [HttpGet("List")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DebtList([FromQuery] DebtListRequestDto requestDto)
+    public async Task<IActionResult> SupplyList([FromQuery] SupplyListRequestDto requestDto)
     {
-        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _listValidator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -32,19 +31,20 @@ public class DebtApiController : ControllerBase
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
-        // Fetch data.
-        return Ok(await _service.GetListAsync(requestDto));
+
+        SupplyListResponseDto responseDto = await _service.GetListAsync(requestDto);
+        return Ok(responseDto);
     }
-    
-    [HttpGet("{id:int}")]
+
+    [HttpGet("{id:int}/Detail")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DebtDetail(int id)
+    public async Task<IActionResult> SupplyDetail(int id)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(id));
+            SupplyDetailResponseDto responseDto = await _service.GetDetailAsync(id);
+            return Ok(responseDto);
         }
         catch (ResourceNotFoundException exception)
         {
@@ -52,62 +52,54 @@ public class DebtApiController : ControllerBase
             return NotFound(ModelState);
         }
     }
-    
-    [HttpPost]
-    [Authorize(Policy = "CanCreateDebt")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+
+    [HttpPost("Create")]
+    [Authorize(Policy = "CanCreateSupply")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtCreate([FromBody] DebtUpsertRequestDto requestDto)
+    public async Task<IActionResult> SupplyCreate([FromBody] SupplyUpsertRequestDto requestDto)
     {
-        // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues());
+        ValidationResult validationResult = _upsertValidator
+            .Validate(requestDto.TransformValues(), options =>
+                options.IncludeRuleSets("Create").IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
-        // Perform the creating operation.
+
         try
         {
             int createdId = await _service.CreateAsync(requestDto);
-            string createdResourceUrl = Url.Action("DebtDetail", "DebtApi", new { id = createdId });
+            string createdResourceUrl = Url.Action("SupplyDetail", new { id = createdId });
             return Created(createdResourceUrl, createdId);
-        }
-        catch (AuthorizationException)
-        {
-            return Forbid();
         }
         catch (OperationException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(exception);
+            return UnprocessableEntity(ModelState);
         }
     }
-    
-    [HttpPut("{id:int}")]
-    [Authorize(Policy = "CanEditDebt")]
+
+    [HttpPut("{id:int}/Update")]
+    [Authorize(Policy = "CanEditSupply")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtUpdate(int id, [FromBody] DebtUpsertRequestDto requestDto)
+    public async Task<IActionResult> SupplyUpdate(int id, [FromBody] SupplyUpsertRequestDto requestDto)
     {
-        // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues());
+        ValidationResult validationResult = _upsertValidator
+            .Validate(requestDto.TransformValues(), options =>
+                options.IncludeRuleSets("Update").IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
-        // Perform the updating operation.
+
         try
         {
             await _service.UpdateAsync(id, requestDto);
@@ -125,22 +117,17 @@ public class DebtApiController : ControllerBase
         catch (OperationException exception)
         {
             ModelState.AddModelErrorsFromServiceException(exception);
-            return UnprocessableEntity(exception);
-        }
-        catch (ConcurrencyException)
-        {
-            return Conflict();
+            return UnprocessableEntity(ModelState);
         }
     }
-    
-    [HttpDelete("{id:int}")]
-    [Authorize(Policy = "CanDeleteDebt")]
+
+    [HttpDelete("{id:int}/Delete")]
+    [Authorize(Policy = "CanDeleteSupply")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtDelete(int id)
+    public async Task<IActionResult> SupplyDelete(int id)
     {
         try
         {
@@ -155,10 +142,6 @@ public class DebtApiController : ControllerBase
         {
             ModelState.AddModelErrorsFromServiceException(exception);
             return NotFound(ModelState);
-        }
-        catch (ConcurrencyException)
-        {
-            return Conflict();
         }
         catch (OperationException exception)
         {

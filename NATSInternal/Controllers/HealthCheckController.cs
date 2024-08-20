@@ -1,12 +1,12 @@
-﻿namespace NATSInternal.Controllers.Api;
+﻿namespace NATSInternal.Controllers;
 
 [Route("Api/HealthCheck")]
 [ApiController]
-public class HealthCheckApiController : ControllerBase
+public class HealthCheckController : ControllerBase
 {
     private readonly IStatsTaskService _statsTaskService;
 
-    public HealthCheckApiController(IStatsTaskService statsTaskService)
+    public HealthCheckController(IStatsTaskService statsTaskService)
     {
         _statsTaskService = statsTaskService;
     }
