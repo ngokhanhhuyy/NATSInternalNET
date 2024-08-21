@@ -6,7 +6,7 @@ public class ConsultantService : LockableEntityService, IConsultantService
     private readonly DatabaseContext _context;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
-    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public ConsultantService(
             DatabaseContext context,
