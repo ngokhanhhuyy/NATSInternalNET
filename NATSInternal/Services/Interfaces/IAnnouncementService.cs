@@ -14,4 +14,37 @@ public interface IAnnouncementService
     /// </param>
     /// <returns>The list of announcements.</returns>
     Task<AnnouncementListResponseDto> GetListAsync(AnnouncementListRequestDto requestDto);
+
+    /// <summary>
+    /// Get the fully detailed information of the announcement with the
+    /// specified id.
+    /// </summary>
+    /// <param name="id">
+    /// The id of the announcement to be retrieve.
+    /// </param>
+    /// <returns>
+    /// An object containing the information of the announcement.
+    /// </returns>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the announcement cannot be found.
+    /// </exception>
+    Task<AnnouncementResponseDto> GetDetailAsync(int id);
+
+    /// <summary>
+    /// Create a new announcement using the data provided from
+    /// the request.
+    /// </summary>
+    /// <param name="requestDto">
+    /// An object containing the data for a new announcement, provided
+    /// from the request.
+    /// </param>
+    /// <returns>
+    /// The id of the created announcement.
+    /// </returns>
+    /// <exception cref="ConcurrencyException">
+    /// Thrown when there is some concurrent conflict during the operation.
+    /// </exception>
+    Task<int> CreateAsync(AnnouncementUpsertRequestDto requestDto);
+
+    Task UpdateAsync(int id, AnnouncementUpsertRequestDto requestDto);
 }

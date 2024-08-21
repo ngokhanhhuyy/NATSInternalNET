@@ -9,7 +9,11 @@ public class Announcement
 
     [Column("category")]
     [Required]
-    public AnnouncementCategory Category { get; set; } = AnnouncementCategory.Announcement;
+    public AnnouncementCategory Category
+    {
+        get;
+        set;
+    } = AnnouncementCategory.Announcement;
 
     [Column("title")]
     [Required]
@@ -29,6 +33,10 @@ public class Announcement
     [Required]
     public DateTime EndingDateTime { get; set; }
 
+    [Column("created_datetime")]
+    [Required]
+    public DateTime CreatedDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
+
     // Foreign keys
     [Column("created_user_id")]
     public int CreatedUserId { get; set; }
@@ -39,5 +47,4 @@ public class Announcement
 
     // Navigation properties
     public virtual User CreatedUser { get; set; }
-    public virtual List<User> ReadUsers { get; set; }
 }

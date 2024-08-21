@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace NATSInternal.Services;
 
 /// <inheritdoc />
@@ -23,19 +21,9 @@ public class AnnouncementService : IAnnouncementService
         // Initialize query statement.
         IQueryable<Announcement> query = _context.Announcements
             .Include(a => a.CreatedUser)
-            .Include(a => a.ReadUsers);
-
-        // Filter by new announcements only if specified.
-        if (requestDto.NewAnnouncementsOnly)
-        {
-            int thisUserId = _authorizationService.GetUserId();
-            query = query.Where(
-                a => !a.ReadUsers.Select(ru => ru.Id).Contains(thisUserId));
-        }
-
-        // Order the results.
-        query = query.OrderByDescending(a => a.StartingDateTime)
-            .ThenByDescending(a => a.EndingDateTime);
+            .OrderByDescending(a => a.StartingDateTime)
+                .ThenByDescending(a => a.EndingDateTime)
+                .ThenByDescending(a => a.CreatedDateTime);
 
         // Initialize response dto.
         AnnouncementListResponseDto responseDto = new AnnouncementListResponseDto();
@@ -57,5 +45,97 @@ public class AnnouncementService : IAnnouncementService
             .ToListAsync();
 
         return responseDto;
+    }
+
+    /// <inheritdoc />
+    public async Task<AnnouncementResponseDto> GetDetailAsync(int id)
+    {
+        return await _context.Announcements
+            .Include(a => a.CreatedUser)
+            .Where(a => a.Id == id)
+            .Select(a => new AnnouncementResponseDto(a))
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException();
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CreateAsync(AnnouncementUpsertRequestDto requestDto)
+    {
+        // Initialize the entity.
+        Announcement announcement = new Announcement
+        {
+            Category = requestDto.Category,
+            Title = requestDto.Title,
+            Content = requestDto.Content,
+            StartingDateTime = requestDto.StartingDateTime,
+            EndingDateTime = requestDto.StartingDateTime
+                .AddMinutes(requestDto.IntervalInMinutes),
+            CreatedUserId = _authorizationService.GetUserId()
+        };
+        _context.Announcements.Add(announcement);
+
+        // Perform the creating opeartion.
+        try
+        {
+            await _context.SaveChangesAsync();
+            return announcement.Id;
+        }
+        catch (DbUpdateException exception)
+        when (exception.InnerException is MySqlException sqlException)
+        {
+            HandleCreateOrUpdateException(sqlException);
+
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateAsync(int id, AnnouncementUpsertRequestDto requestDto)
+    {
+        // Fetch the entity from the database and ensure it exists.
+        Announcement announcement = await _context.Announcements
+            .SingleOrDefaultAsync(a => a.Id == id)
+            ?? throw new ResourceNotFoundException();
+
+        // Updating the entity's properties.
+        announcement.Category = requestDto.Category;
+        announcement.Title = requestDto.Title;
+        announcement.Content = requestDto.Content;
+        announcement.StartingDateTime = requestDto.StartingDateTime;
+        announcement.EndingDateTime = requestDto.StartingDateTime
+            .AddMinutes(requestDto.IntervalInMinutes);
+        
+        // Save changes.
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        when (exception.InnerException is MySqlException sqlException)
+        {
+            HandleCreateOrUpdateException(sqlException);
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Handle the exception thrown from the database during the creating
+    /// or updating operation and convert it into the appropriate exception.
+    /// </summary>
+    /// <param name="exception">
+    /// The exception thrown by the database.
+    /// </param>
+    /// <exception cref="ConcurrencyException">
+    /// Thrown when there is some concurrent conflict during the operation.
+    /// </exception>
+    private void HandleCreateOrUpdateException(MySqlException exception)
+    {
+        SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
+        exceptionHandler.Handle(exception);
+        if (exceptionHandler.IsForeignKeyNotFound)
+        {
+            throw new ConcurrencyException();
+        }
     }
 }

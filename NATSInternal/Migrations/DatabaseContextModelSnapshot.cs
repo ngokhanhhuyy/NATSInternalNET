@@ -147,6 +147,10 @@ namespace NATSInternal.Migrations
                         .HasColumnType("varchar(5000)")
                         .HasColumnName("content");
 
+                    b.Property<int>("CreatedUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_user_id");
+
                     b.Property<DateTime>("EndingDateTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("ending_datetime");
@@ -166,15 +170,28 @@ namespace NATSInternal.Migrations
                         .HasColumnType("varchar(80)")
                         .HasColumnName("title");
 
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedUserId");
+
+                    b.ToTable("announcements", (string)null);
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.AnnouncementReadUser", b =>
+                {
+                    b.Property<int>("AnnouncementId")
+                        .HasColumnType("int")
+                        .HasColumnName("announcement_id");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int")
                         .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("AnnouncementId", "UserId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("announcements", (string)null);
+                    b.ToTable("announcement_read_users", (string)null);
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Brand", b =>
@@ -1041,6 +1058,62 @@ namespace NATSInternal.Migrations
                         .HasDatabaseName("UX_monthly_stats__recorded_month__recorded_year");
 
                     b.ToTable("monthly_stats", (string)null);
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("datetime");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int")
+                        .HasColumnName("notification_type");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.NotificationReadUser", b =>
+                {
+                    b.Property<int>("ReadNotificationId")
+                        .HasColumnType("int")
+                        .HasColumnName("read_notification_id");
+
+                    b.Property<int>("ReadUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("read_user_id");
+
+                    b.HasKey("ReadNotificationId", "ReadUserId");
+
+                    b.HasIndex("ReadUserId");
+
+                    b.ToTable("notification_read_users", (string)null);
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.NotificationReceivedUser", b =>
+                {
+                    b.Property<int>("ReceivedNotificationId")
+                        .HasColumnType("int")
+                        .HasColumnName("received_notification_id");
+
+                    b.Property<int>("ReceivedUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("received_user_id");
+
+                    b.HasKey("ReceivedNotificationId", "ReceivedUserId");
+
+                    b.HasIndex("ReceivedUserId");
+
+                    b.ToTable("notification_received_users", (string)null);
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Order", b =>
@@ -2004,14 +2077,33 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Announcement", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
-                        .WithMany("CreateAnnouncements")
-                        .HasForeignKey("UserId")
+                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                        .WithMany("CreatedAnnouncements")
+                        .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("FK__announcements__users__user_id");
+                        .HasConstraintName("FK__announcements__created_users__created_user_id");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.AnnouncementReadUser", b =>
+                {
+                    b.HasOne("NATSInternal.Services.Entities.Announcement", "Announcement")
+                        .WithMany()
+                        .HasForeignKey("AnnouncementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NATSInternal.Services.Entities.User", "ReadUser")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Announcement");
+
+                    b.Navigation("ReadUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Brand", b =>
@@ -2235,6 +2327,48 @@ namespace NATSInternal.Migrations
                     b.Navigation("Expense");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.NotificationReadUser", b =>
+                {
+                    b.HasOne("NATSInternal.Services.Entities.Notification", "ReadNotification")
+                        .WithMany()
+                        .HasForeignKey("ReadNotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__notification_read_users__users__read_notification_id");
+
+                    b.HasOne("NATSInternal.Services.Entities.User", "ReadUser")
+                        .WithMany()
+                        .HasForeignKey("ReadUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__notification_read_users__users__read_user_id");
+
+                    b.Navigation("ReadNotification");
+
+                    b.Navigation("ReadUser");
+                });
+
+            modelBuilder.Entity("NATSInternal.Services.Entities.NotificationReceivedUser", b =>
+                {
+                    b.HasOne("NATSInternal.Services.Entities.Notification", "ReceivedNotification")
+                        .WithMany()
+                        .HasForeignKey("ReceivedNotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__notification_received_users__users__received_notification_id");
+
+                    b.HasOne("NATSInternal.Services.Entities.User", "ReceivedUser")
+                        .WithMany()
+                        .HasForeignKey("ReceivedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__notification_received_users__users__received_user_id");
+
+                    b.Navigation("ReceivedNotification");
+
+                    b.Navigation("ReceivedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Order", b =>
@@ -2642,11 +2776,11 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.User", b =>
                 {
-                    b.Navigation("CreateAnnouncements");
-
                     b.Navigation("ConsultantUpdateHistories");
 
                     b.Navigation("Consultants");
+
+                    b.Navigation("CreatedAnnouncements");
 
                     b.Navigation("CreatedCustomers");
 

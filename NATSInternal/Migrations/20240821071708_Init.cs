@@ -61,7 +61,7 @@ namespace NATSInternal.Migrations
                     debt_amount = table.Column<long>(type: "bigint", nullable: false),
                     debt_paid_amount = table.Column<long>(type: "bigint", nullable: false),
                     shipment_cost = table.Column<long>(type: "bigint", nullable: false),
-                    supply_expense = table.Column<long>(type: "bigint", nullable: false),
+                    supply_cost = table.Column<long>(type: "bigint", nullable: false),
                     utilities_expenses = table.Column<long>(type: "bigint", nullable: false),
                     equipment_expenses = table.Column<long>(type: "bigint", nullable: false),
                     office_expense = table.Column<long>(type: "bigint", nullable: false),
@@ -75,6 +75,21 @@ namespace NATSInternal.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_monthly_stats", x => x.id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "notifications",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    notification_type = table.Column<int>(type: "int", nullable: false),
+                    datetime = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_notifications", x => x.id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -281,7 +296,7 @@ namespace NATSInternal.Migrations
                     debt_amount = table.Column<long>(type: "bigint", nullable: false),
                     debt_paid_amount = table.Column<long>(type: "bigint", nullable: false),
                     shipment_cost = table.Column<long>(type: "bigint", nullable: false),
-                    supply_expense = table.Column<long>(type: "bigint", nullable: false),
+                    supply_cost = table.Column<long>(type: "bigint", nullable: false),
                     utilities_expenses = table.Column<long>(type: "bigint", nullable: false),
                     equipment_expenses = table.Column<long>(type: "bigint", nullable: false),
                     office_expense = table.Column<long>(type: "bigint", nullable: false),
@@ -341,15 +356,15 @@ namespace NATSInternal.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     starting_datetime = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     ending_datetime = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    user_id = table.Column<int>(type: "int", nullable: false),
+                    created_user_id = table.Column<int>(type: "int", nullable: false),
                     RowVersion = table.Column<DateTime>(type: "timestamp(6)", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_announcements", x => x.id);
                     table.ForeignKey(
-                        name: "FK__announcements__users__user_id",
-                        column: x => x.user_id,
+                        name: "FK__announcements__created_users__created_user_id",
+                        column: x => x.created_user_id,
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
@@ -450,6 +465,56 @@ namespace NATSInternal.Migrations
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "notification_read_users",
+                columns: table => new
+                {
+                    read_notification_id = table.Column<int>(type: "int", nullable: false),
+                    read_user_id = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_notification_read_users", x => new { x.read_notification_id, x.read_user_id });
+                    table.ForeignKey(
+                        name: "FK__notification_read_users__users__read_notification_id",
+                        column: x => x.read_notification_id,
+                        principalTable: "notifications",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK__notification_read_users__users__read_user_id",
+                        column: x => x.read_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "notification_received_users",
+                columns: table => new
+                {
+                    received_notification_id = table.Column<int>(type: "int", nullable: false),
+                    received_user_id = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_notification_received_users", x => new { x.received_notification_id, x.received_user_id });
+                    table.ForeignKey(
+                        name: "FK__notification_received_users__users__received_notification_id",
+                        column: x => x.received_notification_id,
+                        principalTable: "notifications",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK__notification_received_users__users__received_user_id",
+                        column: x => x.received_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -568,6 +633,31 @@ namespace NATSInternal.Migrations
                         principalTable: "product_categories",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "announcement_read_users",
+                columns: table => new
+                {
+                    announcement_id = table.Column<int>(type: "int", nullable: false),
+                    user_id = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_announcement_read_users", x => new { x.announcement_id, x.user_id });
+                    table.ForeignKey(
+                        name: "FK_announcement_read_users_announcements_announcement_id",
+                        column: x => x.announcement_id,
+                        principalTable: "announcements",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_announcement_read_users_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -1197,9 +1287,14 @@ namespace NATSInternal.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
-                name: "IX_announcements_user_id",
-                table: "announcements",
+                name: "IX_announcement_read_users_user_id",
+                table: "announcement_read_users",
                 column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_announcements_created_user_id",
+                table: "announcements",
+                column: "created_user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_brands_country_id",
@@ -1326,7 +1421,7 @@ namespace NATSInternal.Migrations
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX__debts__created_datetime",
+                name: "IX__debts__incurred_datetime",
                 table: "debts",
                 column: "created_datetime");
 
@@ -1394,6 +1489,16 @@ namespace NATSInternal.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_notification_read_users_read_user_id",
+                table: "notification_read_users",
+                column: "read_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_notification_received_users_received_user_id",
+                table: "notification_received_users",
+                column: "received_user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_order_items_order_id",
                 table: "order_items",
                 column: "order_id");
@@ -1440,7 +1545,7 @@ namespace NATSInternal.Migrations
                 column: "is_deleted");
 
             migrationBuilder.CreateIndex(
-                name: "IX__orders__ordered_datetime",
+                name: "IX__orders__paid_datetime",
                 table: "orders",
                 column: "paid_datetime");
 
@@ -1499,7 +1604,7 @@ namespace NATSInternal.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX__supplies__supplied_datetime",
+                name: "IX__supplies__is_deleted",
                 table: "supplies",
                 column: "is_deleted");
 
@@ -1509,7 +1614,7 @@ namespace NATSInternal.Migrations
                 column: "created_user_id");
 
             migrationBuilder.CreateIndex(
-                name: "UX__supply_supplied_datetime",
+                name: "UX__supply_paid_datetime",
                 table: "supplies",
                 column: "paid_datetime",
                 unique: true);
@@ -1626,7 +1731,7 @@ namespace NATSInternal.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "announcements");
+                name: "announcement_read_users");
 
             migrationBuilder.DropTable(
                 name: "consultant_update_histories");
@@ -1645,6 +1750,12 @@ namespace NATSInternal.Migrations
 
             migrationBuilder.DropTable(
                 name: "expense_update_histories");
+
+            migrationBuilder.DropTable(
+                name: "notification_read_users");
+
+            migrationBuilder.DropTable(
+                name: "notification_received_users");
 
             migrationBuilder.DropTable(
                 name: "order_items");
@@ -1692,6 +1803,9 @@ namespace NATSInternal.Migrations
                 name: "user_tokens");
 
             migrationBuilder.DropTable(
+                name: "announcements");
+
+            migrationBuilder.DropTable(
                 name: "consultants");
 
             migrationBuilder.DropTable(
@@ -1705,6 +1819,9 @@ namespace NATSInternal.Migrations
 
             migrationBuilder.DropTable(
                 name: "expenses");
+
+            migrationBuilder.DropTable(
+                name: "notifications");
 
             migrationBuilder.DropTable(
                 name: "supply_items");

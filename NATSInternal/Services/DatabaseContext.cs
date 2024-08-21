@@ -506,23 +506,10 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
             e.ToTable("announcements");
             e.HasKey(a => a.Id);
             e.HasOne(a => a.CreatedUser)
-                .WithMany(u => u.CreateAnnouncements)
+                .WithMany(u => u.CreatedAnnouncements)
                 .HasForeignKey(a => a.CreatedUserId)
                 .HasConstraintName("FK__announcements__created_users__created_user_id")
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasMany(a => a.ReadUsers)
-                .WithMany(u => u.ReadAnnouncements)
-                .UsingEntity<AnnouncementReadUser>(
-                    announcementReadUser => announcementReadUser
-                        .HasOne(aru => aru.ReadUser)
-                        .WithMany()
-                        .HasForeignKey(aru => aru.UserId)
-                        .HasConstraintName("FK__announcement_read_users__users__user_id"),
-                    announcementReadUser => announcementReadUser
-                        .HasOne(aru => aru.Announcement)
-                        .WithMany()
-                        .HasForeignKey(aru => aru.AnnouncementId)
-                        .HasConstraintName("FK__announcement_read_users__announcements__announcement_id"));
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
         });

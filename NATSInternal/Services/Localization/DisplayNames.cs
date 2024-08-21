@@ -115,7 +115,7 @@ public static class DisplayNames
     public const string RecordedYear = "Năm thống kê";
     public const string RecordedMonthAndYear = "Tháng và năm thông kê";
     public const string IncurredDateTime = "Thời gian chịu";
-
+    public const string IntervalInMinutes = "Số phút hiệu lực";
 
     private static readonly Dictionary<string, string> names;
 
