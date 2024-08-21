@@ -93,7 +93,10 @@ public class User : IdentityUser<int>
     public virtual List<DebtUpdateHistory> DebtUpdateHistories { get; set; }
     public virtual List<DebtPayment> DebtPayments { get; set; }
     public virtual List<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
-    public virtual List<Announcement> Announcements { get; set; }
+    public virtual List<Announcement> CreateAnnouncements { get; set; }
+    public virtual List<Announcement> ReadAnnouncements { get; set; }
+    public virtual List<Notification> ReceivedNotifications { get; set; }
+    public virtual List<Notification> ReadNotifications { get; set; }
 
     // Properties for convinience.
     [NotMapped]

@@ -39,4 +39,5 @@ public class Announcement
 
     // Navigation properties
     public virtual User CreatedUser { get; set; }
+    public virtual List<User> ReadUsers { get; set; }
 }

@@ -90,6 +90,7 @@ public class TreatmentService : LockableEntityService, ITreatmentService
             responseDto.PageCount = 0;
             return responseDto;
         }
+
         responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(t => new TreatmentBasicResponseDto(

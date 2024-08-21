@@ -32,6 +32,10 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<DebtPayment> DebtPayments { get; set; }
     public DbSet<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
+    public DbSet<AnnouncementReadUser> AnnouncementReadUsers { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NotificationReceivedUser> NotificationReceivedUsers { get; set; }
+    public DbSet<NotificationReadUser> NotificationReadUsers { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
     public DbSet<DailyStats> DailyStats { get; set; }
     public DbSet<MonthlyStats> MonthlyStats { get; set; }
@@ -502,12 +506,71 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
             e.ToTable("announcements");
             e.HasKey(a => a.Id);
             e.HasOne(a => a.CreatedUser)
-                .WithMany(u => u.Announcements)
+                .WithMany(u => u.CreateAnnouncements)
                 .HasForeignKey(a => a.CreatedUserId)
-                .HasConstraintName("FK__announcements__users__user_id")
+                .HasConstraintName("FK__announcements__created_users__created_user_id")
                 .OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(a => a.ReadUsers)
+                .WithMany(u => u.ReadAnnouncements)
+                .UsingEntity<AnnouncementReadUser>(
+                    announcementReadUser => announcementReadUser
+                        .HasOne(aru => aru.ReadUser)
+                        .WithMany()
+                        .HasForeignKey(aru => aru.UserId)
+                        .HasConstraintName("FK__announcement_read_users__users__user_id"),
+                    announcementReadUser => announcementReadUser
+                        .HasOne(aru => aru.Announcement)
+                        .WithMany()
+                        .HasForeignKey(aru => aru.AnnouncementId)
+                        .HasConstraintName("FK__announcement_read_users__announcements__announcement_id"));
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
+        });
+        modelBuilder.Entity<AnnouncementReadUser>(e =>
+        {
+            e.ToTable("announcement_read_users");
+            e.HasKey(aru => new { aru.AnnouncementId, aru.UserId });
+        });
+        modelBuilder.Entity<Notification>(e =>
+        {
+            e.ToTable("notifications");
+            e.HasKey(n => n.Id);
+            e.HasMany(n => n.ReceivedUsers)
+                .WithMany(u => u.ReceivedNotifications)
+                .UsingEntity<NotificationReceivedUser>(
+                    notificationReceivedUser => notificationReceivedUser
+                        .HasOne(nru => nru.ReceivedUser)
+                        .WithMany()
+                        .HasForeignKey(nru => nru.ReceivedUserId)
+                        .HasConstraintName("FK__notification_received_users__users__received_user_id"),
+                    notificationReceivedUser => notificationReceivedUser
+                        .HasOne(nru => nru.ReceivedNotification)
+                        .WithMany()
+                        .HasForeignKey(nru => nru.ReceivedNotificationId)
+                        .HasConstraintName("FK__notification_received_users__users__received_notification_id"));
+            e.HasMany(n => n.ReadUsers)
+                .WithMany(u => u.ReadNotifications)
+                .UsingEntity<NotificationReadUser>(
+                    notificationReadUser => notificationReadUser
+                        .HasOne(nru => nru.ReadUser)
+                        .WithMany()
+                        .HasForeignKey(nru => nru.ReadUserId)
+                        .HasConstraintName("FK__notification_read_users__users__read_user_id"),
+                    notificationReceivedUser => notificationReceivedUser
+                        .HasOne(nru => nru.ReadNotification)
+                        .WithMany()
+                        .HasForeignKey(nru => nru.ReadNotificationId)
+                        .HasConstraintName("FK__notification_read_users__users__read_notification_id"));
+        });
+        modelBuilder.Entity<NotificationReceivedUser>(e =>
+        {
+            e.ToTable("notification_received_users");
+            e.HasKey(nru => new { nru.ReceivedNotificationId, nru.ReceivedUserId });
+        });
+        modelBuilder.Entity<NotificationReadUser>(e =>
+        {
+            e.ToTable("notification_read_users");
+            e.HasKey(nru => new { nru.ReadNotificationId, nru.ReadUserId });
         });
         modelBuilder.Entity<UserRefreshToken>(e =>
         {

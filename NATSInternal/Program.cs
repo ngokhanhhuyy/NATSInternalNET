@@ -196,6 +196,7 @@ builder.Services.AddScoped<ITreatmentService, TreatmentService>();
 builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IDebtPaymentService, DebtPaymentService>();
 builder.Services.AddScoped<IConsultantService, ConsultantService>();
+builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
 

@@ -2005,7 +2005,7 @@ namespace NATSInternal.Migrations
             modelBuilder.Entity("NATSInternal.Services.Entities.Announcement", b =>
                 {
                     b.HasOne("NATSInternal.Services.Entities.User", "User")
-                        .WithMany("Announcements")
+                        .WithMany("CreateAnnouncements")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
@@ -2642,7 +2642,7 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.User", b =>
                 {
-                    b.Navigation("Announcements");
+                    b.Navigation("CreateAnnouncements");
 
                     b.Navigation("ConsultantUpdateHistories");
 

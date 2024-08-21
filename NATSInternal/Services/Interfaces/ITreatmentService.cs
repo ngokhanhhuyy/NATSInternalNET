@@ -9,9 +9,9 @@ public interface ITreatmentService
     /// Get a list of treatments which each treatment contains basic
     /// information with filtering condition.
     /// </summary>
-    /// <param name="requestDto"
-    /// >An object containing filtering condition
-    /// for the results.</param>
+    /// <param name="requestDto">
+    /// An object containing filtering condition for the results.
+    /// </param>
     /// <returns>The list of treatments.</returns>
     Task<TreatmentListResponseDto> GetListAsync(TreatmentListRequestDto requestDto);
 
