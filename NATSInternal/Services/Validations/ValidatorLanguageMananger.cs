@@ -16,5 +16,6 @@ public class ValidatorLanguageManager : FluentValidation.Resources.LanguageManag
         AddTranslation("vi", "NullValidator", ErrorMessages.Null);
         AddTranslation("vi", "EmailValidator", ErrorMessages.Invalid);
         AddTranslation("vi", "CreditCardValidator", ErrorMessages.Invalid);
+        AddTranslation("vi", "EnumValidator", ErrorMessages.Invalid);
     }
 }

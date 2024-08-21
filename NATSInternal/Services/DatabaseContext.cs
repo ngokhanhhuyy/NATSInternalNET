@@ -32,7 +32,6 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<DebtPayment> DebtPayments { get; set; }
     public DbSet<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
-    public DbSet<AnnouncementReadUser> AnnouncementReadUsers { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationReceivedUser> NotificationReceivedUsers { get; set; }
     public DbSet<NotificationReadUser> NotificationReadUsers { get; set; }
@@ -509,14 +508,9 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                 .WithMany(u => u.CreatedAnnouncements)
                 .HasForeignKey(a => a.CreatedUserId)
                 .HasConstraintName("FK__announcements__created_users__created_user_id")
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.RowVersion)
                 .IsRowVersion();
-        });
-        modelBuilder.Entity<AnnouncementReadUser>(e =>
-        {
-            e.ToTable("announcement_read_users");
-            e.HasKey(aru => new { aru.AnnouncementId, aru.UserId });
         });
         modelBuilder.Entity<Notification>(e =>
         {

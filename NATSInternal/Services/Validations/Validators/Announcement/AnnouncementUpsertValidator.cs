@@ -15,10 +15,22 @@ public class AnnouncementUpsertValidator : Validator<AnnouncementUpsertRequestDt
             .NotEmpty()
             .MaximumLength(5000)
             .WithName(DisplayNames.Content);
-        RuleFor(dto => dto.IntervalInMinutes)
-            .NotEmpty()
-            .GreaterThan(0)
-            .LessThanOrEqualTo(30 * 24 * 60)
-            .WithName(DisplayNames.IntervalInMinutes);
+        RuleSet("Create", () =>
+        {
+            RuleFor(dto => dto.IntervalInMinutes)
+                .NotEmpty()
+                .GreaterThan(0)
+                .LessThanOrEqualTo(30 * 24 * 60)
+                .WithName(DisplayNames.IntervalInMinutes);
+        });
+        RuleSet("Update", () =>
+        {
+            RuleFor(dto => dto.IntervalInMinutes)
+                .NotEmpty()
+                .GreaterThan(0)
+                .LessThanOrEqualTo(30 * 24 * 60)
+                .When(dto => dto.StartingDateTime.HasValue)
+                .WithName(DisplayNames.IntervalInMinutes);
+        });
     }
 }

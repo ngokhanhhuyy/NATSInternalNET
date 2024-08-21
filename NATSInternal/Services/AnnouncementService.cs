@@ -62,13 +62,15 @@ public class AnnouncementService : IAnnouncementService
     public async Task<int> CreateAsync(AnnouncementUpsertRequestDto requestDto)
     {
         // Initialize the entity.
+        DateTime startingDateTime = requestDto.StartingDateTime
+            ?? DateTime.UtcNow.ToApplicationTime();
         Announcement announcement = new Announcement
         {
             Category = requestDto.Category,
             Title = requestDto.Title,
             Content = requestDto.Content,
-            StartingDateTime = requestDto.StartingDateTime,
-            EndingDateTime = requestDto.StartingDateTime
+            StartingDateTime = startingDateTime,
+            EndingDateTime = startingDateTime
                 .AddMinutes(requestDto.IntervalInMinutes),
             CreatedUserId = _authorizationService.GetUserId()
         };
@@ -101,9 +103,14 @@ public class AnnouncementService : IAnnouncementService
         announcement.Category = requestDto.Category;
         announcement.Title = requestDto.Title;
         announcement.Content = requestDto.Content;
-        announcement.StartingDateTime = requestDto.StartingDateTime;
-        announcement.EndingDateTime = requestDto.StartingDateTime
-            .AddMinutes(requestDto.IntervalInMinutes);
+        
+        if (requestDto.StartingDateTime.HasValue)
+        {
+            announcement.StartingDateTime = requestDto.StartingDateTime
+                ?? DateTime.UtcNow.ToApplicationTime();
+            announcement.EndingDateTime = announcement.StartingDateTime
+                .AddMinutes(requestDto.IntervalInMinutes); 
+        }
         
         // Save changes.
         try
@@ -116,6 +123,19 @@ public class AnnouncementService : IAnnouncementService
             HandleCreateOrUpdateException(sqlException);
 
             throw;
+        }
+    }
+    
+    /// <inheritdoc />
+    public async Task DeleteAsync(int id)
+    {
+        int affectedRows = await _context.Announcements
+            .Where(a => a.Id == id)
+            .ExecuteDeleteAsync();
+
+        if (affectedRows == 0)
+        {
+            throw new ResourceNotFoundException();
         }
     }
 

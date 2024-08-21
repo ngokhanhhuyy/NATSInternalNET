@@ -147,6 +147,10 @@ namespace NATSInternal.Migrations
                         .HasColumnType("varchar(5000)")
                         .HasColumnName("content");
 
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_datetime");
+
                     b.Property<int>("CreatedUserId")
                         .HasColumnType("int")
                         .HasColumnName("created_user_id");
@@ -175,23 +179,6 @@ namespace NATSInternal.Migrations
                     b.HasIndex("CreatedUserId");
 
                     b.ToTable("announcements", (string)null);
-                });
-
-            modelBuilder.Entity("NATSInternal.Services.Entities.AnnouncementReadUser", b =>
-                {
-                    b.Property<int>("AnnouncementId")
-                        .HasColumnType("int")
-                        .HasColumnName("announcement_id");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("AnnouncementId", "UserId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("announcement_read_users", (string)null);
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Brand", b =>
@@ -1856,7 +1843,7 @@ namespace NATSInternal.Migrations
                     b.ToTable("treatment_update_histories", (string)null);
                 });
 
-            modelBuilder.Entity("NATSInternal.Services.Entities.User", b =>
+            modelBuilder.Entity("NATSInternal.Services.Entities.CreatedUser", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -2077,33 +2064,14 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Announcement", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("CreatedAnnouncements")
                         .HasForeignKey("CreatedUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK__announcements__created_users__created_user_id");
 
                     b.Navigation("CreatedUser");
-                });
-
-            modelBuilder.Entity("NATSInternal.Services.Entities.AnnouncementReadUser", b =>
-                {
-                    b.HasOne("NATSInternal.Services.Entities.Announcement", "Announcement")
-                        .WithMany()
-                        .HasForeignKey("AnnouncementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NATSInternal.Services.Entities.User", "ReadUser")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Announcement");
-
-                    b.Navigation("ReadUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Brand", b =>
@@ -2119,7 +2087,7 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Consultant", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("Consultants")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2147,7 +2115,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__consultant_update_histories__consultants__consultant_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("ConsultantUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2156,12 +2124,12 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Consultant");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Customer", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("CreatedCustomers")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2193,7 +2161,7 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Debt", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("Debts")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2214,7 +2182,7 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.DebtPayment", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("DebtPayments")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2242,7 +2210,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__debt_payment_update_histories__debt_payments__debt_payment_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("DebtPaymentUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2251,7 +2219,7 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("DebtPayment");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.DebtUpdateHistory", b =>
@@ -2263,7 +2231,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__debt_update_histories__debts__debt_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("DebtUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2272,12 +2240,12 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Debt");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Expense", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("Expenses")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2317,7 +2285,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__expense_update_histories__expenses__expense_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("ExpenseUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2326,7 +2294,7 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Expense");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.NotificationReadUser", b =>
@@ -2338,7 +2306,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__notification_read_users__users__read_notification_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "ReadUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "ReadUser")
                         .WithMany()
                         .HasForeignKey("ReadUserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2359,7 +2327,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__notification_received_users__users__received_notification_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "ReceivedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "ReceivedUser")
                         .WithMany()
                         .HasForeignKey("ReceivedUserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2373,7 +2341,7 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Order", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("Orders")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2438,7 +2406,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__order_update_histories__orders__order_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("OrderUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2447,7 +2415,7 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Order");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Product", b =>
@@ -2483,7 +2451,7 @@ namespace NATSInternal.Migrations
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Supply", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("Supplies")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2535,7 +2503,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__supply_update_histories__supplies__supply_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("SupplyUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2544,12 +2512,12 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Supply");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Treatment", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("CreatedTreatments")
                         .HasForeignKey("CreatedUserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2563,7 +2531,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__treatments__customers__customer_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "Therapist")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "Therapist")
                         .WithMany("TreatmentsInCharge")
                         .HasForeignKey("TherapistId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2619,7 +2587,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__treatment_update_histories__treatment__treatment_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("TreatmentUpdateHistories")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2628,19 +2596,19 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Treatment");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.UserRefreshToken", b =>
                 {
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK__user_refresh_tokens__users__user_id");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.UserRole", b =>
@@ -2652,7 +2620,7 @@ namespace NATSInternal.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__user_roles__roles__role_id");
 
-                    b.HasOne("NATSInternal.Services.Entities.User", "User")
+                    b.HasOne("NATSInternal.Services.Entities.CreatedUser", "CreatedUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2661,7 +2629,7 @@ namespace NATSInternal.Migrations
 
                     b.Navigation("Role");
 
-                    b.Navigation("User");
+                    b.Navigation("CreatedUser");
                 });
 
             modelBuilder.Entity("NATSInternal.Services.Entities.Brand", b =>
@@ -2774,7 +2742,7 @@ namespace NATSInternal.Migrations
                     b.Navigation("UpdateHistories");
                 });
 
-            modelBuilder.Entity("NATSInternal.Services.Entities.User", b =>
+            modelBuilder.Entity("NATSInternal.Services.Entities.CreatedUser", b =>
                 {
                     b.Navigation("ConsultantUpdateHistories");
 

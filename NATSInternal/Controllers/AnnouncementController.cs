@@ -41,7 +41,7 @@ public class AnnouncementController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> AnnounceDetail(int id)
+    public async Task<IActionResult> AnnouncementDetail(int id)
     {
         try
         {
@@ -58,14 +58,17 @@ public class AnnouncementController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [HttpPost]
     public async Task<IActionResult> AnnouncementCreate(
-        AnnouncementUpsertRequestDto requestDto)
+            [FromBody] AnnouncementUpsertRequestDto requestDto)
     {
         // Validate data from the request.
-        ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues());
+        ValidationResult validationResult = _upsertValidator
+            .Validate(requestDto.TransformValues(), options => options
+                .IncludeRuleSets("Create")
+                .IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
+            return BadRequest(ModelState);
         }
 
         // Perform the creating operation.
@@ -81,6 +84,59 @@ public class AnnouncementController : ControllerBase
         catch (ConcurrencyException)
         {
             return Conflict();
+        }
+    }
+
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> AnnouncementUpdate(
+            int id,
+            [FromBody] AnnouncementUpsertRequestDto requestDto)
+    {
+        // Validate data from the request.
+        ValidationResult validationResult = _upsertValidator
+            .Validate(requestDto.TransformValues(), options => options
+                .IncludeRuleSets("Update")
+                .IncludeRulesNotInRuleSet());
+        if (!validationResult.IsValid)
+        {
+            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
+            return BadRequest(ModelState);
+        }
+
+        // Perform update operation.
+        try
+        {
+            await _service.UpdateAsync(id, requestDto);
+            return Ok();
+        }
+        catch (ResourceNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ConcurrencyException)
+        {
+            return Conflict();
+        }
+    }
+
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> AnnouncementDelete(int id)
+    {
+        try
+        {
+            await _service.DeleteAsync(id);
+            return Ok();
+        }
+        catch (ResourceNotFoundException)
+        {
+            return NotFound();
         }
     }
 }

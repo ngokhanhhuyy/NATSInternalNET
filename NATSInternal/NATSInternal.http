@@ -64,4 +64,40 @@ Authorization: Bearer {{accessToken}}
     "customerId": 100
 }
 
+###
+// AnnouncementList
+// @no-log
+GET {{host}}/announcement
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
+###
+// AnnouncementCreate
+// @no-log
+POST {{host}}/announcement
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "category": 0,
+    "title": "Cập nhật phiên bản 1.0",
+    "content": "Cập nhật phiên bản 1.0 hoàn tất.",
+    "startingDateTime": null,
+    "intervalInMinutes": 0
+}
+
+
+###
+// AnnouncementUpdate
+// @no-log
+PUT {{host}}/announcement/1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "category": 5,
+    "title": "Cập nhật phiên bản 1.0",
+    "content": "Cập nhật phiên bản 1.0 hoàn tất.",
+    "startingDateTime": "2024-08-21T22:40:00",
+    "intervalInMinutes": 0
+}

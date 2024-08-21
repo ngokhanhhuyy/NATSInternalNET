@@ -5,8 +5,8 @@ public class AnnouncementUpsertRequestDto : IRequestDto<AnnouncementUpsertReques
     public AnnouncementCategory Category { get; set; }
     public string Title { get; set; }
     public string Content { get; set; }
-    public DateTime StartingDateTime { get; set; } = DateTime.UtcNow.ToApplicationTime();
-    public int IntervalInMinutes { get; set; } = 24 * 60;
+    public DateTime? StartingDateTime { get; set; }
+    public int IntervalInMinutes { get; set; }
 
     public AnnouncementUpsertRequestDto TransformValues()
     {

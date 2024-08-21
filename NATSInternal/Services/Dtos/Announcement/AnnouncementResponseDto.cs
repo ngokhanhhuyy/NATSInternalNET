@@ -8,7 +8,7 @@ public class AnnouncementResponseDto
     public string Content { get; set; }
     public DateTime StartingDateTime { get; set; }
     public DateTime EndingDateTime { get; set; }
-    public UserBasicResponseDto User { get; set; }
+    public UserBasicResponseDto CreatedUser { get; set; }
 
     public AnnouncementResponseDto(Announcement announcement)
     {
@@ -18,6 +18,6 @@ public class AnnouncementResponseDto
         Content = announcement.Content;
         StartingDateTime = announcement.StartingDateTime;
         EndingDateTime = announcement.EndingDateTime;
-        User = new UserBasicResponseDto(announcement.CreatedUser);
+        CreatedUser = new UserBasicResponseDto(announcement.CreatedUser);
     }
 }

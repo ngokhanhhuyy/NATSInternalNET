@@ -19,12 +19,8 @@ public interface IAnnouncementService
     /// Get the fully detailed information of the announcement with the
     /// specified id.
     /// </summary>
-    /// <param name="id">
-    /// The id of the announcement to be retrieve.
-    /// </param>
-    /// <returns>
-    /// An object containing the information of the announcement.
-    /// </returns>
+    /// <param name="id">The id of the announcement to be retrieve.</param>
+    /// <returns>An object containing the information of the announcement.</returns>
     /// <exception cref="ResourceNotFoundException">
     /// Thrown when the announcement cannot be found.
     /// </exception>
@@ -46,5 +42,28 @@ public interface IAnnouncementService
     /// </exception>
     Task<int> CreateAsync(AnnouncementUpsertRequestDto requestDto);
 
+    /// <summary>
+    /// Update the announcement which has the specified id with the data
+    /// provided from the request.
+    /// </summary>
+    /// <param name="id">The id of the announcement to be updated.</param>
+    /// <param name="requestDto">
+    /// An object containing the data to be updated, provided from the request.
+    /// </param>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the announcement with the specified id cannot be found.
+    /// </exception>
+    /// <exception cref="ConcurrencyException">
+    /// Thrown when there is some concurrent conflict during the operation.
+    /// </exception>
     Task UpdateAsync(int id, AnnouncementUpsertRequestDto requestDto);
+
+    /// <summary>
+    /// Delete the announcement which has the specified id.
+    /// </summary>
+    /// <param name="id">The id of the announcement to be updated.</param>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the announcement with the specified id cannot be found.
+    /// </exception>
+    Task DeleteAsync(int id);
 }
