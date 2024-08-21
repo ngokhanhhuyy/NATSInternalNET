@@ -7,7 +7,7 @@ public class ExpenseService : LockableEntityService, IExpenseService
     private readonly IPhotoService _photoService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
-    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
     
     public ExpenseService(
             DatabaseContext context,
