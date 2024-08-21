@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Controllers.Api;
 
-[Route("/Api/CreatedUser")]
+[Route("/Api/User")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class UserController : ControllerBase
@@ -29,7 +29,7 @@ public class UserController : ControllerBase
 
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UserList([FromQuery] UserListRequestDto requestDto)
@@ -80,7 +80,7 @@ public class UserController : ControllerBase
         }
     }
 
-    [HttpGet("{id:int}/Detail")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UserDetail(int id)
     {
@@ -96,7 +96,7 @@ public class UserController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
+    [HttpPost]
     [Authorize(Policy = "CanCreateUser")]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -136,7 +136,7 @@ public class UserController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Update")]
+    [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -255,7 +255,7 @@ public class UserController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Delete")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -284,7 +284,7 @@ public class UserController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Restore")]
+    [HttpPost("{id:int}/Restore")]
     [Authorize(Policy = "CanRestore")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

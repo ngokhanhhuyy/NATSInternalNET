@@ -152,6 +152,9 @@ public sealed class DataInitializer
                         PermissionConstants.DeleteConsultant,
                         PermissionConstants.SetConsultantPaidDateTime,
                         PermissionConstants.AccessConsultantUpdateHistories,
+                        PermissionConstants.CreateAnnouncement,
+                        PermissionConstants.EditAnnouncement,
+                        PermissionConstants.DeleteAnnouncement
                     }
                 },
                 {
@@ -214,6 +217,9 @@ public sealed class DataInitializer
                         PermissionConstants.DeleteConsultant,
                         PermissionConstants.SetConsultantPaidDateTime,
                         PermissionConstants.AccessConsultantUpdateHistories,
+                        PermissionConstants.CreateAnnouncement,
+                        PermissionConstants.EditAnnouncement,
+                        PermissionConstants.DeleteAnnouncement
                     }
                 },
                 {

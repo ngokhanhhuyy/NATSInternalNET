@@ -19,7 +19,7 @@ public class SupplyController : ControllerBase
         _upsertValidator = validator;
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SupplyList([FromQuery] SupplyListRequestDto requestDto)
@@ -36,7 +36,7 @@ public class SupplyController : ControllerBase
         return Ok(responseDto);
     }
 
-    [HttpGet("{id:int}/Detail")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SupplyDetail(int id)
@@ -53,7 +53,7 @@ public class SupplyController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
+    [HttpPost]
     [Authorize(Policy = "CanCreateSupply")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -82,7 +82,7 @@ public class SupplyController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Update")]
+    [HttpPut("{id:int}")]
     [Authorize(Policy = "CanEditSupply")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -121,7 +121,7 @@ public class SupplyController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Delete")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteSupply")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

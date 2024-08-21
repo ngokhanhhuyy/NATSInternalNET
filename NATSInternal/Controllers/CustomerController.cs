@@ -45,7 +45,7 @@ public class CustomerController : ControllerBase
     public async Task<IActionResult> CustomerBasic(int id)
     {
         try
-        {////mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+        {
             CustomerBasicResponseDto responseDto = await _service.GetBasicAsync(id);
             return Ok(responseDto);
         }
@@ -56,15 +56,15 @@ public class CustomerController : ControllerBase
         }
     }
 
-    [HttpGet("{customerId:int}")]
+    [HttpGet("{id:int}")]
     [Authorize(Policy = "CanGetCustomerDetail")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CustomerDetail(int customerId)
+    public async Task<IActionResult> CustomerDetail(int id)
     {
         try
         {
-            CustomerDetailResponseDto responseDto = await _service.GetDetailAsync(customerId);
+            CustomerDetailResponseDto responseDto = await _service.GetDetailAsync(id);
             return Ok(responseDto);
         }
         catch (ResourceNotFoundException exception)
@@ -105,13 +105,13 @@ public class CustomerController : ControllerBase
         }
     }
 
-    [HttpPut("{customerId:int}")]
+    [HttpPut("{id:int}")]
     [Authorize(Policy = "CanEditCustomer")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> CustomerUpdate(
-            int customerId,
+            int id,
             [FromBody] CustomerUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -126,7 +126,7 @@ public class CustomerController : ControllerBase
         // Call service for updating operation.
         try
         {
-            await _service.UpdateAsync(customerId, requestDto);
+            await _service.UpdateAsync(id, requestDto);
             return Ok();
         }
         catch (OperationException exception)
@@ -136,15 +136,15 @@ public class CustomerController : ControllerBase
         }
     }
 
-    [HttpDelete("{customerId:int}")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteCustomer")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CustomerDelete(int customerId)
+    public async Task<IActionResult> CustomerDelete(int id)
     {
         try
         {
-            await _service.DeleteAsync(customerId);
+            await _service.DeleteAsync(id);
             return Ok();
         }
         catch (ResourceNotFoundException exception)

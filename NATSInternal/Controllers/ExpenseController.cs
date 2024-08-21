@@ -19,7 +19,7 @@ public class ExpenseController : ControllerBase
         _upsertValidator = upsertValidator;
     }
 
-    [HttpGet("List")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ExpenseList(
@@ -38,7 +38,7 @@ public class ExpenseController : ControllerBase
         return Ok(await _service.GetListAsync(requestDto));
     }
 
-    [HttpGet("{id:int}/Detail")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ExpenseDetail(int id)
@@ -54,7 +54,7 @@ public class ExpenseController : ControllerBase
         }
     }
 
-    [HttpPost("Create")]
+    [HttpPost]
     [Authorize(Policy = "CanCreateExpense")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -86,7 +86,7 @@ public class ExpenseController : ControllerBase
         }
     }
 
-    [HttpPut("{id:int}/Update")]
+    [HttpPut("{id:int}")]
     [Authorize(Policy = "CanEditExpense")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -128,7 +128,7 @@ public class ExpenseController : ControllerBase
         }
     }
 
-    [HttpDelete("{id:int}/Delete")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteExpense")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -92,4 +92,9 @@ public static class PermissionConstants
     public const string DeleteConsultant = "DeleteConsultant";
     public const string SetConsultantPaidDateTime = "SetConsultantPaidDateTime";
     public const string AccessConsultantUpdateHistories = "AccessConsultantUpdateHistories";
+    
+    // Permissions to interact with announcements.
+    public const string CreateAnnouncement = "CreateAnnouncement";
+    public const string EditAnnouncement = "EditAnnouncement";
+    public const string DeleteAnnouncement = "DeleteAnnouncement";
 }
