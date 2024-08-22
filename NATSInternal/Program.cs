@@ -4,7 +4,6 @@ using NATSInternal.Services.Identity;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
@@ -150,7 +149,13 @@ builder.Services
     .AddPolicy("CanEditDebtPayment", policy =>
         policy.RequireClaim("Permission", PermissionConstants.EditDebtPayment))
     .AddPolicy("CanDeleteDebtPayment", policy =>
-        policy.RequireClaim("Permission", PermissionConstants.DeleteDebtPayment));
+        policy.RequireClaim("Permission", PermissionConstants.DeleteDebtPayment))
+    .AddPolicy("CanCreateAnnouncement", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.CreateAnnouncement))
+    .AddPolicy("CanEditAnnouncement", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.EditAnnouncement))
+    .AddPolicy("CanDeleteAnnouncement", policy =>
+        policy.RequireClaim("Permission", PermissionConstants.DeleteAnnouncement));
 
 
 // FluentValidation
@@ -197,6 +202,7 @@ builder.Services.AddScoped<IDebtIncurrenceService, DebtIncurrenceService>();
 builder.Services.AddScoped<IDebtPaymentService, DebtPaymentService>();
 builder.Services.AddScoped<IConsultantService, ConsultantService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
 

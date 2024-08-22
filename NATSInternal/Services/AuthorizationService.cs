@@ -17,6 +17,7 @@ public class AuthorizationService : IAuthorizationService
             .Where(u => u.Id == id)
             .SingleAsync();
     }
+    
     public int GetUserId()
     {
         return _user.Id;
@@ -31,7 +32,7 @@ public class AuthorizationService : IAuthorizationService
     // Authorization for users.
     public UserListAuthorizationResponseDto GetUserListAuthorization()
     {
-        return new()
+        return new UserListAuthorizationResponseDto
         {
             CanCreate = _user.HasPermission(PermissionConstants.CreateUser)
         };
@@ -39,7 +40,7 @@ public class AuthorizationService : IAuthorizationService
 
     public UserBasicAuthorizationResponseDto GetUserBasicAuthorization(User targetUser)
     {
-        return new()
+        return new UserBasicAuthorizationResponseDto
         {
             CanEdit = CanEditUserPersonalInformation(targetUser) ||
                 CanEditUserUserInformation(targetUser),

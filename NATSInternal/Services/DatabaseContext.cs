@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
 namespace NATSInternal.Services;
 
 public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserClaim<int>,
@@ -519,6 +521,11 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
         {
             e.ToTable("notifications");
             e.HasKey(n => n.Id);
+            e.Property(n => n.ResourceIds)
+                .HasConversion(new ValueConverter<List<int>, string>(
+                    v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                    v => JsonSerializer.Deserialize<List<int>>(v, JsonSerializerOptions.Default)))
+                .HasColumnType("JSON");
             e.HasMany(n => n.ReceivedUsers)
                 .WithMany(u => u.ReceivedNotifications)
                 .UsingEntity<NotificationReceivedUser>(

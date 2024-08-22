@@ -101,3 +101,10 @@ Authorization: Bearer {{accessToken}}
     "startingDateTime": "2024-08-21T22:40:00",
     "intervalInMinutes": 0
 }
+
+###
+// NotificationList
+// @no-log
+GET {{host}}/notification
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}

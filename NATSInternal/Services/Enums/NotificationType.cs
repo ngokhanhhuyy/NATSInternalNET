@@ -45,10 +45,10 @@ public enum NotificationType
     TreatmentModification,
     TreatmentDeletion,
 
-    // Enum values for debt interaction
-    DebtCreation,
-    DebtModification,
-    DebtDeletion,
+    // Enum values for debt incurrence interaction
+    DebtIncurrenceCreation,
+    DebtIncurrenceModification,
+    DebtIncurrenceDeletion,
 
     // Enum values for debt payment interaction.
     DebtPaymentCreation,
