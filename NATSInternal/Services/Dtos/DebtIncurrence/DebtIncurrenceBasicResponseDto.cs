@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Services.Dtos;
 
-public class DebtBasicResponseDto
+public class DebtIncurrenceBasicResponseDto
 {
     public int Id { get; set; }
     public long Amount { get; set; }
@@ -8,20 +8,22 @@ public class DebtBasicResponseDto
     public DateTime PaidDateTime { get; set; }
     public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
-    public DebtAuthorizationResponseDto Authorization { get; set; }
+    public DebtIncurrenceAuthorizationResponseDto Authorization { get; set; }
 
-    public DebtBasicResponseDto(Debt debt)
+    public DebtIncurrenceBasicResponseDto(DebtIncurrence debt)
     {
         MapFromEntity(debt);
     }
 
-    public DebtBasicResponseDto(Debt debt, DebtAuthorizationResponseDto authorization)
+    public DebtIncurrenceBasicResponseDto(
+            DebtIncurrence debt,
+            DebtIncurrenceAuthorizationResponseDto authorization)
     {
         MapFromEntity(debt);
         Authorization = authorization;
     }
 
-    private void MapFromEntity(Debt debt)
+    private void MapFromEntity(DebtIncurrence debt)
     {
         Id = debt.Id;
         Amount = debt.Amount;

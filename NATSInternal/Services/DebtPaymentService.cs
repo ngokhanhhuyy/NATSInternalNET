@@ -74,11 +74,11 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             .ReplacePropertyName(DisplayNames.Id)
             .ReplaceAttemptedValue(customerId.ToString());
         Customer customer = await _context.Customers
-            .Include(c => c.Debts)
+            .Include(c => c.DebtIncurrences)
             .Include(c => c.DebtPayments)
             .SingleOrDefaultAsync(c => c.Id == customerId)
             ?? throw new OperationException(nameof(customerId), customerNotFoundErrorMessage);
-        if (customer.DebtRemainingAmount - requestDto.Amount < 0)
+        if (customer.DebtAmount - requestDto.Amount < 0)
         {
             const string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
             throw new OperationException(nameof(requestDto.Amount), amountErrorMessage);
@@ -130,7 +130,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     {
         // Fetch and ensure the entity with the given debtPaymentId exists in the database.
         DebtPayment debtPayment = await _context.DebtPayments
-            .Include(d => d.Customer).ThenInclude(c => c.Debts)
+            .Include(d => d.Customer).ThenInclude(c => c.DebtIncurrences)
             .Include(d => d.CreatedUser)
             .Where(dp => dp.CustomerId == customerId)
             .Where(dp => dp.Id == debtPaymentId)
@@ -182,7 +182,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
                 if (requestDto.Amount != debtPayment.Amount)
                 {
                     long amountDifference = requestDto.Amount - debtPayment.Amount;
-                    if (debtPayment.Customer.DebtRemainingAmount + amountDifference < 0)
+                    if (debtPayment.Customer.DebtAmount + amountDifference < 0)
                     {
                         throw new OperationException(
                             nameof(requestDto.Amount),
@@ -213,7 +213,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
 
         // Verify that with the new paid amount, the customer's remaining debt amount will
         // not be negative.
-        if (debtPayment.Customer.DebtRemainingAmount - requestDto.Amount < 0)
+        if (debtPayment.Customer.DebtAmount - requestDto.Amount < 0)
         {
             const string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
             throw new OperationException(nameof(requestDto.Amount), amountErrorMessage);
@@ -292,7 +292,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
         }
         
         // Verify that if this debt payment is deleted, will the remaining debt amount be negative.
-        if (debtPayment.Customer.DebtRemainingAmount - debtPayment.Amount < 0)
+        if (debtPayment.Customer.DebtAmount - debtPayment.Amount < 0)
         {
             throw new OperationException(ErrorMessages.NegativeRemainingDebtAmount);
         }

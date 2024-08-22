@@ -91,8 +91,8 @@ public class StatsService : IStatsService
     public async Task IncrementDebtAmountAsync(long value, DateOnly? date = null)
     {
         DailyStats dailyStats = await FetchStatisticsEntitiesAsync(date);
-        dailyStats.DebtAmount += value;
-        dailyStats.Monthly.DebtAmount += value;
+        dailyStats.DebtIncurredAmount += value;
+        dailyStats.Monthly.DebtIncurredAmount += value;
         await _context.SaveChangesAsync();
     }
     

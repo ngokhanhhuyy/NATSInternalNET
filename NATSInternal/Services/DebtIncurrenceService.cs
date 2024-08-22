@@ -1,13 +1,15 @@
 ﻿namespace NATSInternal.Services;
 
-/// <inheritdoc cref="IDebtService" />
-public class DebtService : LockableEntityService, IDebtService
+/// <inheritdoc cref="IDebtIncurrenceService" />
+public class DebtIncurrenceService :
+        LockableEntityService,
+        IDebtIncurrenceService
 {
     private readonly DatabaseContext _context;
     private readonly IStatsService _statsService;
     private readonly IAuthorizationService _authorizationService;
 
-    public DebtService(
+    public DebtIncurrenceService(
             DatabaseContext context,
             IStatsService statsService,
             IAuthorizationService authorizationService)
@@ -18,10 +20,12 @@ public class DebtService : LockableEntityService, IDebtService
     }
 
     /// <inheritdoc />
-    public async Task<DebtDetailResponseDto> GetDetailAsync(int customerId, int debtId)
+    public async Task<DebtIncurrenceDetailResponseDto> GetDetailAsync(
+            int customerId,
+            int debtId)
     {
         // Initialize query.
-        IQueryable<Debt> query = _context.Debts
+        IQueryable<DebtIncurrence> query = _context.DebtIncurrences
             .Include(d => d.Customer)
             .Include(d => d.CreatedUser).ThenInclude(u => u.Roles);
 
@@ -34,7 +38,7 @@ public class DebtService : LockableEntityService, IDebtService
         }
 
         // Fetch the entity with the given id and ensure it exists in the database.
-        Debt debt = await query
+        DebtIncurrence debtIncurrence = await query
             .AsSplitQuery()
             .Where(d => d.CustomerId == customerId)
             .Where(d => d.Id == debtId)
@@ -42,20 +46,23 @@ public class DebtService : LockableEntityService, IDebtService
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
-        return new DebtDetailResponseDto(
-            debt,
-            _authorizationService.GetDebtAuthorization(debt),
+        return new DebtIncurrenceDetailResponseDto(
+            debtIncurrence,
+            _authorizationService.GetDebtAuthorization(debtIncurrence),
             mapUpdateHistories: shouldIncludeUpdateHistories);
     }
     
     /// <inheritdoc />
-    public async Task<int> CreateAsync(int customerId, DebtUpsertRequestDto requestDto)
+    public async Task<int> CreateAsync(
+            int customerId,
+            DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Determining the incurred datetime.
         DateTime incurredDateTime = DateTime.UtcNow.ToApplicationTime();
         if (requestDto.IncurredDateTime.HasValue)
         {
-            // Check if the current user has permission to specify the created datetime for the debt.
+            // Check if the current user has permission to specify the
+            // created datetime for the debt incurrence.
             if (!_authorizationService.CanSetDebtIncurredDateTime())
             {
                 throw new AuthorizationException();
@@ -64,8 +71,8 @@ public class DebtService : LockableEntityService, IDebtService
             incurredDateTime = requestDto.IncurredDateTime.Value;
         }
         
-        // Initialize debt entity.
-        Debt debt = new Debt
+        // Initialize debt incurrence entity.
+        DebtIncurrence debtIncurrence = new DebtIncurrence
         {
             Amount = requestDto.Amount,
             Note = requestDto.Note,
@@ -73,7 +80,7 @@ public class DebtService : LockableEntityService, IDebtService
             CustomerId = customerId,
             CreatedUserId = _authorizationService.GetUserId()
         };
-        _context.Debts.Add(debt);
+        _context.DebtIncurrences.Add(debtIncurrence);
         
         // Using transaction for atomic operations.
         await using IDbContextTransaction transaction = await _context.Database
@@ -86,27 +93,30 @@ public class DebtService : LockableEntityService, IDebtService
             
             // The debt is saved successfully, adjust the stats.
             await _statsService.IncrementDebtAmountAsync(
-                debt.Amount,
-                DateOnly.FromDateTime(debt.CreatedDateTime));
+                debtIncurrence.Amount,
+                DateOnly.FromDateTime(debtIncurrence.CreatedDateTime));
             
             // Commit the transaction, finish all operations.
             await transaction.CommitAsync();
             
-            return debt.Id;
+            return debtIncurrence.Id;
         }
         catch (DbUpdateException exception)
         when (exception.InnerException is MySqlException sqlException)
         {
-            HandleCreateOrUpdateException(sqlException, debt.CreatedUserId);
+            HandleCreateOrUpdateException(sqlException, debtIncurrence.CreatedUserId);
             throw;
         }
     }
     
     /// <inheritdoc />
-    public async Task UpdateAsync(int customerId, int debtId, DebtUpsertRequestDto requestDto)
+    public async Task UpdateAsync(
+            int customerId,
+            int debtId,
+            DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Fetch and ensure the entity with the given id exists in the database.
-        Debt debt = await _context.Debts
+        DebtIncurrence debt = await _context.DebtIncurrences
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
             .Include(d => d.CreatedUser)
             .Where(d => d.CustomerId == customerId)
@@ -128,7 +138,8 @@ public class DebtService : LockableEntityService, IDebtService
         // Store the old data and create new data for stats adjustment.
         DateOnly oldIncurredDate = DateOnly.FromDateTime(debt.IncurredDateTime);
         long oldAmount = debt.Amount;
-        DebtUpdateHistoryDataDto oldData = new DebtUpdateHistoryDataDto(debt);
+        DebtIncurrenceUpdateHistoryDataDto oldData;
+        oldData = new DebtIncurrenceUpdateHistoryDataDto(debt);
 
         // Update the created datetime and amount if specified.
         if (requestDto.IncurredDateTime.HasValue)
@@ -139,7 +150,8 @@ public class DebtService : LockableEntityService, IDebtService
                 throw new AuthorizationException();
             }
 
-            // Prevent the consultant's IncurredDateTime to be modified when the debt is locked.
+            // Prevent the consultant's IncurredDateTime to be modified when the
+            // debt incurrence has already been locked.
             if (debt.IsLocked)
             {
                 string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
@@ -158,7 +170,7 @@ public class DebtService : LockableEntityService, IDebtService
                 if (requestDto.Amount != debt.Amount)
                 {
                     long amountDifference = requestDto.Amount - debt.Amount;
-                    if (debt.Customer.DebtRemainingAmount + amountDifference < 0)
+                    if (debt.Customer.DebtAmount + amountDifference < 0)
                     {
                         throw new OperationException(
                             nameof(requestDto.Amount),
@@ -192,7 +204,8 @@ public class DebtService : LockableEntityService, IDebtService
         debt.Note = requestDto.Note;
         
         // Store the new data for update history logging.
-        DebtUpdateHistoryDataDto newData = new DebtUpdateHistoryDataDto(debt);
+        DebtIncurrenceUpdateHistoryDataDto newData;
+        newData = new DebtIncurrenceUpdateHistoryDataDto(debt);
         
         // Log update history.
         LogUpdateHistory(debt, oldData, newData, requestDto.UpdatingReason);
@@ -235,7 +248,7 @@ public class DebtService : LockableEntityService, IDebtService
     public async Task DeleteAsync(int customerId, int debtId)
     {
         // Fetch and ensure the entity with the given id exists in the database.
-        Debt debt = await _context.Debts
+        DebtIncurrence debt = await _context.DebtIncurrences
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
             .Where(d => d.CustomerId == customerId)
             .Where(d => d.Id == debtId)
@@ -252,7 +265,7 @@ public class DebtService : LockableEntityService, IDebtService
         //
         
         // Verify that if this debt is deleted, will the remaining debt amount be negative.
-        if (debt.Customer.DebtRemainingAmount - debt.Amount < 0)
+        if (debt.Customer.DebtAmount - debt.Amount < 0)
         {
             throw new OperationException(ErrorMessages.NegativeRemainingDebtAmount);
         }
@@ -264,7 +277,7 @@ public class DebtService : LockableEntityService, IDebtService
         // Perform deleting operation and adjust stats.
         try
         {
-            _context.Debts.Remove(debt);
+            _context.DebtIncurrences.Remove(debt);
             await _context.SaveChangesAsync();
             
             // Debt has been deleted successfully, adjust the stats.
@@ -351,12 +364,12 @@ public class DebtService : LockableEntityService, IDebtService
     /// </param>
     /// <param name="reason">The reason of the modification.</param>
     private void LogUpdateHistory(
-            Debt debt,
-            DebtUpdateHistoryDataDto oldData,
-            DebtUpdateHistoryDataDto newData,
+            DebtIncurrence debt,
+            DebtIncurrenceUpdateHistoryDataDto oldData,
+            DebtIncurrenceUpdateHistoryDataDto newData,
             string reason)
     {
-        DebtUpdateHistory updateHistory = new DebtUpdateHistory
+        DebtIncurrenceUpdateHistory updateHistory = new DebtIncurrenceUpdateHistory
         {
             Reason = reason,
             OldData = JsonSerializer.Serialize(oldData),
@@ -365,7 +378,7 @@ public class DebtService : LockableEntityService, IDebtService
             UpdatedDateTime = DateTime.UtcNow.ToApplicationTime()
         };
         
-        debt.UpdateHistories ??= new List<DebtUpdateHistory>();
+        debt.UpdateHistories ??= new List<DebtIncurrenceUpdateHistory>();
         debt.UpdateHistories.Add(updateHistory);
     }
 }

@@ -1,6 +1,6 @@
 namespace NATSInternal.Services.Dtos;
 
-public class DebtAuthorizationResponseDto
+public class DebtIncurrenceAuthorizationResponseDto
 {
     public bool CanEdit { get; set; }
     public bool CanDelete { get; set; }

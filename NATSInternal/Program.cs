@@ -193,7 +193,7 @@ builder.Services.AddScoped<ISupplyService, SupplyService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ITreatmentService, TreatmentService>();
-builder.Services.AddScoped<IDebtService, DebtService>();
+builder.Services.AddScoped<IDebtIncurrenceService, DebtIncurrenceService>();
 builder.Services.AddScoped<IDebtPaymentService, DebtPaymentService>();
 builder.Services.AddScoped<IConsultantService, ConsultantService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();

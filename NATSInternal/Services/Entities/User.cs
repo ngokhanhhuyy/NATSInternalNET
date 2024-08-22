@@ -89,8 +89,8 @@ public class User : IdentityUser<int>
     public virtual List<ConsultantUpdateHistory> ConsultantUpdateHistories { get; set; }
     public virtual List<Expense> Expenses { get; set; }
     public virtual List<ExpenseUpdateHistory> ExpenseUpdateHistories { get; set; }
-    public virtual List<Debt> Debts { get; set; }
-    public virtual List<DebtUpdateHistory> DebtUpdateHistories { get; set; }
+    public virtual List<DebtIncurrence> Debts { get; set; }
+    public virtual List<DebtIncurrenceUpdateHistory> DebtUpdateHistories { get; set; }
     public virtual List<DebtPayment> DebtPayments { get; set; }
     public virtual List<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
     public virtual List<Announcement> CreatedAnnouncements { get; set; }
@@ -117,7 +117,7 @@ public class User : IdentityUser<int>
     public List<Treatment> UpdatedTreatments => TreatmentUpdateHistories.Select(tuh => tuh.Treatment).ToList();
 
     [NotMapped]
-    public List<Debt> UpdatedDebts => DebtUpdateHistories.Select(duh => duh.Debt).ToList();
+    public List<DebtIncurrence> UpdatedDebts => DebtUpdateHistories.Select(duh => duh.DebtIncurrence).ToList();
 
     [NotMapped]
     public List<DebtPayment> UpdatedDebtPayments => DebtPaymentUpdateHistories

@@ -8,7 +8,7 @@ public class CustomerBasicResponseDto
     public Gender Gender { get; set; }
     public DateOnly? Birthday { get; set; }
     public string PhoneNumber { get; set; }
-    public long DebtRemainingAmount { get; set; }
+    public long? DebtAmount { get; set; }
     public CustomerAuthorizationResponseDto Authorization { get; set; }
 
     public CustomerBasicResponseDto(Customer customer)
@@ -32,6 +32,10 @@ public class CustomerBasicResponseDto
         Gender = customer.Gender;
         Birthday = customer.Birthday;
         PhoneNumber = customer.PhoneNumber;
-        DebtRemainingAmount = customer.DebtRemainingAmount;
+
+        if (customer.DebtIncurrences != null && customer.DebtPayments != null)
+        {
+            DebtAmount = customer.DebtAmount;
+        }
     }
 }

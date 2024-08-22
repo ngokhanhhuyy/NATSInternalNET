@@ -22,9 +22,9 @@ public class MonthlyStats
     [Required]
     public long VatCollectedAmount { get; set; }
 
-    [Column("debt_amount")]
+    [Column("debt_incurred_amount")]
     [Required]
-    public long DebtAmount { get; set; }
+    public long DebtIncurredAmount { get; set; }
 
     [Column("debt_paid_amount")]
     [Required]
@@ -86,10 +86,10 @@ public class MonthlyStats
     public long GrossRevenue => RetailGrossRevenue + TreatmentGrossRevenue + ConsultantGrossRevenue;
 
     [NotMapped]
-    public long NetRevenue => GrossRevenue - RemainingDebtAmount;
+    public long NetRevenue => GrossRevenue - DebtAmount;
     
     [NotMapped]
-    public long RemainingDebtAmount => DebtAmount - DebtPaidAmount;
+    public long DebtAmount => DebtIncurredAmount - DebtPaidAmount;
 
     [NotMapped]
     public long NetProfit => NetRevenue - (Cost + Expenses);

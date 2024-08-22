@@ -5,12 +5,12 @@ namespace NATSInternal.Controllers;
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class CustomerDebtController : ControllerBase
 {
-    private readonly IDebtService _service;
-    private readonly IValidator<DebtUpsertRequestDto> _upsertValidator;
+    private readonly IDebtIncurrenceService _service;
+    private readonly IValidator<DebtIncurrenceUpsertRequestDto> _upsertValidator;
     
     public CustomerDebtController(
-            IDebtService service,
-            IValidator<DebtUpsertRequestDto> upsertValidator)
+            IDebtIncurrenceService service,
+            IValidator<DebtIncurrenceUpsertRequestDto> upsertValidator)
     {
         _service = service;
         _upsertValidator = upsertValidator;
@@ -38,7 +38,7 @@ public class CustomerDebtController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtCreate(int customerId, [FromBody] DebtUpsertRequestDto requestDto)
+    public async Task<IActionResult> DebtCreate(int customerId, [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -82,7 +82,7 @@ public class CustomerDebtController : ControllerBase
     public async Task<IActionResult> DebtUpdate(
             int customerId,
             int debtId,
-            [FromBody] DebtUpsertRequestDto requestDto)
+            [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;

@@ -15,11 +15,12 @@ public class CustomerService : ICustomerService
     }
 
     /// <inheritdoc />
-    public async Task<CustomerListResponseDto> GetListAsync(CustomerListRequestDto requestDto)
+    public async Task<CustomerListResponseDto> GetListAsync(
+            CustomerListRequestDto requestDto)
     {
         // Initialize query.
         IQueryable<Customer> query = _context.Customers
-            .Include(c => c.Debts)
+            .Include(c => c.DebtIncurrences)
             .Include(c => c.DebtPayments)
             .Where(c => !c.IsDeleted);
 
@@ -43,13 +44,13 @@ public class CustomerService : ICustomerService
                 break;
             case nameof(CustomerListRequestDto.FieldToBeOrdered.DebtRemainingAmount):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(c => c.Debts
+                    ? query.OrderBy(c => c.DebtIncurrences
                             .Where(d => !d.IsDeleted)
                             .Sum(d => d.Amount) - c.DebtPayments
                             .Where(dp => !dp.IsDeleted)
                             .Sum(dp => dp.Amount))
                         .ThenBy(c => c.Id)
-                    : query.OrderByDescending(c => c.Debts
+                    : query.OrderByDescending(c => c.DebtIncurrences
                             .Where(d => !d.IsDeleted)
                             .Sum(d => d.Amount) - c.DebtPayments
                             .Where(dp => !dp.IsDeleted)
@@ -76,7 +77,7 @@ public class CustomerService : ICustomerService
         // Filter by remaining debt amount.
         if (requestDto.HasRemainingDebtAmountOnly)
         {
-            query = query.Where(c => c.Debts
+            query = query.Where(c => c.DebtIncurrences
                 .Where(d => !d.IsDeleted)
                 .Sum(d => d.Amount) - c.DebtPayments
                 .Where(dp => !dp.IsDeleted)
@@ -111,7 +112,7 @@ public class CustomerService : ICustomerService
     public async Task<CustomerBasicResponseDto> GetBasicAsync(int id)
     {
         return await _context.Customers
-            .Include(c => c.Debts)
+            .Include(c => c.DebtIncurrences)
             .Include(c => c.DebtPayments)
             .Where(c => c.Id == id)
             .Select(c => new CustomerBasicResponseDto(
@@ -129,7 +130,7 @@ public class CustomerService : ICustomerService
     {
         return await _context.Customers
             .Include(c => c.Introducer)
-            .Include(c => c.Debts)
+            .Include(c => c.DebtIncurrences)
             .Include(c => c.DebtPayments)
             .Where(c => !c.IsDeleted && c.Id == id)
             .Select(c => new CustomerDetailResponseDto(

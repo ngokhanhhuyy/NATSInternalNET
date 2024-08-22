@@ -18,7 +18,7 @@ public class StatsDetailResponseDto
     public long Expenses { get; set; }
     public long GrossRevenue { get; set; }
     public long NetRevenue { get; set; }
-    public long RemainingDebtAmount { get; set; }
+    public long DebtAmount { get; set; }
     public long GrossProfit { get; set; }
     public long NetProfit { get; set; }
     public long OperatingProfit { get; set; }

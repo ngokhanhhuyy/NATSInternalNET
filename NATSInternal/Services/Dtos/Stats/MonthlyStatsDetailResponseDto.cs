@@ -14,7 +14,7 @@ public class MonthlyStatsDetailResponseDto : StatsDetailResponseDto
         TreatmentGrossRevenue = monthlyStats.TreatmentGrossRevenue;
         ConsultantGrossRevenue = monthlyStats.ConsultantGrossRevenue;
         VatCollectedAmount = monthlyStats.VatCollectedAmount;
-        DebtAmount = monthlyStats.DebtAmount;
+        DebtAmount = monthlyStats.DebtIncurredAmount;
         DebtPaidAmount = monthlyStats.DebtPaidAmount;
         ShipmentCost = monthlyStats.ShipmentCost;
         SupplyCost = monthlyStats.SupplyCost;
@@ -26,7 +26,7 @@ public class MonthlyStatsDetailResponseDto : StatsDetailResponseDto
         Expenses = monthlyStats.Expenses;
         GrossRevenue = monthlyStats.GrossRevenue;
         NetRevenue = monthlyStats.NetRevenue;
-        RemainingDebtAmount = monthlyStats.RemainingDebtAmount;
+        DebtAmount = monthlyStats.DebtAmount;
         GrossProfit = monthlyStats.GrossProfit;
         NetProfit = monthlyStats.NetProfit;
         OperatingProfit = monthlyStats.OperatingProfit;

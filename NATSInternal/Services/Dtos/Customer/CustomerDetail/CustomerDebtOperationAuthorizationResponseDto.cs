@@ -6,7 +6,7 @@ public class CustomerDebtOperationAuthorizationResponseDto
     public bool CanDelete { get; set; }
     
     public CustomerDebtOperationAuthorizationResponseDto(
-            DebtAuthorizationResponseDto authorization)
+            DebtIncurrenceAuthorizationResponseDto authorization)
     {
         CanEdit = authorization.CanEdit;
         CanDelete = authorization.CanDelete;

@@ -44,7 +44,7 @@ public interface IAuthorizationService
     TreatmentAuthorizationResponseDto GetTreatmentAuthorization(Treatment treatment);
 
     // Authorization for debts.
-    DebtAuthorizationResponseDto GetDebtAuthorization(Debt debt);
+    DebtIncurrenceAuthorizationResponseDto GetDebtAuthorization(DebtIncurrence debt);
 
     // Authorization for debt payments.
     DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment);
@@ -92,7 +92,7 @@ public interface IAuthorizationService
 
     // Permisisons to interact with debts.
     bool CanCreateDebt();
-    bool CanEditDebt(Debt debt);
+    bool CanEditDebt(DebtIncurrence debt);
     bool CanDeleteDebt();
     bool CanSetDebtIncurredDateTime();
     bool CanAccessDebtUpdateHistories();

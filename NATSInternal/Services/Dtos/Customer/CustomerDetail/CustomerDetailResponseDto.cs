@@ -19,7 +19,7 @@ public record CustomerDetailResponseDto
     public DateTime CreatedDateTime { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
     public CustomerBasicResponseDto Introducer { get; set; }
-    public long DebtRemainingAmount { get; set; }
+    public long? DebtAmount { get; set; }
     public List<CustomerDebtOperationResponseDto> DebtOperations { get; set; }
     public CustomerAuthorizationResponseDto Authorization { get; set; }
 
@@ -43,7 +43,7 @@ public record CustomerDetailResponseDto
         Note = customer.Note;
         CreatedDateTime = customer.CreatedDateTime;
         UpdatedDateTime = customer.UpdatedDateTime;
-        DebtRemainingAmount = customer.DebtRemainingAmount;
+        DebtAmount = customer.DebtAmount;
         Authorization = authorizationService.GetCustomerAuthorization(customer);
 
         if (customer.Introducer != null)
@@ -51,24 +51,34 @@ public record CustomerDetailResponseDto
             Introducer = new CustomerBasicResponseDto(customer.Introducer);
         }
         
-        if (customer.Debts != null)
+        if (customer.DebtIncurrences != null)
         {
             DebtOperations = new List<CustomerDebtOperationResponseDto>();
-            foreach (Debt debt in customer.Debts)
+            foreach (DebtIncurrence debtIncurrence in customer.DebtIncurrences)
             {
-                DebtOperations.Add(new CustomerDebtOperationResponseDto(debt, authorizationService));
+                CustomerDebtOperationResponseDto operationResponseDto;
+                operationResponseDto = new CustomerDebtOperationResponseDto(
+                    debtIncurrence,
+                    authorizationService);
+                DebtOperations.Add(operationResponseDto);
             }
         }
         
         if (customer.DebtPayments != null)
         {
             DebtOperations ??= new List<CustomerDebtOperationResponseDto>();
-            foreach (DebtPayment payment in customer.DebtPayments)
+            foreach (DebtPayment debtPayment in customer.DebtPayments)
             {
-                DebtOperations.Add(new CustomerDebtOperationResponseDto(payment, authorizationService));
+                CustomerDebtOperationResponseDto operationResponseDto;
+                operationResponseDto = new CustomerDebtOperationResponseDto(
+                    debtPayment,
+                    authorizationService);
+                DebtOperations.Add(operationResponseDto);
             }
         }
 
-        DebtOperations = DebtOperations?.OrderBy(dp => dp.OperatedDateTime).ToList();
+        DebtOperations = DebtOperations?
+            .OrderBy(dp => dp.OperatedDateTime)
+            .ToList();
     }
 }

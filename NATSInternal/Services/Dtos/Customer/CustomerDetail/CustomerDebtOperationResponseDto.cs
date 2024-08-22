@@ -9,7 +9,7 @@ public class CustomerDebtOperationResponseDto
     public CustomerDebtOperationAuthorizationResponseDto Authorization { get; set; }
     
     public CustomerDebtOperationResponseDto(
-            Debt debt,
+            DebtIncurrence debt,
             IAuthorizationService authorizationService)
     {
         Operation = DebtOperationType.DebtIncurrence;
@@ -17,7 +17,7 @@ public class CustomerDebtOperationResponseDto
         OperatedDateTime = debt.IncurredDateTime;
         IsLocked = debt.IsLocked;
         
-        DebtAuthorizationResponseDto authorization;
+        DebtIncurrenceAuthorizationResponseDto authorization;
         authorization = authorizationService.GetDebtAuthorization(debt);
         Authorization = new CustomerDebtOperationAuthorizationResponseDto(authorization);
     }

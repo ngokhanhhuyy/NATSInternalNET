@@ -210,9 +210,9 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Authorization for debts.
-    public DebtAuthorizationResponseDto GetDebtAuthorization(Debt debt)
+    public DebtIncurrenceAuthorizationResponseDto GetDebtAuthorization(DebtIncurrence debt)
     {
-        return new DebtAuthorizationResponseDto
+        return new DebtIncurrenceAuthorizationResponseDto
         {
             CanEdit = CanEditDebt(debt),
             CanDelete = CanDeleteDebt(),
@@ -495,7 +495,7 @@ public class AuthorizationService : IAuthorizationService
         return _user.HasPermission(PermissionConstants.CreateDebt);
     }
 
-    public bool CanEditDebt(Debt debt)
+    public bool CanEditDebt(DebtIncurrence debt)
     {
         if (!_user.HasPermission(PermissionConstants.EditDebt))
         {

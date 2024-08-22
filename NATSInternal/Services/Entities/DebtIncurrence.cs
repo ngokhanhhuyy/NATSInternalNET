@@ -1,7 +1,7 @@
 ﻿namespace NATSInternal.Services.Entities;
 
-[Table("debts")]
-public class Debt : LockableEntity
+[Table("debt_incurrences")]
+public class DebtIncurrence : LockableEntity
 {
     [Column("id")]
     [Key]
@@ -34,7 +34,7 @@ public class Debt : LockableEntity
     // Navigation properties.
     public virtual Customer Customer { get; set; }
     public virtual User CreatedUser { get; set; }
-    public virtual List<DebtUpdateHistory> UpdateHistories { get; set; }
+    public virtual List<DebtIncurrenceUpdateHistory> UpdateHistories { get; set; }
 
     [NotMapped]
     public DateTime? LastUpdatedDateTime => UpdateHistories

@@ -27,8 +27,8 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
     public DbSet<ExpensePayee> ExpensePayees { get; set; }
     public DbSet<ExpensePhoto> ExpensePhotos { get; set; }
     public DbSet<ExpenseUpdateHistory> ExpenseUpdateHistories { get; set; }
-    public DbSet<Debt> Debts { get; set; }
-    public DbSet<DebtUpdateHistory> DebtUpdateHistories { get; set; }
+    public DbSet<DebtIncurrence> DebtIncurrences { get; set; }
+    public DbSet<DebtIncurrenceUpdateHistory> DebtIncurrenceUpdateHistories { get; set; }
     public DbSet<DebtPayment> DebtPayments { get; set; }
     public DbSet<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
     public DbSet<Announcement> Announcements { get; set; }
@@ -428,41 +428,44 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
             e.HasIndex(euh => euh.UpdatedDateTime)
                 .HasDatabaseName("IX__expense_update_histories__updated_datetime");
         });
-        modelBuilder.Entity<Debt>(e =>
+        modelBuilder.Entity<DebtIncurrence>(e =>
         {
-            e.ToTable("debts");
+            e.ToTable("debt_incurrences");
             e.HasKey(d => d.Id);
             e.HasOne(d => d.Customer)
-                .WithMany(c => c.Debts)
+                .WithMany(c => c.DebtIncurrences)
                 .HasForeignKey(d => d.CustomerId)
-                .HasConstraintName("FK__debts__customers__customer_id")
+                .HasConstraintName("FK__debt_incurrences__customers__customer_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasOne(d => d.CreatedUser)
                 .WithMany(u => u.Debts)
                 .HasForeignKey(d => d.CreatedUserId)
-                .HasConstraintName("FK__debts__users__user_id")
+                .HasConstraintName("FK__debt_incurrences__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(d => d.CreatedDateTime)
-                .HasDatabaseName("IX__debts__incurred_datetime");
+                .HasDatabaseName("IX__debt_incurrences__incurred_datetime");
             e.HasIndex(d => d.IsDeleted)
-                .HasDatabaseName("IX__debts__is_deleted");
+                .HasDatabaseName("IX__debt_incurrences__is_deleted");
         });
-        modelBuilder.Entity<DebtUpdateHistory>(e =>
+        modelBuilder.Entity<DebtIncurrenceUpdateHistory>(e =>
         {
-            e.ToTable("debt_update_histories");
+            e.ToTable("debt_incurrence_update_histories");
             e.HasKey(duh => duh.Id);
-            e.HasOne(duh => duh.Debt)
+            e.HasOne(duh => duh.DebtIncurrence)
                 .WithMany(d => d.UpdateHistories)
-                .HasForeignKey(duh => duh.DebtId)
-                .HasConstraintName("FK__debt_update_histories__debts__debt_id")
+                .HasForeignKey(duh => duh.DebtIncurrenceId)
+                .HasConstraintName(
+                    "FK__debt_incurrence_update_histories__" +
+                    "debt_incurrences__" +
+                    "debt_incurrence_id")
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(duh => duh.User)
                 .WithMany(u => u.DebtUpdateHistories)
                 .HasForeignKey(duh => duh.UserId)
-                .HasConstraintName("FK__debt_update_histories__users__user_id")
+                .HasConstraintName("FK__debt_incurrence_update_histories__users__user_id")
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(duh => duh.UpdatedDateTime)
-                .HasDatabaseName("IX__debt_update_histories__updated_datetime");
+                .HasDatabaseName("IX__debt_incurrence_update_histories__updated_datetime");
         });
         modelBuilder.Entity<DebtPayment>(e =>
         {

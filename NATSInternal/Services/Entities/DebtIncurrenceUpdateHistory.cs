@@ -1,7 +1,7 @@
 ﻿namespace NATSInternal.Services.Entities;
 
-[Table("debt_update_histories")]
-public class DebtUpdateHistory
+[Table("debt_incurrence_update_histories")]
+public class DebtIncurrenceUpdateHistory
 {
     [Column("id")]
     [Key]
@@ -25,15 +25,15 @@ public class DebtUpdateHistory
     public string NewData { get; set; }
 
     // Foreign keys
-    [Column("debt_id")]
+    [Column("debt_incurrence_id")]
     [Required]
-    public int DebtId { get; set; }
+    public int DebtIncurrenceId { get; set; }
 
     [Column("user_id")]
     [Required]
     public int UserId { get; set; }
 
     // Navigation properties
-    public virtual Debt Debt { get; set; }
+    public virtual DebtIncurrence DebtIncurrence { get; set; }
     public virtual User User { get; set; }
 }

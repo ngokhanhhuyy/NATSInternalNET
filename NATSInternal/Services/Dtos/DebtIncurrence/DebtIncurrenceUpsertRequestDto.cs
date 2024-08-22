@@ -1,13 +1,13 @@
 namespace NATSInternal.Services.Dtos;
 
-public class DebtUpsertRequestDto : IRequestDto<DebtUpsertRequestDto>
+public class DebtIncurrenceUpsertRequestDto : IRequestDto<DebtIncurrenceUpsertRequestDto>
 {
     public long Amount { get; set; }
     public string Note { get; set; }
     public DateTime? IncurredDateTime { get; set; }
     public string UpdatingReason { get; set; }
     
-    public DebtUpsertRequestDto TransformValues()
+    public DebtIncurrenceUpsertRequestDto TransformValues()
     {
         Note = Note?.ToNullIfEmpty();
         return this;

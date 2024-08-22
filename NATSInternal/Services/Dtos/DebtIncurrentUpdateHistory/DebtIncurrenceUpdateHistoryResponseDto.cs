@@ -1,9 +1,9 @@
 namespace NATSInternal.Services.Dtos;
 
-public class DebtUpdateHistoryResponseDto
+public class DebtIncurrenceUpdateHistoryResponseDto
 {
-    private readonly DebtUpdateHistoryDataDto _oldData;
-    private readonly DebtUpdateHistoryDataDto _newData;
+    private readonly DebtIncurrenceUpdateHistoryDataDto _oldData;
+    private readonly DebtIncurrenceUpdateHistoryDataDto _newData;
     
     public DateTime UpdatedDateTime { get; private set; }
     public UserBasicResponseDto UpdatedUser { get; private set; }
@@ -18,12 +18,13 @@ public class DebtUpdateHistoryResponseDto
     public string OldNote => _oldData.Note;
     public string NewNote => _newData.Note;
     
-    public DebtUpdateHistoryResponseDto(DebtUpdateHistory updateHistory)
+    public DebtIncurrenceUpdateHistoryResponseDto(
+            DebtIncurrenceUpdateHistory updateHistory)
     {
         _oldData = JsonSerializer
-            .Deserialize<DebtUpdateHistoryDataDto>(updateHistory.OldData);
+            .Deserialize<DebtIncurrenceUpdateHistoryDataDto>(updateHistory.OldData);
         _newData = JsonSerializer
-            .Deserialize<DebtUpdateHistoryDataDto>(updateHistory.NewData);
+            .Deserialize<DebtIncurrenceUpdateHistoryDataDto>(updateHistory.NewData);
         UpdatedDateTime = updateHistory.UpdatedDateTime;
         UpdatedUser = new UserBasicResponseDto(updateHistory.User);
         Reason = updateHistory.Reason;

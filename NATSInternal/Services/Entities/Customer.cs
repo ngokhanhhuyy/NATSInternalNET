@@ -110,11 +110,20 @@ public class Customer
     public virtual List<Order> Orders { get; set; }
     public virtual List<Treatment> Treatments { get; set; }
     public virtual List<Consultant> Consultants { get; set; }
-    public virtual List<Debt> Debts { get; set; }
+    public virtual List<DebtIncurrence> DebtIncurrences { get; set; }
     public virtual List<DebtPayment> DebtPayments { get; set; }
 
     // Property for convinience.
-    public long DebtAmount => Debts.Where(d => !d.IsDeleted).Sum(d => d.Amount);
-    public long DebtPaidAmount => DebtPayments.Where(dp => !dp.IsDeleted).Sum(dp => dp.Amount);
-    public long DebtRemainingAmount =>  DebtAmount - DebtPaidAmount;
+    [NotMapped]
+    public long DebtIncurredAmount => DebtIncurrences
+        .Where(d => !d.IsDeleted)
+        .Sum(d => d.Amount);
+
+    [NotMapped]
+    public long DebtPaidAmount => DebtPayments
+        .Where(dp => !dp.IsDeleted)
+        .Sum(dp => dp.Amount);
+
+    [NotMapped]
+    public long DebtAmount =>  DebtIncurredAmount - DebtPaidAmount;
 }

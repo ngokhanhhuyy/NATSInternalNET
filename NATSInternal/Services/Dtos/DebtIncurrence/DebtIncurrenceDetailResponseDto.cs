@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Services.Dtos;
 
-public class DebtDetailResponseDto
+public class DebtIncurrenceDetailResponseDto
 {
     public int Id { get; set; }
     public long Amount { get; set; }
@@ -9,12 +9,12 @@ public class DebtDetailResponseDto
     public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
     public UserBasicResponseDto User { get; set; }
-    public DebtAuthorizationResponseDto Authorization { get; set; }
-    public List<DebtUpdateHistoryResponseDto> UpdateHistories { get; set; }
+    public DebtIncurrenceAuthorizationResponseDto Authorization { get; set; }
+    public List<DebtIncurrenceUpdateHistoryResponseDto> UpdateHistories { get; set; }
 
-    public DebtDetailResponseDto(
-            Debt debt,
-            DebtAuthorizationResponseDto authorization,
+    public DebtIncurrenceDetailResponseDto(
+            DebtIncurrence debt,
+            DebtIncurrenceAuthorizationResponseDto authorization,
             bool mapUpdateHistories = false)
     {
         Id = debt.Id;
@@ -29,7 +29,7 @@ public class DebtDetailResponseDto
         if (mapUpdateHistories)
         {
             UpdateHistories = debt.UpdateHistories
-                .Select(uh => new DebtUpdateHistoryResponseDto(uh))
+                .Select(uh => new DebtIncurrenceUpdateHistoryResponseDto(uh))
                 .ToList();
         }
     }

@@ -10,7 +10,7 @@ public class DailyStatsDetailResponseDto : StatsDetailResponseDto
         TreatmentGrossRevenue = dailyStats.TreatmentGrossRevenue;
         ConsultantGrossRevenue = dailyStats.ConsultantGrossRevenue;
         VatCollectedAmount = dailyStats.VatCollectedAmount;
-        DebtAmount = dailyStats.DebtAmount;
+        DebtAmount = dailyStats.DebtIncurredAmount;
         DebtPaidAmount = dailyStats.DebtPaidAmount;
         ShipmentCost = dailyStats.ShipmentCost;
         SupplyCost = dailyStats.SupplyCost;
@@ -22,7 +22,7 @@ public class DailyStatsDetailResponseDto : StatsDetailResponseDto
         Expenses = dailyStats.Expenses;
         GrossRevenue = dailyStats.GrossRevenue;
         NetRevenue = dailyStats.NetRevenue;
-        RemainingDebtAmount = dailyStats.RemainingDebtAmount;
+        DebtAmount = dailyStats.DebtAmount;
         GrossProfit = dailyStats.GrossProfit;
         NetProfit = dailyStats.NetProfit;
         OperatingProfit = dailyStats.OperatingProfit;
