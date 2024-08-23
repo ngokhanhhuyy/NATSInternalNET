@@ -5,16 +5,19 @@ namespace NATSInternal.Controller;
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ConsultantController : ControllerBase
 {
-    private readonly IConsultantService _service;
+    private readonly IConsultantService _consultantService;
+    private readonly INotificationService _notificationService;
     private readonly IValidator<ConsultantListRequestDto> _listValidator;
     private readonly IValidator<ConsultantUpsertRequestDto> _upsertValidator;
 
     public ConsultantController(
-            IConsultantService service,
+            IConsultantService consultantService,
+            INotificationService notificationService,
             IValidator<ConsultantListRequestDto> listValidator,
             IValidator<ConsultantUpsertRequestDto> upsertValidator)
     {
-        _service = service;
+        _consultantService = consultantService;
+        _notificationService = notificationService;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
     }
@@ -35,7 +38,7 @@ public class ConsultantController : ControllerBase
         }
 
         // Fetch the data of the list.
-        return Ok(await _service.GetListAsync(requestDto));
+        return Ok(await _consultantService.GetListAsync(requestDto));
     }
 
     [HttpGet("{id:int}")]
@@ -45,7 +48,7 @@ public class ConsultantController : ControllerBase
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(id));
+            return Ok(await _consultantService.GetDetailAsync(id));
         }
         catch (ResourceNotFoundException exception)
         {
@@ -65,8 +68,11 @@ public class ConsultantController : ControllerBase
     {
         // Validate data from the request.
         ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues(), options =>
-            options.IncludeRuleSets("Create").IncludeRulesNotInRuleSet());
+        validationResult = _upsertValidator.Validate(
+            requestDto.TransformValues(),
+            options => options
+                .IncludeRuleSets("Create")
+                .IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
@@ -76,11 +82,18 @@ public class ConsultantController : ControllerBase
         // Perform creating operation.
         try
         {
-            int createdId = await _service.CreateAsync(requestDto);
+            // Create the consultant.
+            int createdId = await _consultantService.CreateAsync(requestDto);
             string createdResourceUrl = Url.Action(
                 "ConsultantDetail",
                 "Consultant",
                 new { id = createdId });
+            
+            // The consultant has been created successfully, create the notification.
+            await _notificationService.CreateAsync(
+                NotificationType.ConsultantCreation,
+                new List<int> { createdId });
+
             return Created(createdResourceUrl, createdId);
         }
         catch (AuthorizationException)
@@ -111,18 +124,28 @@ public class ConsultantController : ControllerBase
     {
         // Validate data from the request.
         ValidationResult validationResult;
-        validationResult = _upsertValidator.Validate(requestDto.TransformValues(), options =>
-            options.IncludeRuleSets("Update").IncludeRulesNotInRuleSet());
+        validationResult = _upsertValidator.Validate(
+            requestDto.TransformValues(),
+            options => options
+                .IncludeRuleSets("Update")
+                .IncludeRulesNotInRuleSet());
         if (!validationResult.IsValid)
         {
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
 
-        // Perform the updating operation.
+        // Perform the operations.
         try
         {
-            await _service.UpdateAsync(id, requestDto);
+            // Perform the update operation.
+            await _consultantService.UpdateAsync(id, requestDto);
+
+            // Create the notification.
+            await _notificationService.CreateAsync(
+                NotificationType.ConsultantModification,
+                new List<int> { id });
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -155,7 +178,13 @@ public class ConsultantController : ControllerBase
     {
         try
         {
-            await _service.DeleteAsync(id);
+            await _consultantService.DeleteAsync(id);
+
+            // Create the notification.
+            await _notificationService.CreateAsync(
+                NotificationType.ConsultantDeletion,
+                new List<int> { id });
+                
             return Ok();
         }
         catch (ResourceNotFoundException exception)

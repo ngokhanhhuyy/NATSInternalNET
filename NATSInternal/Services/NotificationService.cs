@@ -15,12 +15,14 @@ public class NotificationService : INotificationService
     }
     
     /// <inheritdoc />
-    public async Task<NotificationListResponseDto> GetListAsync(NotificationListRequestDto requestDto)
+    public async Task<NotificationListResponseDto> GetListAsync(
+            NotificationListRequestDto requestDto)
     {
         // Initialize query.
         int currentUserId = _authorizationService.GetUserId();
         IQueryable<Notification> query = _context.Notifications
             .Include(n => n.ReadUsers).ThenInclude(u => u.ReceivedNotifications)
+            .OrderByDescending(n => n.DateTime)
             .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUserId));
         
         // Initialize response dto.
@@ -31,7 +33,8 @@ public class NotificationService : INotificationService
             responseDto.PageCount = 0;
             return responseDto;
         }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(user => new NotificationResponseDto(user, currentUserId))
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
@@ -67,24 +70,53 @@ public class NotificationService : INotificationService
         }
     }
     
-    // TODO: Implement notification creating mechanism.
-    // public async Task<int> CreateAsync(NotificationType type, List<int> resourceIds)
-    // {
-    //     // Fetch the list of all users' ids.
-    //     List<string>;
-    //     
-    //     // Initialize the entity.
-    //     Notification notification = new Notification
-    //     {
-    //         Type = type,
-    //         DateTime = DateTime.UtcNow.ToApplicationTime(),
-    //         ResourceIds = resourceIds
-    //         
-    //     };
-    //     
-    //     ;
-    //     
-    // }
+    /// <summary>
+    /// Create a notification which all users can receive with the specified
+    /// notification type and resource ids.
+    /// </summary>
+    /// <param name="type">The type of the notification.</param>
+    /// <param name="resourceIds">The id(s) of the interacted resource.</param>
+    /// <returns>The id of the created notification.</returns>
+    public async Task<int> CreateAsync(NotificationType type, List<int> resourceIds)
+    {
+        // Fetch the list of all users' ids.
+        List<int> userIds = await _context.Users
+            .Where(u => !u.IsDeleted)
+            .Select(u => u.Id)
+            .ToListAsync();
+        
+        // Use transaction for atomic operations.
+        await using IDbContextTransaction transaction = await _context.Database
+            .BeginTransactionAsync();
+
+        // Initialize the entity.
+        Notification notification = new Notification
+        {
+            Type = type,
+            DateTime = DateTime.UtcNow.ToApplicationTime(),
+            ResourceIds = resourceIds
+        };
+        _context.Notifications.Add(notification);
+
+        // Initialize the relationship between all users (as notification receivers)
+        // and the notification.
+        foreach (int userId in userIds)
+        {
+            NotificationReceivedUser notificationReceivedUser;
+            notificationReceivedUser = new NotificationReceivedUser
+            {
+                ReceivedNotification = notification,
+                ReceivedUserId = userId
+            };
+            _context.NotificationReceivedUsers.Add(notificationReceivedUser);
+        }
+        // Save the notification received user entity.
+        await _context.SaveChangesAsync();
+
+        // Commit the transaction and finish the operation.
+        await transaction.CommitAsync();
+        return notification.Id;
+    }
     
     /// <summary>
     /// Fetch the entity of the current user.

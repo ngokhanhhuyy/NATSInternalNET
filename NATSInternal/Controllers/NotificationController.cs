@@ -34,7 +34,7 @@ public class NotificationController : ControllerBase
         return Ok(await _service.GetListAsync(requestDto));
     }
     
-    [HttpPost("{id:int}")]
+    [HttpPost("{id:int}/MarkAsRead")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> NotificationMarkAsRead(int id)
@@ -49,6 +49,4 @@ public class NotificationController : ControllerBase
             return NotFound();
         }
     }
-    
-    
 }

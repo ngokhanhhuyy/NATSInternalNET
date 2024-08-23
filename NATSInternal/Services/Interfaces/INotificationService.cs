@@ -26,4 +26,13 @@ public interface INotificationService
     /// cannot be found.
     /// </exception>
     Task MarkAsReadAsync(int id);
+    
+    /// <summary>
+    /// Create a notification which all users can receive with the specified
+    /// notification type and resource ids.
+    /// </summary>
+    /// <param name="type">The type of the notification.</param>
+    /// <param name="resourceIds">The id(s) of the interacted resource.</param>
+    /// <returns>The id of the created notification.</returns>
+    Task<int> CreateAsync(NotificationType type, List<int> resourceIds);
 }
