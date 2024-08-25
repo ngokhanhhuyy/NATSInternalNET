@@ -7,19 +7,24 @@ public class CustomerDebtPaymentController : ControllerBase
 {
     private readonly IDebtPaymentService _service;
     private readonly IValidator<DebtPaymentUpsertRequestDto> _upsertValidator;
+    private readonly INotifier _notifier;
 
     public CustomerDebtPaymentController(
             IDebtPaymentService service,
-            IValidator<DebtPaymentUpsertRequestDto> upsertValidator)
+            IValidator<DebtPaymentUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = service;
         _upsertValidator = upsertValidator;
+        _notifier = notifier;
     }
     
     [HttpGet("{debtPaymentId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DebtPaymentDetail(int customerId, int debtPaymentId)
+    public async Task<IActionResult> DebtPaymentDetail(
+            int customerId,
+            int debtPaymentId)
     {
         try
         {
@@ -54,11 +59,19 @@ public class CustomerDebtPaymentController : ControllerBase
         // Perform the creating operation.
         try
         {
+            // Create the debt payment.
             int createdId = await _service.CreateAsync(customerId, requestDto);
             string createdResourceUrl = Url.Action(
                 "DebtPaymentDetail",
                 "CustomerDebtPayment",
                 new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                NotificationType.DebtPaymentCreation,
+                customerId,
+                createdId);
+            
             return Created(createdResourceUrl, createdId);
         }
         catch (AuthorizationException)
@@ -101,7 +114,15 @@ public class CustomerDebtPaymentController : ControllerBase
         // Perform the updating operation.
         try
         {
+            // Update the debt payment.
             await _service.UpdateAsync(customerId, debtPaymentId, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                NotificationType.DebtPaymentModification,
+                customerId,
+                debtPaymentId);
+            
             return Ok();
         }
         catch (AuthorizationException)
@@ -134,7 +155,15 @@ public class CustomerDebtPaymentController : ControllerBase
     {
         try
         {
+            // Delete the debt payment.
             await _service.DeleteAsync(customerId, debtPaymentId);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                NotificationType.DebtPaymentDeletion,
+                customerId,
+                debtPaymentId);
+            
             return Ok();
         }
         catch (AuthorizationException)

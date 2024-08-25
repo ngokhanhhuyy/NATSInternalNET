@@ -7,13 +7,16 @@ public class ProductCategoryController : ControllerBase
 {
     private readonly IProductCategoryService _service;
     private readonly IValidator<ProductCategoryRequestDto> _validator;
+    private readonly INotifier _notifier;
 
     public ProductCategoryController(
             IProductCategoryService service,
-            IValidator<ProductCategoryRequestDto> validator)
+            IValidator<ProductCategoryRequestDto> validator,
+            INotifier notifier)
     {
         _service = service;
         _validator = validator;
+        _notifier = notifier;
     }
 
     [HttpGet]
@@ -47,6 +50,7 @@ public class ProductCategoryController : ControllerBase
     public async Task<IActionResult> ProductCategoryCreate(
             [FromBody] ProductCategoryRequestDto requestDto)
     {
+        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _validator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -55,13 +59,19 @@ public class ProductCategoryController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Perform the creating operation.
         try
         {
+            // Create the product category.
             int createdId = await _service.CreateAsyns(requestDto);
             string createdResourceUrl = Url.Action(
                 "ProductCategoryDetail",
                 "ProductCategory",
                 new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ProductCategoryCreation, createdId);
+            
             return Created(createdResourceUrl, createdId);
         }
         catch (OperationException exception)
@@ -80,6 +90,7 @@ public class ProductCategoryController : ControllerBase
             int id,
             [FromBody] ProductCategoryRequestDto requestDto)
     {
+        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _validator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -88,9 +99,15 @@ public class ProductCategoryController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Perform the updating operation.
         try
         {
+            // Update the product category.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ProductCategoryModification, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -112,7 +129,12 @@ public class ProductCategoryController : ControllerBase
     {
         try
         {
+            // Delete the product category.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ProductCategoryDeletion, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)

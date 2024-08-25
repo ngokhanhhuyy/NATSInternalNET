@@ -8,15 +8,18 @@ public class AnnouncementController : ControllerBase
     private readonly IAnnouncementService _service;
     private readonly IValidator<AnnouncementListRequestDto> _listValidator;
     private readonly IValidator<AnnouncementUpsertRequestDto> _upsertValidator;
+    private readonly INotifier _notifier;
 
     public AnnouncementController(
             IAnnouncementService service,
             IValidator<AnnouncementListRequestDto> listValidator,
-            IValidator<AnnouncementUpsertRequestDto> upsertValidator)
+            IValidator<AnnouncementUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = service;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
+        _notifier = notifier;
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -53,10 +56,11 @@ public class AnnouncementController : ControllerBase
         }
     }
     
+    [HttpPost]
+    [Authorize(Policy = "CanCreateAnnouncement")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [HttpPost]
     public async Task<IActionResult> AnnouncementCreate(
             [FromBody] AnnouncementUpsertRequestDto requestDto)
     {
@@ -74,12 +78,17 @@ public class AnnouncementController : ControllerBase
         // Perform the creating operation.
         try
         {
-            int createdAnnouncementId = await _service.CreateAsync(requestDto);
-            string createdAnnouncementUrl = Url.Action(
+            // Create the announcement.
+            int createdId = await _service.CreateAsync(requestDto);
+            string createdResourceUrl = Url.Action(
                 "AnnouncementDetail",
                 "Announcement",
-                new { id = createdAnnouncementId });
-            return Created(createdAnnouncementUrl, createdAnnouncementId);
+                new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.AnnouncementCreation, createdId);
+            
+            return Created(createdResourceUrl, createdId);
         }
         catch (ConcurrencyException)
         {
@@ -87,11 +96,12 @@ public class AnnouncementController : ControllerBase
         }
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "CanUpdateAnnouncement")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [HttpPut("{id:int}")]
     public async Task<IActionResult> AnnouncementUpdate(
             int id,
             [FromBody] AnnouncementUpsertRequestDto requestDto)
@@ -110,7 +120,12 @@ public class AnnouncementController : ControllerBase
         // Perform update operation.
         try
         {
+            // Update the announcement.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.AnnouncementModification, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException)
@@ -123,15 +138,21 @@ public class AnnouncementController : ControllerBase
         }
     }
 
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "CanDeleteAnnouncement")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [HttpDelete("{id:int}")]
     public async Task<IActionResult> AnnouncementDelete(int id)
     {
         try
         {
+            // Delete the announcement.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.AnnouncementDeletion, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException)

@@ -19,7 +19,8 @@ public class NotificationController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> NotificationList([FromQuery] NotificationListRequestDto requestDto)
+    public async Task<IActionResult> NotificationList(
+            [FromQuery] NotificationListRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -31,7 +32,37 @@ public class NotificationController : ControllerBase
         }
         
         // Fetch the list.
-        return Ok(await _service.GetListAsync(requestDto));
+        NotificationListResponseDto responseDto = await _service
+            .GetListAsync(requestDto);
+        
+        // Generate the resource URL for the notifications.
+        foreach (NotificationResponseDto notification in responseDto.Items)
+        {
+            notification.GenerateResourceUrl(Url);
+        }
+        
+        return Ok(responseDto);
+    }
+    
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> NotificationSingle(int id)
+    {
+        try
+        {
+            // Fetch the notification.
+            NotificationResponseDto responseDto = await _service.GetSingleAsync(id);
+            
+            // Generate the resource URL for the notification.
+            responseDto.GenerateResourceUrl(Url);
+            
+            return Ok(responseDto);
+        }
+        catch (ResourceNotFoundException)
+        {
+            return NotFound();
+        }
     }
     
     [HttpPost("{id:int}/MarkAsRead")]

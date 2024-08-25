@@ -2,21 +2,24 @@
 
 [Route("Api/Treatment")]
 [ApiController]
-[Authorize]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class TreatmentController : ControllerBase
 {
     private readonly ITreatmentService _service;
     private readonly IValidator<TreatmentListRequestDto> _listValidator;
     private readonly IValidator<TreatmentUpsertRequestDto> _upsertValidator;
+    private readonly INotifier _notifier;
 
     public TreatmentController(
             ITreatmentService service,
             IValidator<TreatmentListRequestDto> listValidator,
-            IValidator<TreatmentUpsertRequestDto> upsertValidator)
+            IValidator<TreatmentUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = service;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
+        _notifier = notifier;
     }
 
     [HttpGet]
@@ -74,11 +77,16 @@ public class TreatmentController : ControllerBase
         // Perform the creating operation.
         try
         {
+            // Create the treatment.
             int createdId = await _service.CreateAsync(requestDto);
             string createdResourceUrl = Url.Action(
                 "TreatmentDetail",
                 "Treatment",
                 new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.TreatmentCreation, createdId);
+            
             return Created(createdResourceUrl, createdId);
         }
         catch (AuthorizationException)
@@ -119,7 +127,12 @@ public class TreatmentController : ControllerBase
         // Perform the updating operation.
         try
         {
+            // Update the treatment.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.TreatmentModification, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -152,7 +165,12 @@ public class TreatmentController : ControllerBase
     {
         try
         {
+            // Delete the treatment.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.TreatmentDeletion, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)

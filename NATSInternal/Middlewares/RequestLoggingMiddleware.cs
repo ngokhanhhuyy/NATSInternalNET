@@ -1,4 +1,6 @@
-﻿namespace NATSInternal.Middlewares;
+﻿using System.Globalization;
+
+namespace NATSInternal.Middlewares;
 
 public class RequestLoggingMiddleware
 {
@@ -35,7 +37,12 @@ public class RequestLoggingMiddleware
                 break;
         }
         Console.Write(statusCode);
-        Console.Write(" " + DateTime.UtcNow.ToApplicationTime().ToString());
+        Console.BackgroundColor = ConsoleColor.Black;
+        Console.ForegroundColor = ConsoleColor.White;
+        await Console.Out.WriteAsync("     ");
+        Console.BackgroundColor = ConsoleColor.White;
+        Console.ForegroundColor = ConsoleColor.Black;
+        Console.Write(DateTime.UtcNow.ToApplicationTime().ToString(CultureInfo.InvariantCulture));
         Console.BackgroundColor = ConsoleColor.Black;
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine($" {method} {path}{queryString}");

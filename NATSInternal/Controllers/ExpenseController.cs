@@ -8,15 +8,18 @@ public class ExpenseController : ControllerBase
     private readonly IExpenseService _service;
     private readonly IValidator<ExpenseListRequestDto> _listValidator;
     private readonly IValidator<ExpenseUpsertRequestDto> _upsertValidator;
+    private readonly INotifier _notifier;
 
     public ExpenseController(
             IExpenseService service,
             IValidator<ExpenseListRequestDto> listValidator,
-            IValidator<ExpenseUpsertRequestDto> upsertValidator)
+            IValidator<ExpenseUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = service;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
+        _notifier = notifier;
     }
 
     [HttpGet]
@@ -34,7 +37,7 @@ public class ExpenseController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Fetch the list data.
+        // Fetch the list of data.
         return Ok(await _service.GetListAsync(requestDto));
     }
 
@@ -76,8 +79,16 @@ public class ExpenseController : ControllerBase
         // Perform creating operation.
         try
         {
+            // Create the expense.
             int createdId = await _service.CreateAsync(requestDto);
-            string createdUrl = Url.Action("ExpenseDetail", "Expense", new { id = createdId });
+            string createdUrl = Url.Action(
+                "ExpenseDetail",
+                "Expense",
+                new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ExpenseCreation, createdId);
+            
             return Created(createdUrl, createdId); 
         }
         catch (ConcurrencyException)
@@ -110,7 +121,12 @@ public class ExpenseController : ControllerBase
         // Perform updating operation.
         try
         {
+            // Update the expense.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ExpenseModification, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -137,7 +153,12 @@ public class ExpenseController : ControllerBase
     {
         try
         {
+            // Delete the expense.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ExpenseDeletion, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)

@@ -18,6 +18,17 @@ public interface INotificationService
     Task<NotificationListResponseDto> GetListAsync(NotificationListRequestDto requestDto);
     
     /// <summary>
+    /// Get a single notification with the specified id. The current user who has sent the request
+    /// must be in the list of the notification's received users.
+    /// </summary>
+    /// <param name="id">The id of the notification.</param>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the notification with the specified id which belongs to the current user
+    /// cannot be found.
+    /// </exception>
+    Task<NotificationResponseDto> GetSingleAsync(int id);
+    
+    /// <summary>
     /// Set the notification with the specified id as read.
     /// </summary>
     /// <param name="id">The id of the notification.</param>
@@ -33,6 +44,10 @@ public interface INotificationService
     /// </summary>
     /// <param name="type">The type of the notification.</param>
     /// <param name="resourceIds">The id(s) of the interacted resource.</param>
-    /// <returns>The id of the created notification.</returns>
-    Task<int> CreateAsync(NotificationType type, List<int> resourceIds);
+    /// <returns>
+    /// A tuple containing 2 elements. The first one is a list of the users
+    /// those the created notification is distributed. The second one is the id
+    /// of the created notification.
+    /// </returns>
+    Task<(List<int>, int)> CreateAsync(NotificationType type, List<int> resourceIds);
 }

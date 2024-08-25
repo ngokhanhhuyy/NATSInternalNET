@@ -11,6 +11,7 @@ public class UserController : ControllerBase
     private readonly IValidator<UserUpdateRequestDto> _updateValidator;
     private readonly IValidator<UserPasswordChangeRequestDto> _passwordChangeValidator;
     private readonly IValidator<UserPasswordResetRequestDto> _passwordResetValidator;
+    private readonly INotifier _notifier;
 
     public UserController(
             IUserService userService,
@@ -18,7 +19,8 @@ public class UserController : ControllerBase
             IValidator<UserCreateRequestDto> createValidator,
             IValidator<UserUpdateRequestDto> updateValidator,
             IValidator<UserPasswordChangeRequestDto> passwordChangeValidator,
-            IValidator<UserPasswordResetRequestDto> passwordResetValidator)
+            IValidator<UserPasswordResetRequestDto> passwordResetValidator,
+            INotifier notifier)
     {
         _userService = userService;
         _listValidator = listValidator;
@@ -26,7 +28,7 @@ public class UserController : ControllerBase
         _updateValidator = updateValidator;
         _passwordChangeValidator = passwordChangeValidator;
         _passwordResetValidator = passwordResetValidator;
-
+        _notifier = notifier;
     }
 
     [HttpGet]
@@ -98,6 +100,7 @@ public class UserController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = "CanCreateUser")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -115,8 +118,14 @@ public class UserController : ControllerBase
         // Perform creating operation.
         try
         {
-            UserCreateResponseDto responseDto = await _userService.CreateAsync(requestDto);
-            return Ok(responseDto);
+            // Create the user.
+            int createdId = await _userService.CreateAsync(requestDto);
+            string createdResourceUrl = Url.Action("UserDetail", "User", createdId);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.UserCreation, createdId);
+            
+            return Created(createdResourceUrl, createdId);
         }
         catch (DuplicatedException exception)
         {
@@ -142,8 +151,11 @@ public class UserController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> UpdateUser(int id, [FromBody] UserUpdateRequestDto requestDto)
+    public async Task<IActionResult> UpdateUser(
+            int id,
+            [FromBody] UserUpdateRequestDto requestDto)
     {
+        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _updateValidator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -152,9 +164,15 @@ public class UserController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Perform the updating operation.
         try
         {
+            // Update the user.
             await _userService.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.UserModification, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -179,8 +197,9 @@ public class UserController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult>
-        ChangeUserPassword(int id, [FromBody] UserPasswordChangeRequestDto requestDto)
+    public async Task<IActionResult> ChangeUserPassword(
+            int id,
+            [FromBody] UserPasswordChangeRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -233,7 +252,7 @@ public class UserController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Perform the password change operation.
+        // Perform the password reset operation.
         try
         {
             await _userService.ResetPasswordAsync(id, requestDto);
@@ -265,7 +284,11 @@ public class UserController : ControllerBase
     {
         try
         {
+            // Delete the user.
             await _userService.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.UserDeletion, id);
             return Ok();
         }
         catch (ResourceNotFoundException exception)

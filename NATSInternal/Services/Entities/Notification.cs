@@ -17,8 +17,13 @@ public class Notification
     
     [Column("resource_ids")]
     public List<int> ResourceIds { get; set; }
+    
+    // Foreign key.
+    [Column("created_user_id")]
+    public int? CreatedUserId { get; set; }
 
     // Navigation properties.
+    public virtual User CreatedUser { get; set; }
     public virtual List<User> ReceivedUsers { get; set; }
     public virtual List<User> ReadUsers { get; set; }
     

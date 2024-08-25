@@ -14,6 +14,7 @@ global using Microsoft.AspNetCore.Mvc.Rendering;
 global using Microsoft.AspNetCore.SignalR;
 global using MySqlConnector;
 global using NATSInternal.Extensions;
+global using NATSInternal.Hubs;
 global using NATSInternal.Models;
 global using NATSInternal.Services;
 global using NATSInternal.Services.Constants;

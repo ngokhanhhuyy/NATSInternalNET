@@ -8,21 +8,25 @@ public class CustomerController : ControllerBase
     private readonly ICustomerService _service;
     private readonly IValidator<CustomerListRequestDto> _listValidator;
     private readonly IValidator<CustomerUpsertRequestDto> _upsertValidator;
+    private readonly INotifier _notifier;
 
     public CustomerController(
             ICustomerService service,
             IValidator<CustomerListRequestDto> listValidator,
-            IValidator<CustomerUpsertRequestDto> upsertValidator)
+            IValidator<CustomerUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = service;
         _listValidator = listValidator;
         _upsertValidator = upsertValidator;
+        _notifier = notifier;
     }
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CustomerList([FromQuery] CustomerListRequestDto requestDto)
+    public async Task<IActionResult> CustomerList(
+            [FromQuery] CustomerListRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -91,12 +95,17 @@ public class CustomerController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Call service for creating operation.
+        // Perform the creating operation.
         try
         {
-            int createdCustomerId = await _service.CreateAsync(requestDto);
-            string createdCustomerUrl = Url.Action("CustomerDetail", new { id = createdCustomerId });
-            return Created(createdCustomerUrl, createdCustomerId);
+            // Create the customer.
+            int createdId = await _service.CreateAsync(requestDto);
+            string createdUrl = Url.Action("CustomerDetail", new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.CustomerCreation, createdId);
+            
+            return Created(createdUrl, createdId);
         }
         catch (OperationException exception)
         {
@@ -123,10 +132,15 @@ public class CustomerController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Call service for updating operation.
+        // Perform the updating operation.
         try
         {
+            // Update the customer.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.CustomerModification, id);
+            
             return Ok();
         }
         catch (OperationException exception)
@@ -144,7 +158,12 @@ public class CustomerController : ControllerBase
     {
         try
         {
+            // Delete the customer.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.CustomerDeletion, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)

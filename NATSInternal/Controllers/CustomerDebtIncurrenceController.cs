@@ -1,29 +1,34 @@
 namespace NATSInternal.Controllers;
 
-[Route("Api/Customer/{customerId:int}/Debt")]
+[Route("Api/Customer/{customerId:int}/DebtIncurrence")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class CustomerDebtController : ControllerBase
+public class CustomerDebtIncurrenceController : ControllerBase
 {
     private readonly IDebtIncurrenceService _service;
     private readonly IValidator<DebtIncurrenceUpsertRequestDto> _upsertValidator;
+    private readonly INotifier _notifier;
     
-    public CustomerDebtController(
+    public CustomerDebtIncurrenceController(
             IDebtIncurrenceService service,
-            IValidator<DebtIncurrenceUpsertRequestDto> upsertValidator)
+            IValidator<DebtIncurrenceUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = service;
         _upsertValidator = upsertValidator;
+        _notifier = notifier;
     }
     
-    [HttpGet("{debtId:int}")]
+    [HttpGet("{debtIncurrenceId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DebtDetail(int customerId, int debtId)
+    public async Task<IActionResult> DebtIncurrenceDetail(
+            int customerId,
+            int debtIncurrenceId)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(customerId, debtId));
+            return Ok(await _service.GetDetailAsync(customerId, debtIncurrenceId));
         }
         catch (ResourceNotFoundException)
         {
@@ -32,13 +37,15 @@ public class CustomerDebtController : ControllerBase
     }
     
     [HttpPost]
-    [Authorize(Policy = "CanCreateDebt")]
+    [Authorize(Policy = "CanCreateDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtCreate(int customerId, [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
+    public async Task<IActionResult> DebtIncurrenceCreate(
+            int customerId,
+            [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Validate data from the request.
         ValidationResult validationResult;
@@ -52,9 +59,20 @@ public class CustomerDebtController : ControllerBase
         // Perform the creating operation.
         try
         {
+            // Create the debt incurrence.
             int createdId = await _service.CreateAsync(customerId, requestDto);
-            string createdResourceUrl = Url.Action("DebtDetail", "CustomerDebt", new { id = createdId });
-            return Created(createdResourceUrl, createdId);
+            string createdUrl = Url.Action(
+                "DebtIncurrenceDetail",
+                "CustomerDebtIncurrence",
+                new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                NotificationType.DebtIncurrenceCreation,
+                customerId,
+                createdId);
+            
+            return Created(createdUrl, createdId);
         }
         catch (AuthorizationException)
         {
@@ -71,17 +89,17 @@ public class CustomerDebtController : ControllerBase
         }
     }
     
-    [HttpPut("{debtId:int}")]
-    [Authorize(Policy = "CanEditDebt")]
+    [HttpPut("{debtIncurrenceId:int}")]
+    [Authorize(Policy = "CanEditDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtUpdate(
+    public async Task<IActionResult> DebtIncurrenceUpdate(
             int customerId,
-            int debtId,
+            int debtIncurrenceId,
             [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -96,7 +114,15 @@ public class CustomerDebtController : ControllerBase
         // Perform the updating operation.
         try
         {
-            await _service.UpdateAsync(customerId, debtId, requestDto);
+            // Update the debt incurrence.
+            await _service.UpdateAsync(customerId, debtIncurrenceId, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                    NotificationType.DebtIncurrenceModification,
+                    customerId,
+                    debtIncurrenceId);
+            
             return Ok();
         }
         catch (AuthorizationException)
@@ -118,18 +144,28 @@ public class CustomerDebtController : ControllerBase
         }
     }
     
-    [HttpDelete("{debtId:int}")]
-    [Authorize(Policy = "CanDeleteDebt")]
+    [HttpDelete("{debtIncurrenceId:int}")]
+    [Authorize(Policy = "CanDeleteDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtDelete(int customerId, int debtId)
+    public async Task<IActionResult> DebtIncurrenceDelete(
+            int customerId,
+            int debtIncurrenceId)
     {
         try
         {
-            await _service.DeleteAsync(customerId, debtId);
+            // Delete the debt incurrence.
+            await _service.DeleteAsync(customerId, debtIncurrenceId);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                NotificationType.DebtIncurrenceDeletion,
+                customerId,
+                debtIncurrenceId);
+            
             return Ok();
         }
         catch (AuthorizationException)

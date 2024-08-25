@@ -167,8 +167,8 @@ public class AuthenticationService : IAuthenticationService
         [
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.UserName!),
-            new Claim(ClaimTypes.Role, user.Role.Name),
-            .. user.Role.Claims.Select(c => new Claim("Permission", c.ClaimValue)),
+            new Claim(ClaimTypes.Role, user.Role.Name!),
+            .. user.Role.Claims.Select(c => new Claim("Permission", c.ClaimValue!))
         ];
 
         // Generate access token.

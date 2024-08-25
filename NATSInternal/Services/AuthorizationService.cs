@@ -493,17 +493,17 @@ public class AuthorizationService : IAuthorizationService
     // Permisisons to interact with debts.
     public bool CanCreateDebt()
     {
-        return _user.HasPermission(PermissionConstants.CreateDebt);
+        return _user.HasPermission(PermissionConstants.CreateDebtIncurrence);
     }
 
     public bool CanEditDebt(DebtIncurrence debt)
     {
-        if (!_user.HasPermission(PermissionConstants.EditDebt))
+        if (!_user.HasPermission(PermissionConstants.EditDebtIncurrence))
         {
             return false;
         }
         
-        if (debt.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedDebt))
+        if (debt.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedDebtIncurrence))
         {
             return false;
         }
@@ -513,17 +513,17 @@ public class AuthorizationService : IAuthorizationService
     
     public bool CanDeleteDebt()
     {
-        return _user.HasPermission(PermissionConstants.DeleteDebt);
+        return _user.HasPermission(PermissionConstants.DeleteDebtIncurrence);
     }
     
     public bool CanSetDebtIncurredDateTime()
     {
-        return _user.HasPermission(PermissionConstants.SetDebtIncurredDateTime);
+        return _user.HasPermission(PermissionConstants.SetDebtIncurrenceIncurredDateTime);
     }
     
     public bool CanAccessDebtUpdateHistories()
     {
-        return _user.HasPermission(PermissionConstants.AccessDebtUpdateHistories);
+        return _user.HasPermission(PermissionConstants.AccessDebtIncurrenceUpdateHistories);
     }
 
     // Permissions to interact with debt payments.
@@ -534,12 +534,12 @@ public class AuthorizationService : IAuthorizationService
 
     public bool CanEditDebtPayment(DebtPayment debtPayment)
     {
-        if (!_user.HasPermission(PermissionConstants.EditDebt))
+        if (!_user.HasPermission(PermissionConstants.EditDebtIncurrence))
         {
             return false;
         }
 
-        if (debtPayment.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedDebt))
+        if (debtPayment.IsLocked && !_user.HasPermission(PermissionConstants.EditLockedDebtIncurrence))
         {
             return false;
         }

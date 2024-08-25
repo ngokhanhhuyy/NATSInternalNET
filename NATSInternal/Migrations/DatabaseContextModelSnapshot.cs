@@ -1056,6 +1056,10 @@ namespace NATSInternal.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CreatedUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_user_id");
+
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("datetime");
@@ -1069,6 +1073,8 @@ namespace NATSInternal.Migrations
                         .HasColumnName("notification_type");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedUserId");
 
                     b.ToTable("notifications", (string)null);
                 });
@@ -2301,6 +2307,17 @@ namespace NATSInternal.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NATSInternal.Services.Entities.Notification", b =>
+                {
+                    b.HasOne("NATSInternal.Services.Entities.User", "CreatedUser")
+                        .WithMany("CreatedNotifications")
+                        .HasForeignKey("CreatedUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK__notifications__users__created_user_id");
+
+                    b.Navigation("CreatedUser");
+                });
+
             modelBuilder.Entity("NATSInternal.Services.Entities.NotificationReadUser", b =>
                 {
                     b.HasOne("NATSInternal.Services.Entities.Notification", "ReadNotification")
@@ -2755,6 +2772,8 @@ namespace NATSInternal.Migrations
                     b.Navigation("CreatedAnnouncements");
 
                     b.Navigation("CreatedCustomers");
+
+                    b.Navigation("CreatedNotifications");
 
                     b.Navigation("CreatedTreatments");
 

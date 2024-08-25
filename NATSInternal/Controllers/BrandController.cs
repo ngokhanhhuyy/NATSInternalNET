@@ -7,13 +7,16 @@ public class BrandController : ControllerBase
 {
     private readonly IBrandService _service;
     private readonly IValidator<BrandRequestDto> _validator;
+    private readonly INotifier _notifier;
 
     public BrandController(
             IBrandService service,
-            IValidator<BrandRequestDto> validator)
+            IValidator<BrandRequestDto> validator,
+            INotifier notifier)
     {
         _service = service;
         _validator = validator;
+        _notifier = notifier;
     }
 
     [HttpGet]
@@ -54,10 +57,21 @@ public class BrandController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Perform the creating operation.
         try
         {
+            // Create the brand.
             int createdBrandId = await _service.CreateAsync(requestDto);
-            string createdResourceUrl = Url.Action("BrandDetail", "Brand", new { id = createdBrandId });
+            string createdResourceUrl = Url.Action(
+                "BrandDetail",
+                "Brand",
+                new { id = createdBrandId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(
+                NotificationType.BrandCreation,
+                createdBrandId);
+            
             return Created(createdResourceUrl, createdBrandId);
         }
         catch (OperationException exception)
@@ -73,8 +87,11 @@ public class BrandController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> BrandUpdate(int id, [FromBody] BrandRequestDto requestDto)
+    public async Task<IActionResult> BrandUpdate(
+            int id,
+            [FromBody] BrandRequestDto requestDto)
     {
+        // Validate data from the request.
         ValidationResult validationResult;
         validationResult = _validator.Validate(requestDto.TransformValues());
         if (!validationResult.IsValid)
@@ -83,9 +100,15 @@ public class BrandController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // Perform the updating operation.
         try
         {
+            // Update the brand.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.BrandModification, id);
+                    
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -109,7 +132,12 @@ public class BrandController : ControllerBase
     {
         try
         {
+            // Delete the brand.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.BrandDeletion, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)

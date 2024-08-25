@@ -19,7 +19,7 @@ if (response.status === 200) {
 
 // Customer list
 // @no-log
-GET {{host}}/customer/list
+GET {{host}}/customer
     ?orderByAscending=False
     &orderByField=DebtRemainingAmount
     &page=1
@@ -29,7 +29,6 @@ Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
 ###
-
 // Customer detail
 // @no-log
 GET {{host}}/customer/100/detail
@@ -37,9 +36,38 @@ Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
 ###
-// DebtCreate
+// ConsultantCreate
 // @no-log
-POST {{host}}/debt
+POST {{host}}/consultant
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 1500000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 100
+}
+
+###
+// ConsultantUpdate
+// @no-log
+PUT {{host}}/consultant/1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 2500000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 100,
+    "updateReason": "Updated amount."
+}
+
+###
+// DebtIncurrenceCreate
+// @no-log
+POST {{host}}/customer/1/debtIncurrence
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 

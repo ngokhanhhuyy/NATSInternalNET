@@ -7,18 +7,22 @@ public class ProductController : ControllerBase
 {
     private readonly IProductService _service;
     private readonly IValidator<ProductUpsertRequestDto> _validator;
+    private readonly INotifier _notifier;
 
     public ProductController(
             IProductService productService,
-            IValidator<ProductUpsertRequestDto> upsertValidator)
+            IValidator<ProductUpsertRequestDto> upsertValidator,
+            INotifier notifier)
     {
         _service = productService;
         _validator = upsertValidator;
+        _notifier = notifier;
     }
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ProductList([FromQuery] ProductListRequestDto requestDto)
+    public async Task<IActionResult> ProductList(
+            [FromQuery] ProductListRequestDto requestDto)
     {
         ProductListResponseDto responseDto;
         responseDto = await _service.GetListAsync(requestDto.TransformValues());
@@ -48,7 +52,8 @@ public class ProductController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ProductCreate([FromBody] ProductUpsertRequestDto requestDto)
+    public async Task<IActionResult> ProductCreate(
+            [FromBody] ProductUpsertRequestDto requestDto)
     {
         // Validate the data from the request.
         ValidationResult validationResult;
@@ -62,8 +67,17 @@ public class ProductController : ControllerBase
         // Performing creating operation.
         try
         {
+            // Create the product.
             int createdId = await _service.CreateAsync(requestDto);
-            return Created(Url.Action("ProductDetail", "Product", new { id = createdId }), createdId);
+            string createdResourceUrl = Url.Action(
+                "ProductDetail",
+                "Product",
+                new { id = createdId });
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ProductCreation, createdId);
+            
+            return Created(createdResourceUrl, createdId);
         }
         catch (OperationException exception)
         {
@@ -93,7 +107,12 @@ public class ProductController : ControllerBase
         // Perform updating operation.
         try
         {
+            // Update the product.
             await _service.UpdateAsync(id, requestDto);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ProductModification, id);
+            
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -116,7 +135,12 @@ public class ProductController : ControllerBase
     {
         try
         {
+            // Delete the product.
             await _service.DeleteAsync(id);
+            
+            // Create and distribute the notification to the users.
+            await _notifier.Notify(NotificationType.ProductDeletion, id);
+            
             return NoContent();
         }
         catch (ResourceNotFoundException exception)

@@ -75,7 +75,7 @@ public interface IUserService
     /// Business rules violation during assign the new user to
     /// the specified role.
     /// </exception>
-    Task<UserCreateResponseDto> CreateAsync(UserCreateRequestDto requestDto);
+    Task<int> CreateAsync(UserCreateRequestDto requestDto);
 
     /// <summary>
     /// Update a user with given id.

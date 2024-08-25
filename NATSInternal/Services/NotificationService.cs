@@ -21,6 +21,7 @@ public class NotificationService : INotificationService
         // Initialize query.
         int currentUserId = _authorizationService.GetUserId();
         IQueryable<Notification> query = _context.Notifications
+            .Include(n => n.CreatedUser)
             .Include(n => n.ReadUsers).ThenInclude(u => u.ReceivedNotifications)
             .OrderByDescending(n => n.DateTime)
             .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUserId));
@@ -43,6 +44,19 @@ public class NotificationService : INotificationService
             .ToListAsync();
         
         return responseDto;
+    }
+    
+    public async Task<NotificationResponseDto> GetSingleAsync(int id)
+    {
+        int currentUserId = _authorizationService.GetUserId();
+        return await _context.Notifications
+            .Include(n => n.CreatedUser)
+            .Include(n => n.ReadUsers).ThenInclude(u => u.ReceivedNotifications)
+            .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUserId))
+            .Where(n => n.Id == id)
+            .Select(n => new NotificationResponseDto(n, currentUserId))
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException();
     }
     
     /// <inheritdoc />
@@ -70,14 +84,8 @@ public class NotificationService : INotificationService
         }
     }
     
-    /// <summary>
-    /// Create a notification which all users can receive with the specified
-    /// notification type and resource ids.
-    /// </summary>
-    /// <param name="type">The type of the notification.</param>
-    /// <param name="resourceIds">The id(s) of the interacted resource.</param>
-    /// <returns>The id of the created notification.</returns>
-    public async Task<int> CreateAsync(NotificationType type, List<int> resourceIds)
+    /// <inheritdoc />
+    public async Task<(List<int>, int)> CreateAsync(NotificationType type, List<int> resourceIds)
     {
         // Fetch the list of all users' ids.
         List<int> userIds = await _context.Users
@@ -85,16 +93,31 @@ public class NotificationService : INotificationService
             .Select(u => u.Id)
             .ToListAsync();
         
+        NotificationType[] selfCreatedNotificationType =
+        {
+            NotificationType.UserBirthday,
+            NotificationType.UserJoiningDateAnniversary,
+            NotificationType.CustomerBirthday
+        };
+        
         // Use transaction for atomic operations.
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
+        
+        // Determine the interacted user id value.
+        int? createdUserId = null;
+        if (!selfCreatedNotificationType.Contains(type))
+        {
+            createdUserId = _authorizationService.GetUserId();
+        }
 
         // Initialize the entity.
         Notification notification = new Notification
         {
             Type = type,
             DateTime = DateTime.UtcNow.ToApplicationTime(),
-            ResourceIds = resourceIds
+            ResourceIds = resourceIds,
+            CreatedUserId = createdUserId
         };
         _context.Notifications.Add(notification);
 
@@ -115,7 +138,7 @@ public class NotificationService : INotificationService
 
         // Commit the transaction and finish the operation.
         await transaction.CommitAsync();
-        return notification.Id;
+        return (userIds, notification.Id);
     }
     
     /// <summary>

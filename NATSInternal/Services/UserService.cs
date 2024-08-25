@@ -190,7 +190,7 @@ public class UserService : IUserService
     }
 
     /// <inheritdoc />
-    public async Task<UserCreateResponseDto> CreateAsync(UserCreateRequestDto requestDto)
+    public async Task<int> CreateAsync(UserCreateRequestDto requestDto)
     {
         string fullName = PersonNameUtility.GetFullNameFromNameElements(
             requestDto.PersonalInformation.FirstName,
@@ -284,7 +284,7 @@ public class UserService : IUserService
                     .CreateAsync(requestDto.PersonalInformation.AvatarFile, "user", true);
             }
 
-            return new UserCreateResponseDto { Id = user.Id };
+            return user.Id;
         }
 
         if (creatingUserResult.Errors.Any(e => e.Code == "DuplicateUserName"))

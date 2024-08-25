@@ -69,13 +69,13 @@ public static class PermissionConstants
     public const string SetTreatmentPaidDateTime = "SetTreatmentPaidDateTime";
     public const string AccessTreatmentUpdateHistories = "AccessTreatmentUpdateHistories";
 
-    // Permissions to interact with debts.
-    public const string CreateDebt = "CreateDebt";
-    public const string EditDebt = "EditDebt";
-    public const string EditLockedDebt = "EditLockedDebt";
-    public const string SetDebtIncurredDateTime = "SetDebtIncurredDateTime";
-    public const string DeleteDebt = "DeleteDebt";
-    public const string AccessDebtUpdateHistories = "AccessDebtUpdateHistories";
+    // Permissions to interact with debt incurrence.
+    public const string CreateDebtIncurrence = "CreateDebtIncurrence";
+    public const string EditDebtIncurrence = "EditDebtIncurrence";
+    public const string EditLockedDebtIncurrence = "EditLockedDebtIncurrence";
+    public const string SetDebtIncurrenceIncurredDateTime = "SetDebtIncurrenceIncurredDateTime";
+    public const string DeleteDebtIncurrence = "DeleteDebtIncurrence";
+    public const string AccessDebtIncurrenceUpdateHistories = "AccessDebtIncurrenceUpdateHistories";
 
     // Permissions to interact with debt payments.
     public const string CreateDebtPayment = "CreateDebtPayment";

@@ -526,6 +526,11 @@ public class DatabaseContext : IdentityDbContext<User, Role, int, IdentityUserCl
                     v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
                     v => JsonSerializer.Deserialize<List<int>>(v, JsonSerializerOptions.Default)))
                 .HasColumnType("JSON");
+            e.HasOne(n => n.CreatedUser)
+                .WithMany(u => u.CreatedNotifications)
+                .HasForeignKey(n => n.CreatedUserId)
+                .HasConstraintName("FK__notifications__users__created_user_id")
+                .OnDelete(DeleteBehavior.Restrict);
             e.HasMany(n => n.ReceivedUsers)
                 .WithMany(u => u.ReceivedNotifications)
                 .UsingEntity<NotificationReceivedUser>(

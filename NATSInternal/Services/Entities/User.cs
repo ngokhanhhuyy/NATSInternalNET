@@ -69,7 +69,7 @@ public class User : IdentityUser<int>
 
     [Column("is_deleted")]
     [Required]
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; }
 
     [Timestamp]
     public byte[] RowVersion { get; set; }
@@ -94,6 +94,7 @@ public class User : IdentityUser<int>
     public virtual List<DebtPayment> DebtPayments { get; set; }
     public virtual List<DebtPaymentUpdateHistory> DebtPaymentUpdateHistories { get; set; }
     public virtual List<Announcement> CreatedAnnouncements { get; set; }
+    public virtual List<Notification> CreatedNotifications { get; set; }
     public virtual List<Notification> ReceivedNotifications { get; set; }
     public virtual List<Notification> ReadNotifications { get; set; }
 
