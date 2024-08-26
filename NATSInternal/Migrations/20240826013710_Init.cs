@@ -79,21 +79,6 @@ namespace NATSInternal.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "notifications",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    notification_type = table.Column<int>(type: "int", nullable: false),
-                    datetime = table.Column<DateTime>(type: "datetime(6)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_notifications", x => x.id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "product_categories",
                 columns: table => new
                 {
@@ -470,52 +455,26 @@ namespace NATSInternal.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "notification_read_users",
+                name: "notifications",
                 columns: table => new
                 {
-                    read_notification_id = table.Column<int>(type: "int", nullable: false),
-                    read_user_id = table.Column<int>(type: "int", nullable: false)
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    notification_type = table.Column<int>(type: "int", nullable: false),
+                    datetime = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    resource_ids = table.Column<string>(type: "JSON", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_user_id = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_notification_read_users", x => new { x.read_notification_id, x.read_user_id });
+                    table.PrimaryKey("PK_notifications", x => x.id);
                     table.ForeignKey(
-                        name: "FK__notification_read_users__users__read_notification_id",
-                        column: x => x.read_notification_id,
-                        principalTable: "notifications",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK__notification_read_users__users__read_user_id",
-                        column: x => x.read_user_id,
+                        name: "FK__notifications__users__created_user_id",
+                        column: x => x.created_user_id,
                         principalTable: "users",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "notification_received_users",
-                columns: table => new
-                {
-                    received_notification_id = table.Column<int>(type: "int", nullable: false),
-                    received_user_id = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_notification_received_users", x => new { x.received_notification_id, x.received_user_id });
-                    table.ForeignKey(
-                        name: "FK__notification_received_users__users__received_notification_id",
-                        column: x => x.received_notification_id,
-                        principalTable: "notifications",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK__notification_received_users__users__received_user_id",
-                        column: x => x.received_user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -865,6 +824,56 @@ namespace NATSInternal.Migrations
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "notification_read_users",
+                columns: table => new
+                {
+                    read_notification_id = table.Column<int>(type: "int", nullable: false),
+                    read_user_id = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_notification_read_users", x => new { x.read_notification_id, x.read_user_id });
+                    table.ForeignKey(
+                        name: "FK__notification_read_users__users__read_notification_id",
+                        column: x => x.read_notification_id,
+                        principalTable: "notifications",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK__notification_read_users__users__read_user_id",
+                        column: x => x.read_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "notification_received_users",
+                columns: table => new
+                {
+                    received_notification_id = table.Column<int>(type: "int", nullable: false),
+                    received_user_id = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_notification_received_users", x => new { x.received_notification_id, x.received_user_id });
+                    table.ForeignKey(
+                        name: "FK__notification_received_users__users__received_notification_id",
+                        column: x => x.received_notification_id,
+                        principalTable: "notifications",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK__notification_received_users__users__received_user_id",
+                        column: x => x.received_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -1468,6 +1477,11 @@ namespace NATSInternal.Migrations
                 name: "IX_notification_received_users_received_user_id",
                 table: "notification_received_users",
                 column: "received_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_notifications_created_user_id",
+                table: "notifications",
+                column: "created_user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_order_items_order_id",

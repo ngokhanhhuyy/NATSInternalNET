@@ -25,6 +25,15 @@ public class NotificationService : INotificationService
             .Include(n => n.ReadUsers).ThenInclude(u => u.ReceivedNotifications)
             .OrderByDescending(n => n.DateTime)
             .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUserId));
+
+        // Filter by unread notifications only.
+        if (requestDto.UnreadOnly)
+        {
+            query = query
+                .Where(n => !n.ReadUsers
+                    .Select(u => u.Id)
+                    .Contains(currentUserId));
+        }
         
         // Initialize response dto.
         NotificationListResponseDto responseDto = new NotificationListResponseDto();
@@ -52,6 +61,7 @@ public class NotificationService : INotificationService
         return await _context.Notifications
             .Include(n => n.CreatedUser)
             .Include(n => n.ReadUsers).ThenInclude(u => u.ReceivedNotifications)
+            .OrderBy(n => n.Id)
             .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUserId))
             .Where(n => n.Id == id)
             .Select(n => new NotificationResponseDto(n, currentUserId))
@@ -85,7 +95,35 @@ public class NotificationService : INotificationService
     }
     
     /// <inheritdoc />
-    public async Task<(List<int>, int)> CreateAsync(NotificationType type, List<int> resourceIds)
+    public async Task MarkAllAsReadAsync()
+    {
+        // Fetch the current user entity.
+        User currentUser = await GetCurrentUser();
+        
+        // Fetch the notification entity.
+        List<Notification> notifications = await _context.Notifications
+            .Include(n => n.ReceivedUsers)
+            .Include(n => n.ReadUsers)
+            .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUser.Id))
+            .Where(n => !n.ReadUsers.Select(u => u.Id).Contains(currentUser.Id))
+            .ToListAsync();
+        
+        // Add the current user to each notification's read user list.
+        foreach (Notification notification in notifications)
+        {
+            if (!notification.ReadUsers.Select(u => u.Id).Contains(currentUser.Id))
+            {
+                notification.ReadUsers.Add(currentUser);
+                
+                // Save the changes.
+                await _context.SaveChangesAsync();
+            }
+        }
+    }
+    /// <inheritdoc />
+    public async Task<(List<int>, int)> CreateAsync(
+            NotificationType type,
+            List<int> resourceIds)
     {
         // Fetch the list of all users' ids.
         List<int> userIds = await _context.Users

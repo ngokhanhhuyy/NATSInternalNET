@@ -36,9 +36,12 @@ public class NotificationController : ControllerBase
             .GetListAsync(requestDto);
         
         // Generate the resource URL for the notifications.
-        foreach (NotificationResponseDto notification in responseDto.Items)
+        if (responseDto.Items != null)
         {
-            notification.GenerateResourceUrl(Url);
+            foreach (NotificationResponseDto notification in responseDto.Items)
+            {
+                notification.GenerateResourceUrl(Url);
+            }
         }
         
         return Ok(responseDto);
@@ -79,5 +82,13 @@ public class NotificationController : ControllerBase
         {
             return NotFound();
         }
+    }
+
+    [HttpPost("MarkAllAsRead")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> NotificationMarkAllAsRead()
+    {
+        await _service.MarkAllAsReadAsync();
+        return Ok();
     }
 }
