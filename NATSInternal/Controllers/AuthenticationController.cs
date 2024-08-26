@@ -20,7 +20,9 @@ public class AuthenticationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> GetAccessToken([FromBody] SignInRequestDto requestDto)
+    public async Task<IActionResult> GetAccessToken(
+            [FromBody] SignInRequestDto requestDto,
+            [FromQuery] bool includeExchangeToken = true)
     {
         // Validate data from request.
         ValidationResult validationResult;
@@ -35,7 +37,9 @@ public class AuthenticationController : ControllerBase
         try
         {
             AccessTokenResponseDto responseDto;
-            responseDto = await _authenticationService.GetAccessTokenAsync(requestDto);
+            responseDto = await _authenticationService.GetAccessTokenAsync(
+                requestDto,
+                includeExchangeToken);
             return Ok(responseDto);
         }
         catch (OperationException exception)

@@ -1,0 +1,16 @@
+# @name NotificationList
+GET {{host}}/notification?unreadOnly=True
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+# @name NotificationMarkAsRead
+POST {{host}}/notification/1/markAsRead
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+# @name NotificationMarkAllAsRead
+POST {{host}}/notification/markAllAsRead
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}

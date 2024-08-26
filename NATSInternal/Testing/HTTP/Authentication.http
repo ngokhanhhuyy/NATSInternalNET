@@ -1,0 +1,16 @@
+# @name GetAccessToken
+// @no-log
+POST {{host}}/authentication/getAccessToken?includeExchangeToken=False
+Content-Type: application/json
+
+{
+    "userName": "ngokhanhhuyy",
+    "password": "Huyy47b1"
+}
+
+> {% 
+if (response.status === 200) {
+    const accessToken = response.body["accessToken"];
+    client.global.set("accessToken", accessToken);
+}
+ %}

@@ -1,4 +1,4 @@
-// Authentication
+# @name Authentication
 // @no-log
 POST {{host}}/authentication/getAccessToken
 Content-Type: application/json
@@ -16,27 +16,30 @@ if (response.status === 200) {
  %}
 
 ###
-
-// Customer list
+# @name CustomerList
 // @no-log
-GET {{host}}/customer
-    ?orderByAscending=False
-    &orderByField=DebtRemainingAmount
-    &page=1
-    &resultsPerPage=15
-    &hasRemainingDebtAmountOnly=False
+@orderByAscending = orderByAsceding=False
+@orderByField = orderByField=DebtRemainingAmount
+@page = page=1
+@resultsPerPage = resultsPerPage=15
+@hasRemainingDebtAmountOnly = hasRemainingDebtAmountOnly=False
+GET {{host}}/customer?
+    {{orderByAscending}}&
+    {{orderByField}}&
+    {{page}}&
+    {{resultsPerPage}}&{{hasRemainingDebtAmountOnly}}
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
 ###
-// Customer detail
+# @name CustomerDetail
 // @no-log
 GET {{host}}/customer/100/detail
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
 ###
-// ConsultantCreate
+# @name ConsultantCreate
 // @no-log
 POST {{host}}/consultant
 Content-Type: application/json
@@ -50,7 +53,7 @@ Authorization: Bearer {{accessToken}}
 }
 
 ###
-// ConsultantUpdate
+# @name ConsultantUpdate
 // @no-log
 PUT {{host}}/consultant/1
 Content-Type: application/json
@@ -65,7 +68,7 @@ Authorization: Bearer {{accessToken}}
 }
 
 ###
-// DebtIncurrenceCreate
+# @name DebtIncurrenceCreate
 // @no-log
 POST {{host}}/customer/1/debtIncurrence
 Content-Type: application/json
@@ -79,7 +82,7 @@ Authorization: Bearer {{accessToken}}
 }
 
 ###
-// DebtPaymentCreate
+# @name DebtPaymentCreate
 // @no-log
 POST {{host}}/debtPayment
 Content-Type: application/json
@@ -93,14 +96,14 @@ Authorization: Bearer {{accessToken}}
 }
 
 ###
-// AnnouncementList
+# @name AnnouncementList
 // @no-log
 GET {{host}}/announcement
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
 ###
-// AnnouncementCreate
+# @name AnnouncementCreate
 // @no-log
 POST {{host}}/announcement
 Content-Type: application/json
@@ -116,7 +119,7 @@ Authorization: Bearer {{accessToken}}
 
 
 ###
-// AnnouncementUpdate
+# @name AnnouncementUpdate
 // @no-log
 PUT {{host}}/announcement/1
 Content-Type: application/json
@@ -131,7 +134,7 @@ Authorization: Bearer {{accessToken}}
 }
 
 ###
-// NotificationList
+# @name NotificationList
 // @no-log
 GET {{host}}/notification
 Content-Type: application/json

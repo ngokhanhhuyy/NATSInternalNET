@@ -5,6 +5,7 @@ using System.Text;
 
 namespace NATSInternal.Services;
 
+/// <inheritdoc cref="IAuthenticationService" />
 public class AuthenticationService : IAuthenticationService
 {
     private readonly DatabaseContext _context;
@@ -34,7 +35,10 @@ public class AuthenticationService : IAuthenticationService
             SecurityAlgorithms.HmacSha256);
     }
 
-    public async Task<AccessTokenResponseDto> GetAccessTokenAsync(SignInRequestDto requestDto)
+    /// <inheritdoc />
+    public async Task<AccessTokenResponseDto> GetAccessTokenAsync(
+            SignInRequestDto requestDto,
+            bool includeRefreshToken = true)
     {
         // Check if user exists.
         User user = _userManager.Users
@@ -49,7 +53,8 @@ public class AuthenticationService : IAuthenticationService
         }
 
         // Check if password is correct.
-        bool passwordValid = await _userManager.CheckPasswordAsync(user, requestDto.Password);
+        bool passwordValid = await _userManager
+            .CheckPasswordAsync(user, requestDto.Password);
         if (!passwordValid)
         {
             throw new OperationException(
@@ -58,18 +63,22 @@ public class AuthenticationService : IAuthenticationService
                     .ReplacePropertyName(DisplayNames.Password));
         }
 
-        // Generate refresh token.
-        string refreshToken = GenerateRefreshToken();
-        DateTime refreshTokenIssuedDateTime = DateTime.UtcNow.ToApplicationTime();
-
-        // Store the refresh token in the database.
-        user.RefreshTokens.Add(new UserRefreshToken
+        // Generate refresh token if specified.
+        string refreshToken = null;
+        if (includeRefreshToken)
         {
-            Token = refreshToken,
-            IssuedDateTime = refreshTokenIssuedDateTime,
-            ExpiringDateTime = refreshTokenIssuedDateTime.AddDays(7)
-        });
-        await _context.SaveChangesAsync();
+            refreshToken = GenerateRefreshToken();
+            DateTime refreshTokenIssuedDateTime = DateTime.UtcNow.ToApplicationTime();
+
+            // Store the refresh token in the database.
+            user.RefreshTokens.Add(new UserRefreshToken
+            {
+                Token = refreshToken,
+                IssuedDateTime = refreshTokenIssuedDateTime,
+                ExpiringDateTime = refreshTokenIssuedDateTime.AddDays(7)
+            });
+            await _context.SaveChangesAsync();
+        }
 
         DateTime expiringDateTime = DateTime.UtcNow.ToApplicationTime().AddDays(7);
         return new AccessTokenResponseDto
@@ -81,6 +90,7 @@ public class AuthenticationService : IAuthenticationService
         };
     }
 
+    /// <inheritdoc />
     public async Task<AccessTokenResponseDto> ExchangeAccessTokenAsync(
             AccessTokenExchangeRequestDto requestDto)
     {
@@ -125,6 +135,7 @@ public class AuthenticationService : IAuthenticationService
         return responseDto;
     }
 
+    /// <inheritdoc />
     public async Task SignInAsync(SignInRequestDto requestDto)
     {
         // Check if user exists
@@ -156,11 +167,23 @@ public class AuthenticationService : IAuthenticationService
         }
     }
 
+    /// <inheritdoc />
     public async Task SignOutAsync()
     {
         await _signInManager.SignOutAsync();
     }
 
+    /// <summary>
+    /// Generate an access token assiocated to the specified <c>User</c> with the
+    /// specified <c>DateTime</c> object representing the expiring datetime.
+    /// </summary>
+    /// <param name="user">
+    /// The <c>User</c> entity which the generating access token is assiociated with.
+    /// </param>
+    /// <param name="expiringDateTime">
+    /// An <c>DateTime</c> object representing the expiring datetime of the token.
+    /// </param>
+    /// <returns>The generated access token.</returns>
     private string GenerateAccessToken(User user, DateTime expiringDateTime) {
         // Prepare payload for access token.
         List<Claim> claims =
@@ -185,7 +208,9 @@ public class AuthenticationService : IAuthenticationService
     {
         const int tokenLength = 64;
         Random random = new Random();
-        string characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        const string characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+                                  "abcdefghijklmnopqrstuvwxyz" +
+                                  "0123456789";
         string token = string.Empty;
         for (int i = 0; i < tokenLength; i++)
         {
@@ -207,7 +232,7 @@ public class AuthenticationService : IAuthenticationService
             ValidIssuer = _config["JwtSettings:Issuer"],
             ValidAudience = _config["JwtSettings:Issuer"],
             IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["JwtSettings:Secret"]))
+            Encoding.UTF8.GetBytes(_config["JwtSettings:Secret"]!))
         };
 
         ClaimsPrincipal claimsPrincipal;
@@ -216,18 +241,20 @@ public class AuthenticationService : IAuthenticationService
             claimsPrincipal = _tokenHandler.ValidateToken(
                 accessToken,
                 validationParameters,
-                out SecurityToken token);
+                out SecurityToken _);
         }
         catch (Exception)
         {
-            throw new OperationException("Mã truy cập không hợp lệ"); ;
+            throw new OperationException("Mã truy cập không hợp lệ");
         }
 
         Claim[] claims = claimsPrincipal.Claims.ToArray();
         // Verifying user id in the payload.
         string userIdAsString = claims
             .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
-            ?? throw new OperationException("ID người dùng không được chứa trong mã truy cập.");;
+            ?? throw new OperationException(
+                "ID người dùng không được chứa trong mã truy cập.");
+        
         bool parsable = int.TryParse(userIdAsString, out int userId);
         if (!parsable)
         {
@@ -236,7 +263,7 @@ public class AuthenticationService : IAuthenticationService
 
         string userName = claims
             .FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value
-            ?? throw new OperationException("Tên tài khoản người dùng không hợp lệ."); ;
+            ?? throw new OperationException("Tên tài khoản người dùng không hợp lệ.");
 
         return (userId, userName);
     }
