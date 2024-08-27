@@ -32,19 +32,7 @@ public class NotificationController : ControllerBase
         }
         
         // Fetch the list.
-        NotificationListResponseDto responseDto = await _service
-            .GetListAsync(requestDto);
-        
-        // Generate the resource URL for the notifications.
-        if (responseDto.Items != null)
-        {
-            foreach (NotificationResponseDto notification in responseDto.Items)
-            {
-                notification.GenerateResourceUrl(Url);
-            }
-        }
-        
-        return Ok(responseDto);
+        return Ok(await _service.GetListAsync(requestDto));
     }
     
     [HttpGet("{id:int}")]
@@ -54,12 +42,7 @@ public class NotificationController : ControllerBase
     {
         try
         {
-            // Fetch the notification.
             NotificationResponseDto responseDto = await _service.GetSingleAsync(id);
-            
-            // Generate the resource URL for the notification.
-            responseDto.GenerateResourceUrl(Url);
-            
             return Ok(responseDto);
         }
         catch (ResourceNotFoundException)

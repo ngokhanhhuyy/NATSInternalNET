@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using Microsoft.AspNetCore.Mvc.Routing;
-
 namespace NATSInternal.Hubs;
 
 public interface INotifier
@@ -26,17 +23,13 @@ public class Notifier : INotifier
 {
     private readonly IHubContext<NotificationHub> _hubContext;
     private readonly INotificationService _notificationService;
-    private readonly IUrlHelper _urlHelper;
     
     public Notifier(
             IHubContext<NotificationHub> hubContext,
-            INotificationService notificationService,
-            IUrlHelperFactory urlHelperFactory,
-            IActionContextAccessor actionContextAccessor)
+            INotificationService notificationService)
     {
         _hubContext = hubContext;
         _notificationService = notificationService;
-        _urlHelper = urlHelperFactory.GetUrlHelper(actionContextAccessor.ActionContext!);
     }
     
     /// <inheritdoc />
@@ -53,9 +46,6 @@ public class Notifier : INotifier
         // Get the created notification data.
         NotificationResponseDto responseDto = await _notificationService
             .GetSingleAsync(notificationId);
-        
-        // Genere the resource url for the notification.
-        responseDto.GenerateResourceUrl(_urlHelper);
         
         // Distribute the notification to the users.
         foreach (int userId in userIds)

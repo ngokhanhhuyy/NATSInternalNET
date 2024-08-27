@@ -4,7 +4,6 @@ using NATSInternal.Services.Identity;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Primitives;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -253,7 +252,6 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INotifier, Notifier>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddSingleton<IStatsTaskService, StatsTaskService>();
-builder.Services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
