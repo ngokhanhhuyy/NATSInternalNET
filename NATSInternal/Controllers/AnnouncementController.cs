@@ -97,7 +97,7 @@ public class AnnouncementController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = "CanUpdateAnnouncement")]
+    [Authorize(Policy = "CanEditAnnouncement")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
