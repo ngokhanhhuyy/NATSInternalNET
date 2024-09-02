@@ -1,0 +1,142 @@
+@host = http://localhost:5000/api
+# @name Authentication
+// @no-log
+POST {{host}}/authentication/getAccessToken
+Content-Type: application/json
+
+{
+    "userName": "ngokhanhhuyy",
+    "password": "Huyy47b1"
+}
+
+> {%
+    if (response.status === 200) {
+        const accessToken = response.body["accessToken"];
+        client.global.set("accessToken", accessToken);
+    }
+ %}
+
+###
+# @name CustomerList
+// @no-log
+@orderByAscending = orderByAsceding=False
+@orderByField = orderByField=DebtRemainingAmount
+@page = page=1
+@resultsPerPage = resultsPerPage=15
+@hasRemainingDebtAmountOnly = hasRemainingDebtAmountOnly=False
+GET {{host}}/customer?
+    {{orderByAscending}}&
+    {{orderByField}}&
+    {{page}}&
+    {{resultsPerPage}}&{{hasRemainingDebtAmountOnly}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+# @name CustomerDetail
+// @no-log
+GET {{host}}/customer/100/detail
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+# @name ConsultantCreate
+// @no-log
+POST {{host}}/consultant
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 500000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 50
+}
+
+###
+# @name ConsultantUpdate
+// @no-log
+PUT {{host}}/consultant/1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 2500000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 100,
+    "updateReason": "Updated amount."
+}
+
+###
+# @name DebtIncurrenceCreate
+// @no-log
+POST {{host}}/customer/1/debtIncurrence
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 500000,
+    "note": null,
+    "incurredDateTime": null,
+    "customerId": 100
+}
+
+###
+# @name DebtPaymentCreate
+// @no-log
+POST {{host}}/debtPayment
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "amount": 2000000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 100
+}
+
+###
+# @name AnnouncementList
+// @no-log
+GET {{host}}/announcement
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+# @name AnnouncementCreate
+// @no-log
+POST {{host}}/announcement
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "category": 0,
+    "title": "Cập nhật phiên bản 1.0",
+    "content": "Cập nhật phiên bản 1.0 hoàn tất.",
+    "startingDateTime": null,
+    "intervalInMinutes": 720
+}
+
+
+###
+# @name AnnouncementUpdate
+// @no-log
+PUT {{host}}/announcement/1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "category": 5,
+    "title": "Cập nhật phiên bản 1.0",
+    "content": "Cập nhật phiên bản 1.0 hoàn tất.",
+    "startingDateTime": "2024-08-21T22:40:00",
+    "intervalInMinutes": 0
+}
+
+###
+# @name NotificationList
+// @no-log
+GET {{host}}/notification
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}

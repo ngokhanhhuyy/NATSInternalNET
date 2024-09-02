@@ -19,19 +19,19 @@ public class ResourceAccessingUsersHub : Hub
     {
         _resourceAccessingData = new AccessingResourceDictionary
         {
-            { nameof(User), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Customer), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Brand), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Product), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(ProductCategory), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Supply), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Expense), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Order), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Treatment), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Consultant), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(DebtIncurrence), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(DebtPayment), new List<ResourceAccessingConnectionIdList>() },
-            { nameof(Announcement), new List<ResourceAccessingConnectionIdList>() },
+            { nameof(User), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Customer), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Brand), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Product), new List<ResourceAccessConnectionIdList>() },
+            { nameof(ProductCategory), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Supply), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Expense), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Order), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Treatment), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Consultant), new List<ResourceAccessConnectionIdList>() },
+            { nameof(DebtIncurrence), new List<ResourceAccessConnectionIdList>() },
+            { nameof(DebtPayment), new List<ResourceAccessConnectionIdList>() },
+            { nameof(Announcement), new List<ResourceAccessConnectionIdList>() },
         };
         
         _userConnectionLists = new List<UserConnectionList>();
@@ -59,21 +59,21 @@ public class ResourceAccessingUsersHub : Hub
         // Check if the requested resource name valid.
         bool isResourceNameValid = _resourceAccessingData.TryGetValue(
             resourceName,
-            out List<ResourceAccessingConnectionIdList> resourceAccessingUserLists);
+            out List<ResourceAccessConnectionIdList> resourceAccessingUserLists);
         if (!isResourceNameValid)
         {
             throw new ArgumentException();
         }
 
         // Get the list of resources containing accessing user ids.
-        ResourceAccessingConnectionIdList userList = resourceAccessingUserLists
+        ResourceAccessConnectionIdList userList = resourceAccessingUserLists
             .Where(ul => ul.ResourcePrimaryId == resourcePrimaryId)
             .Where(ul => ul.ResourceSecondaryId == resourceSecondaryId)
             .SingleOrDefault();
 
         if (userList == null)
         {
-            userList = new ResourceAccessingConnectionIdList
+            userList = new ResourceAccessConnectionIdList
             {
                 ResourcePrimaryId = resourcePrimaryId,
                 ResourceSecondaryId = resourceSecondaryId
@@ -134,24 +134,9 @@ public class ResourceAccessingUsersHub : Hub
     /// connecting to it.
     /// </summary>
     private class AccessingResourceDictionary
-        : Dictionary<string, List<ResourceAccessingConnectionIdList>> { }
+        : Dictionary<string, List<ResourceAccessConnectionIdList>> { }
 
-    /// <summary>
-    /// A data class to store a resource's ids and all connection id
-    /// </summary>
-    private class ResourceAccessingConnectionIdList
-    {
-        /// <summary>
-        /// Representing the primary id of the resource.
-        /// </summary>
-        public int ResourcePrimaryId { get; init; }
 
-        /// <summary>
-        /// Representing the 
-        /// </summary>
-        public int? ResourceSecondaryId { get; init; } = null;
-        public List<string> ConnectionIds { get; init; } = new List<string>();
-    }
 
     /// <summary>
     /// A data class to store a user's id and all connection ids.
