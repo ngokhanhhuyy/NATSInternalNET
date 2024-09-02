@@ -174,6 +174,17 @@ public class UserService : IUserService
     }
 
     /// <inheritdoc />
+    public async Task<UserBasicResponseDto> GetBasicAsync(int id)
+    {
+        return await _context.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .Where(u => u.Id == id)
+            .Select(u => new UserBasicResponseDto(u))
+            .SingleOrDefaultAsync()
+            ?? throw new ResourceNotFoundException();
+    }
+
+    /// <inheritdoc />
     public async Task<UserDetailResponseDto> GetDetailAsync(int id)
     {
         User user = await _context.Users
@@ -400,7 +411,9 @@ public class UserService : IUserService
     }
     
     /// <inheritdoc />
-    public async Task ChangePasswordAsync(int id, [FromBody] UserPasswordChangeRequestDto requestDto)
+    public async Task ChangePasswordAsync(
+            int id,
+            [FromBody] UserPasswordChangeRequestDto requestDto)
     {
         // Fetch the entity with given id and ensure the entity exists.
         User user = await _context.Users
@@ -427,7 +440,9 @@ public class UserService : IUserService
     }
 
     /// <inheritdoc />
-    public async Task ResetPasswordAsync(int id, [FromBody] UserPasswordResetRequestDto requestDto)
+    public async Task ResetPasswordAsync(
+            int id,
+            [FromBody] UserPasswordResetRequestDto requestDto)
     {
         // Fetch the entity with given id and ensure the entity exists.
         User user = await _context.Users

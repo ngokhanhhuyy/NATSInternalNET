@@ -293,7 +293,8 @@ app.UseAuthorization();
 app.UseEndpoints(endpoint =>
 {
     endpoint.MapControllers();
-    endpoint.MapHub<NotificationHub>("/Api/NotificationHub");
+    endpoint.MapHub<ApplicationHub>("/Api/NotificationHub");
+    endpoint.MapHub<ResourceAccessingUsersHub>("Api/ResourceAccessHub");
 });
 app.UseStaticFiles();
 // app.MapFallbackToFile("/index.html");

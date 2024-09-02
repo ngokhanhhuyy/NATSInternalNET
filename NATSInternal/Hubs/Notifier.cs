@@ -21,11 +21,11 @@ public interface INotifier
 /// <inheritdoc cref="INotifier" />
 public class Notifier : INotifier
 {
-    private readonly IHubContext<NotificationHub> _hubContext;
+    private readonly IHubContext<ApplicationHub> _hubContext;
     private readonly INotificationService _notificationService;
     
     public Notifier(
-            IHubContext<NotificationHub> hubContext,
+            IHubContext<ApplicationHub> hubContext,
             INotificationService notificationService)
     {
         _hubContext = hubContext;

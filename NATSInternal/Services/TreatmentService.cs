@@ -22,7 +22,8 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
 
     /// <inheritdoc />
-    public async Task<TreatmentListResponseDto> GetListAsync(TreatmentListRequestDto requestDto)
+    public async Task<TreatmentListResponseDto> GetListAsync(
+            TreatmentListRequestDto requestDto)
     {
         // Initialize list of month and year options.
         if (_earliestRecordedMonthYear == null)

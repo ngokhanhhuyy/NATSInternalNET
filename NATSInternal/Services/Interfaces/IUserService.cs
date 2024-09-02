@@ -44,6 +44,16 @@ public interface IUserService
     Task<RoleDetailResponseDto> GetRoleAsync(int id);
 
     /// <summary>
+    /// Get basic information of the user with given id.
+    /// </summary>
+    /// <param name="id">The id of the user to be retrieved.</param>
+    /// <returns>An object containing basic information of the user.</returns>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when the user doesn't exist.
+    /// </exception>
+    Task<UserBasicResponseDto> GetBasicAsync(int id);
+
+    /// <summary>
     /// Get fully detailed information, including role, claims
     /// (permissions) of the user with given id.
     /// </summary>

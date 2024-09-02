@@ -4,7 +4,7 @@ using System.Security.Claims;
 namespace NATSInternal.Hubs;
 
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class NotificationHub : Hub
+public class ApplicationHub : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -28,10 +28,12 @@ public class NotificationHub : Hub
         await Console.Out.WriteAsync(" ");
         Console.BackgroundColor = ConsoleColor.White;
         Console.ForegroundColor = ConsoleColor.Black;
-        await Console.Out.WriteAsync(DateTime.UtcNow.ToApplicationTime().ToString(CultureInfo.InvariantCulture));
+        await Console.Out.WriteAsync(DateTime.UtcNow.ToApplicationTime()
+            .ToString(CultureInfo.InvariantCulture));
         Console.BackgroundColor = ConsoleColor.Black;
         Console.ForegroundColor = ConsoleColor.White;
         string connectionStatus = isConnected ? "Connected" : "Disconnected";
-        await Console.Out.WriteLineAsync($" {connectionStatus} ({userName}#{userId})");
+        await Console.Out.WriteLineAsync(
+            $" {connectionStatus} NotificationHub ({userName}#{userId})");
     }
 }
