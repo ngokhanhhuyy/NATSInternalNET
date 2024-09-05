@@ -2,7 +2,7 @@
 
 [Route("/Api/Role")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class RoleController : ControllerBase
 {
     private readonly IRoleService _roleService;

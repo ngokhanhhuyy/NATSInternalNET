@@ -2,7 +2,7 @@
 
 [Route("Api/Product")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class ProductController : ControllerBase
 {
     private readonly IProductService _service;
@@ -73,10 +73,10 @@ public class ProductController : ControllerBase
                 "ProductDetail",
                 "Product",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ProductCreation, createdId);
-            
+
             return Created(createdResourceUrl, createdId);
         }
         catch (OperationException exception)
@@ -109,10 +109,10 @@ public class ProductController : ControllerBase
         {
             // Update the product.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ProductModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -137,10 +137,10 @@ public class ProductController : ControllerBase
         {
             // Delete the product.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ProductDeletion, id);
-            
+
             return NoContent();
         }
         catch (ResourceNotFoundException exception)

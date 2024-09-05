@@ -2,10 +2,11 @@
 
 [Route("/Api/User")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IValidator<UserListRequestDto> _listValidator;
     private readonly IValidator<UserCreateRequestDto> _createValidator;
     private readonly IValidator<UserUpdateRequestDto> _updateValidator;
@@ -15,6 +16,7 @@ public class UserController : ControllerBase
 
     public UserController(
             IUserService userService,
+            IAuthorizationService authorizationService,
             IValidator<UserListRequestDto> listValidator,
             IValidator<UserCreateRequestDto> createValidator,
             IValidator<UserUpdateRequestDto> updateValidator,
@@ -23,6 +25,7 @@ public class UserController : ControllerBase
             INotifier notifier)
     {
         _userService = userService;
+        _authorizationService = authorizationService;
         _listValidator = listValidator;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
@@ -83,6 +86,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UserDetail(int id)
     {
@@ -96,6 +100,15 @@ public class UserController : ControllerBase
         {
             return NotFound();
         }
+    }
+
+    [HttpGet("Caller")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CallerDetail()
+    {
+        int callerId = _authorizationService.GetUserId();
+        UserDetailResponseDto responseDto = await _userService.GetDetailAsync(callerId);
+        return Ok(responseDto);
     }
 
     [HttpPost]
@@ -121,10 +134,10 @@ public class UserController : ControllerBase
             // Create the user.
             int createdId = await _userService.CreateAsync(requestDto);
             string createdResourceUrl = Url.Action("UserDetail", "User", createdId);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.UserCreation, createdId);
-            
+
             return Created(createdResourceUrl, createdId);
         }
         catch (DuplicatedException exception)
@@ -169,10 +182,10 @@ public class UserController : ControllerBase
         {
             // Update the user.
             await _userService.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.UserModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -286,7 +299,7 @@ public class UserController : ControllerBase
         {
             // Delete the user.
             await _userService.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.UserDeletion, id);
             return Ok();

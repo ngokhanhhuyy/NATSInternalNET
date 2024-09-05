@@ -2,7 +2,7 @@ namespace NATSInternal.Controllers;
 
 [Route("Api/Customer/{customerId:int}/DebtPayment")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class CustomerDebtPaymentController : ControllerBase
 {
     private readonly IDebtPaymentService _service;
@@ -18,7 +18,7 @@ public class CustomerDebtPaymentController : ControllerBase
         _upsertValidator = upsertValidator;
         _notifier = notifier;
     }
-    
+
     [HttpGet("{debtPaymentId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -35,7 +35,7 @@ public class CustomerDebtPaymentController : ControllerBase
             return NotFound();
         }
     }
-    
+
     [HttpPost]
     [Authorize(Policy = "CanCreateDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -55,7 +55,7 @@ public class CustomerDebtPaymentController : ControllerBase
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
+
         // Perform the creating operation.
         try
         {
@@ -65,13 +65,13 @@ public class CustomerDebtPaymentController : ControllerBase
                 "DebtPaymentDetail",
                 "CustomerDebtPayment",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.DebtPaymentCreation,
                 customerId,
                 createdId);
-            
+
             return Created(createdResourceUrl, createdId);
         }
         catch (AuthorizationException)
@@ -88,7 +88,7 @@ public class CustomerDebtPaymentController : ControllerBase
             return UnprocessableEntity(ModelState);
         }
     }
-    
+
     [HttpPut("{debtPaymentId:int}")]
     [Authorize(Policy = "CanEditDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -110,19 +110,19 @@ public class CustomerDebtPaymentController : ControllerBase
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
+
         // Perform the updating operation.
         try
         {
             // Update the debt payment.
             await _service.UpdateAsync(customerId, debtPaymentId, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.DebtPaymentModification,
                 customerId,
                 debtPaymentId);
-            
+
             return Ok();
         }
         catch (AuthorizationException)
@@ -143,7 +143,7 @@ public class CustomerDebtPaymentController : ControllerBase
             return Conflict();
         }
     }
-    
+
     [HttpDelete("{debtPaymentId:int}")]
     [Authorize(Policy = "CanDeleteDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -157,13 +157,13 @@ public class CustomerDebtPaymentController : ControllerBase
         {
             // Delete the debt payment.
             await _service.DeleteAsync(customerId, debtPaymentId);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.DebtPaymentDeletion,
                 customerId,
                 debtPaymentId);
-            
+
             return Ok();
         }
         catch (AuthorizationException)

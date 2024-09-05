@@ -1,10 +1,10 @@
-using Microsoft.IdentityModel.Tokens;
 using NATSInternal.Middlewares;
 using NATSInternal.Services.Identity;
 using System.Globalization;
 using System.Security.Claims;
-using System.Text;
-using Microsoft.Extensions.Primitives;
+// using System.Text;
+// using Microsoft.Extensions.Primitives;
+// using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
@@ -20,81 +20,127 @@ builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<DatabaseContext>()
     .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
     .AddDefaultTokenProviders();
-builder.Services.Configure<IdentityOptions>(options => {
+builder.Services.Configure<IdentityOptions>(options =>
+{
     options.Password.RequireDigit = false;
     options.Password.RequireLowercase = false;
     options.Password.RequireUppercase = false;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequiredLength = 0;
 });
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.SlidingExpiration = true;
+    options.Cookie.Name = "NATSInternalAuthenticationCookie";
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Events.OnRedirectToLogin = options.Events.OnRedirectToAccessDenied = (context) =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnRedirectToLogout = (context) =>
+    {
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnValidatePrincipal = async (context) =>
+    {
+        IAuthorizationService authorizationService = context.HttpContext
+            .RequestServices
+            .GetRequiredService<IAuthorizationService>();
+        string userIdAsString = context.Principal?
+            .FindFirst(ClaimTypes.NameIdentifier)?
+            .Value;
+
+        // Validate user id in the token.
+        try
+        {
+            if (userIdAsString == null)
+            {
+                throw new Exception();
+            }
+            int userId = int.Parse(userIdAsString);
+            await authorizationService.SetUserId(userId);
+        }
+        catch (Exception)
+        {
+            context.RejectPrincipal();
+        }
+    };
+});
 
 // Authentication by JWT strategies.
-builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-    }).AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-            ValidAudience = builder.Configuration["JwtSettings:Issuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!)),
-            ClockSkew = TimeSpan.Zero
-        };
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                StringValues accessToken = context.Request.Query["access_token"];
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme);
+// .AddAuthentication(options =>
+// {
+//     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+//     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+//     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+// })
+// .AddJwtBearer(options =>
+// {
+//     options.TokenValidationParameters = new TokenValidationParameters
+//     {
+//         ValidateIssuer = true,
+//         ValidateAudience = true,
+//         ValidateLifetime = true,
+//         ValidateIssuerSigningKey = true,
+//         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+//         ValidAudience = builder.Configuration["JwtSettings:Issuer"],
+//         IssuerSigningKey = new SymmetricSecurityKey(
+//             Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!)),
+//         ClockSkew = TimeSpan.Zero
+//     };
+//     options.Events = new JwtBearerEvents
+//     {
+//         OnMessageReceived = context =>
+//         {
+//             StringValues accessToken = context.Request.Query["access_token"];
 
-                // Check if the request is for the signalR hub.
-                PathString path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/Api/NotificationHub"))
-                {
-                    context.Token = accessToken;
-                }
+//             // Check if the request is for the signalR hub.
+//             PathString path = context.HttpContext.Request.Path;
+//             if (!string.IsNullOrEmpty(accessToken)
+//                 && path.StartsWithSegments("/Api/NotificationHub"))
+//             {
+//                 context.Token = accessToken;
+//             }
 
-                return Task.CompletedTask;
-            },
-            OnTokenValidated = async context =>
-            {
-                IAuthorizationService authorizationService = context.HttpContext
-                    .RequestServices
-                    .GetRequiredService<IAuthorizationService>();
-                string userIdAsString = context.Principal?
-                    .FindFirst(ClaimTypes.NameIdentifier)?
-                    .Value;
+//             return Task.CompletedTask;
+//         },
+//         OnTokenValidated = async context =>
+//         {
+//             IAuthorizationService authorizationService = context.HttpContext
+//                 .RequestServices
+//                 .GetRequiredService<IAuthorizationService>();
+//             string userIdAsString = context.Principal?
+//                 .FindFirst(ClaimTypes.NameIdentifier)?
+//                 .Value;
 
-                // Validate user id in the token.
-                try
-                {
-                    if (userIdAsString == null)
-                    {
-                        throw new Exception();
-                    }
-                    int userId = int.Parse(userIdAsString);
-                    await authorizationService.SetUserId(userId);
-                }
-                catch (Exception exception)
-                {
-                    context.Fail(exception);
-                }
-            }
-        };
-    });
+//             // Validate user id in the token.
+//             try
+//             {
+//                 if (userIdAsString == null)
+//                 {
+//                     throw new Exception();
+//                 }
+//                 int userId = int.Parse(userIdAsString);
+//                 await authorizationService.SetUserId(userId);
+//             }
+//             catch (Exception exception)
+//             {
+//                 context.Fail(exception);
+//             }
+//         }
+//     };
+// });
 
 // Authorization policies.
 builder.Services
     .AddAuthorizationBuilder()
-    
+
     // Users.
     .AddPolicy("CanCreateUser", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateUser))
@@ -104,7 +150,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.DeleteUser))
     .AddPolicy("CanRestoreUser", policy =>
         policy.RequireClaim("Permission", PermissionConstants.RestoreUser))
-    
+
     // Customers.
     .AddPolicy("CanGetCustomerDetail", policy =>
         policy.RequireClaim("Permission", PermissionConstants.GetCustomerDetail))
@@ -114,7 +160,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditCustomer))
     .AddPolicy("CanDeleteCustomer", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteCustomer))
-    
+
     // Brands.
     .AddPolicy("CanCreateBrand", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateBrand))
@@ -122,7 +168,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditBrand))
     .AddPolicy("CanDeleteBrand", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteBrand))
-    
+
     // Products.
     .AddPolicy("CanCreateProduct", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateProduct))
@@ -130,7 +176,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditProduct))
     .AddPolicy("CanDeleteProduct", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteProduct))
-    
+
     // ProductCategory.
     .AddPolicy("CanCreateProductCategory", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateProductCategory))
@@ -138,7 +184,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditProductCategory))
     .AddPolicy("CanDeleteProductCategory", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteProductCategory))
-    
+
     // Supplies.
     .AddPolicy("CanCreateSupply", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateSupply))
@@ -146,7 +192,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditSupply))
     .AddPolicy("CanDeleteSupply", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteSupply))
-    
+
     // Expenses.
     .AddPolicy("CanCreateExpense", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateExpense))
@@ -154,7 +200,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditExpense))
     .AddPolicy("CanDeleteExpense", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteExpense))
-    
+
     // Orders.
     .AddPolicy("CanCreateOrder", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateOrder))
@@ -162,7 +208,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditOrder))
     .AddPolicy("CanDeleteOrder", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteOrder))
-    
+
     // Treatments.
     .AddPolicy("CanCreateTreatment", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateTreatment))
@@ -170,7 +216,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditTreatment))
     .AddPolicy("CanDeleteTreatment", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteTreatment))
-    
+
     // DebtIncurrence.
     .AddPolicy("CanCreateDebtIncurrence", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateDebtIncurrence))
@@ -178,7 +224,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditDebtIncurrence))
     .AddPolicy("CanDeleteDebtIncurrence", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteDebtIncurrence))
-    
+
     // DebtPayments.
     .AddPolicy("CanCreateDebtPayment", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateDebtPayment))
@@ -186,7 +232,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditDebtPayment))
     .AddPolicy("CanDeleteDebtPayment", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteDebtPayment))
-    
+
     // Consultants.
     .AddPolicy("CanCreateConsultant", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateConsultant))
@@ -194,7 +240,7 @@ builder.Services
         policy.RequireClaim("Permission", PermissionConstants.EditConsultant))
     .AddPolicy("CanDeleteConsultant", policy =>
         policy.RequireClaim("Permission", PermissionConstants.DeleteConsultant))
-    
+
     // Announcements.
     .AddPolicy("CanCreateAnnouncement", policy =>
         policy.RequireClaim("Permission", PermissionConstants.CreateAnnouncement))
@@ -293,8 +339,7 @@ app.UseAuthorization();
 app.UseEndpoints(endpoint =>
 {
     endpoint.MapControllers();
-    endpoint.MapHub<ApplicationHub>("/Api/NotificationHub");
-    endpoint.MapHub<ResourceAccessingUsersHub>("Api/ResourceAccessHub");
+    endpoint.MapHub<ApplicationHub>("/Api/Hub");
 });
 app.UseStaticFiles();
 // app.MapFallbackToFile("/index.html");

@@ -15,6 +15,8 @@ global using Microsoft.AspNetCore.SignalR;
 global using MySqlConnector;
 global using NATSInternal.Extensions;
 global using NATSInternal.Hubs;
+global using NATSInternal.Hubs.Notifier;
+global using NATSInternal.Hubs.ResourceAccess;
 global using NATSInternal.Models;
 global using NATSInternal.Services;
 global using NATSInternal.Services.Constants;

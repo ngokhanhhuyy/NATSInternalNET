@@ -2,7 +2,7 @@
 
 [Route("Api/Expense")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class ExpenseController : ControllerBase
 {
     private readonly IExpenseService _service;
@@ -85,11 +85,11 @@ public class ExpenseController : ControllerBase
                 "ExpenseDetail",
                 "Expense",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ExpenseCreation, createdId);
-            
-            return Created(createdUrl, createdId); 
+
+            return Created(createdUrl, createdId);
         }
         catch (ConcurrencyException)
         {
@@ -123,10 +123,10 @@ public class ExpenseController : ControllerBase
         {
             // Update the expense.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ExpenseModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -155,10 +155,10 @@ public class ExpenseController : ControllerBase
         {
             // Delete the expense.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ExpenseDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)

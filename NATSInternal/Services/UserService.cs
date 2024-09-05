@@ -114,6 +114,28 @@ public class UserService : IUserService
     }
 
     /// <inheritdoc />
+    public async Task<UserListResponseDto> GetListAsync(IEnumerable<int> ids)
+    {
+        // Fetch a list of users with specified ids.
+        List<User> users = await _context.Users
+            .Include(u => u.Roles)
+            .OrderBy(u => u.Id)
+            .Where(u => ids.Contains(u.Id))
+            .ToListAsync();
+
+        // Ensure all of the ids exist.
+        if (ids.Except(users.Select(u => u.Id)).Any())
+        {
+            throw new ResourceNotFoundException();
+        }
+
+        return new UserListResponseDto
+        {
+            Results = users.Select(u => new UserBasicResponseDto(u)).ToList()
+        };
+    }
+
+    /// <inheritdoc />
     public async Task<UserListResponseDto> GetJoinedRecentlyListAsync()
     {
         DateOnly minimumJoiningDate = DateOnly
@@ -409,7 +431,7 @@ public class UserService : IUserService
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
     }
-    
+
     /// <inheritdoc />
     public async Task ChangePasswordAsync(
             int id,
@@ -492,7 +514,7 @@ public class UserService : IUserService
         user.IsDeleted = true;
 
         // Save changes.
-        await _context.SaveChangesAsync(); 
+        await _context.SaveChangesAsync();
     }
 
     /// <inheritdoc />

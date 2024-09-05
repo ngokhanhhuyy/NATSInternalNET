@@ -2,12 +2,12 @@ namespace NATSInternal.Controllers;
 
 [Route("Api/Notification")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class NotificationController : ControllerBase
 {
     private readonly INotificationService _service;
     private readonly IValidator<NotificationListRequestDto> _listValidator;
-    
+
     public NotificationController(
             INotificationService service,
             IValidator<NotificationListRequestDto> listValidator)
@@ -15,7 +15,7 @@ public class NotificationController : ControllerBase
         _service = service;
         _listValidator = listValidator;
     }
-    
+
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -30,11 +30,11 @@ public class NotificationController : ControllerBase
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
+
         // Fetch the list.
         return Ok(await _service.GetListAsync(requestDto));
     }
-    
+
     [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -50,7 +50,7 @@ public class NotificationController : ControllerBase
             return NotFound();
         }
     }
-    
+
     [HttpPost("{id:int}/MarkAsRead")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

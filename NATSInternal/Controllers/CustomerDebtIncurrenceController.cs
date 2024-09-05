@@ -2,13 +2,13 @@ namespace NATSInternal.Controllers;
 
 [Route("Api/Customer/{customerId:int}/DebtIncurrence")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class CustomerDebtIncurrenceController : ControllerBase
 {
     private readonly IDebtIncurrenceService _service;
     private readonly IValidator<DebtIncurrenceUpsertRequestDto> _upsertValidator;
     private readonly INotifier _notifier;
-    
+
     public CustomerDebtIncurrenceController(
             IDebtIncurrenceService service,
             IValidator<DebtIncurrenceUpsertRequestDto> upsertValidator,
@@ -18,7 +18,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
         _upsertValidator = upsertValidator;
         _notifier = notifier;
     }
-    
+
     [HttpGet("{debtIncurrenceId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -35,7 +35,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
             return NotFound();
         }
     }
-    
+
     [HttpPost]
     [Authorize(Policy = "CanCreateDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -55,7 +55,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
+
         // Perform the creating operation.
         try
         {
@@ -65,13 +65,13 @@ public class CustomerDebtIncurrenceController : ControllerBase
                 "DebtIncurrenceDetail",
                 "CustomerDebtIncurrence",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.DebtIncurrenceCreation,
                 customerId,
                 createdId);
-            
+
             return Created(createdUrl, createdId);
         }
         catch (AuthorizationException)
@@ -88,7 +88,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
             return UnprocessableEntity(exception);
         }
     }
-    
+
     [HttpPut("{debtIncurrenceId:int}")]
     [Authorize(Policy = "CanEditDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -110,19 +110,19 @@ public class CustomerDebtIncurrenceController : ControllerBase
             ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
             return BadRequest(ModelState);
         }
-        
+
         // Perform the updating operation.
         try
         {
             // Update the debt incurrence.
             await _service.UpdateAsync(customerId, debtIncurrenceId, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                     NotificationType.DebtIncurrenceModification,
                     customerId,
                     debtIncurrenceId);
-            
+
             return Ok();
         }
         catch (AuthorizationException)
@@ -143,7 +143,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
             return Conflict();
         }
     }
-    
+
     [HttpDelete("{debtIncurrenceId:int}")]
     [Authorize(Policy = "CanDeleteDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -159,13 +159,13 @@ public class CustomerDebtIncurrenceController : ControllerBase
         {
             // Delete the debt incurrence.
             await _service.DeleteAsync(customerId, debtIncurrenceId);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.DebtIncurrenceDeletion,
                 customerId,
                 debtIncurrenceId);
-            
+
             return Ok();
         }
         catch (AuthorizationException)

@@ -2,7 +2,7 @@
 
 [Route("Api/ProductCategory")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class ProductCategoryController : ControllerBase
 {
     private readonly IProductCategoryService _service;
@@ -68,10 +68,10 @@ public class ProductCategoryController : ControllerBase
                 "ProductCategoryDetail",
                 "ProductCategory",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ProductCategoryCreation, createdId);
-            
+
             return Created(createdResourceUrl, createdId);
         }
         catch (OperationException exception)
@@ -104,10 +104,10 @@ public class ProductCategoryController : ControllerBase
         {
             // Update the product category.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ProductCategoryModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -131,10 +131,10 @@ public class ProductCategoryController : ControllerBase
         {
             // Delete the product category.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ProductCategoryDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)

@@ -21,7 +21,7 @@ fetch(`${host}/authentication/getAccessToken?includeAccessToken=False`, {
     accessToken = data.accessToken;
 
     connection = new HubConnectionBuilder()
-        .withUrl(`${host}/resourceAccessHub`, {
+        .withUrl(`${host}/hub`, {
             accessTokenFactory: () => accessToken
         }).build();
 
@@ -30,30 +30,43 @@ fetch(`${host}/authentication/getAccessToken?includeAccessToken=False`, {
         .then(() => {
             console.log("Connected to ResourceAccessingUsers hub");
             connection.on(
-                "ResourceAccessStarted",
-                (resourceName, resourcePrimaryId, resourceSecondaryId, userResponseDto) => {
+                "Other.ResourceAccessStarted",
+                (resource, userResponseDto) => {
                     const json = {
-                        resourceName,
-                        resourcePrimaryId,
-                        resourceSecondaryId,
-                        userResponseDto
-                    }
-                    console.log(json);
+                        resource,
+                        user: userResponseDto.userName,
+                        type: "Other.ResourceAccessStarted"
+                    };
+                    console.log(JSON.stringify(json, null, 2));
+                });
+            connection.on(
+                "Self.ResourceAccessStarted",
+                (resource, listResponseDto) => {
+                    const json = {
+                        resource,
+                        user: listResponseDto.results.map(u => u.userName),
+                        type: "Self.ResourceAccessStarted"
+                    };
+                    console.log(JSON.stringify(json, null, 2));
                 });
         
             connection.on(
-                "ResourceAccessFinished",
-                (resourceName, resourcePrimaryId, resourceSecondaryId, userResponseDto) => {
+                "Other.ResourceAccessFinished",
+                (resource, userId) => {
                     const json = {
-                        resourceName,
-                        resourcePrimaryId,
-                        resourceSecondaryId,
-                        userResponseDto: JSON.stringify(userResponseDto, null, 2)
-                    }
-                    console.log(json);
+                        resource,
+                        userId,
+                        type: "Other.ResourceAccessFinished"
+                    };
+                    console.log(JSON.stringify(json, null, 2));
                 });
 
-            connection.send("AccessResource", "User", 1, null);
+            connection.send("StartResourceAccess", {
+                type: "User",
+                primaryId: 1,
+                secondaryId: null,
+                mode: 1
+            }).catch(err => console.log(err));
         }).catch(err => {
             console.error("Error connecting to ResourceAccessingUsers hub", err);
         });

@@ -23,8 +23,8 @@ public interface IAuthenticationService
     /// password is incorrect. 
     /// </exception>
     Task<AccessTokenResponseDto> GetAccessTokenAsync(
-        SignInRequestDto requestDto,
-        bool includeExchangeToken);
+            SignInRequestDto requestDto,
+            bool includeExchangeToken);
 
     /// <summary>
     /// Get the new fresh access token and refresh token by exchanging the old ones.
@@ -40,17 +40,19 @@ public interface IAuthenticationService
     Task<AccessTokenResponseDto> ExchangeAccessTokenAsync(
             AccessTokenExchangeRequestDto requestDto);
 
-    /// <summary>
-    /// Sign in using the specified username and password using cookies.
-    /// </summary>
+    /// <summary>Sign in with the specified username and password using cookies.</summary>
     /// <param name="requestDto">An object containing username and password.</param>
-    /// <returns>A <c>Task</c> object representing the asynchronous operation.</returns>
-    Task SignInAsync(SignInRequestDto requestDto);
+    /// <returns>
+    /// A <c><see cref="int"/></c> representing the id of the signed in user.
+    /// </returns>
+    Task<int> SignInAsync(SignInRequestDto requestDto);
 
     /// <summary>
     /// Sign out and clear the cookies which containing the authentication credentials
     /// from the client.
     /// </summary>
-    /// <returns>A <c>Task</c> object representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A <c><see cref="Task"/></c> object representing the asynchronous operation.
+    /// </returns>
     Task SignOutAsync();
 }

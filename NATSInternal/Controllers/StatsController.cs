@@ -2,7 +2,7 @@ namespace NATSInternal.Controllers;
 
 [ApiController]
 [Route("Api/Stats")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class StatsController : ControllerBase
 {
     private readonly IStatsService _service;

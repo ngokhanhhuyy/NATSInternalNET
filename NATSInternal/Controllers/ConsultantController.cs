@@ -2,7 +2,7 @@ namespace NATSInternal.Controller;
 
 [ApiController]
 [Route("Api/Consultant")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class ConsultantController : ControllerBase
 {
     private readonly IConsultantService _service;
@@ -89,7 +89,7 @@ public class ConsultantController : ControllerBase
                 "ConsultantDetail",
                 "Consultant",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.ConsultantCreation,
@@ -185,7 +185,7 @@ public class ConsultantController : ControllerBase
 
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.ConsultantDeletion, id);
-                
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)

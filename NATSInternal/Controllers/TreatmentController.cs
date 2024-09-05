@@ -2,7 +2,7 @@
 
 [Route("Api/Treatment")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class TreatmentController : ControllerBase
 {
     private readonly ITreatmentService _service;
@@ -83,10 +83,10 @@ public class TreatmentController : ControllerBase
                 "TreatmentDetail",
                 "Treatment",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.TreatmentCreation, createdId);
-            
+
             return Created(createdResourceUrl, createdId);
         }
         catch (AuthorizationException)
@@ -129,10 +129,10 @@ public class TreatmentController : ControllerBase
         {
             // Update the treatment.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.TreatmentModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -167,10 +167,10 @@ public class TreatmentController : ControllerBase
         {
             // Delete the treatment.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.TreatmentDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)

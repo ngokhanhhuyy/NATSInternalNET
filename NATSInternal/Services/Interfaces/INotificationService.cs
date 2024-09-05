@@ -10,15 +10,15 @@ public interface INotificationService
     /// parameters.
     /// </summary>
     /// <param name="requestDto">
-    /// The request parameters for fetching the expense list.
+    /// (Optional) The request parameters for fetching the notification list.
     /// </param>
     /// <returns>
     /// A task that represents the asynchronous operation.
     /// The task result contains the notification list response DTO.
     /// </returns>
     Task<NotificationListResponseDto> GetListAsync(
-            NotificationListRequestDto requestDto);
-    
+            NotificationListRequestDto requestDto = null);
+
     /// <summary>
     /// Get a single notification with the specified id. The current user who has
     /// sent the request must be in the list of the notification's received users.
@@ -29,7 +29,7 @@ public interface INotificationService
     /// current user cannot be found.
     /// </exception>
     Task<NotificationResponseDto> GetSingleAsync(int id);
-    
+
     /// <summary>
     /// Mark the notification with the specified id as read.
     /// </summary>
@@ -49,7 +49,7 @@ public interface INotificationService
     /// <returns>
     /// A <c>Task</c> object representing the asynchronous operation.
     Task MarkAllAsReadAsync();
-    
+
     /// <summary>
     /// Create a notification which all users can receive with the specified
     /// notification type and resource ids.

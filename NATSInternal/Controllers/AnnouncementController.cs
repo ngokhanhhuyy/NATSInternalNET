@@ -2,7 +2,7 @@ namespace NATSInternal.Controllers;
 
 [Route("/Api/Announcement")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class AnnouncementController : ControllerBase
 {
     private readonly IAnnouncementService _service;
@@ -55,7 +55,7 @@ public class AnnouncementController : ControllerBase
             return NotFound();
         }
     }
-    
+
     [HttpPost]
     [Authorize(Policy = "CanCreateAnnouncement")]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -84,10 +84,10 @@ public class AnnouncementController : ControllerBase
                 "AnnouncementDetail",
                 "Announcement",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.AnnouncementCreation, createdId);
-            
+
             return Created(createdResourceUrl, createdId);
         }
         catch (ConcurrencyException)
@@ -122,10 +122,10 @@ public class AnnouncementController : ControllerBase
         {
             // Update the announcement.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.AnnouncementModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException)
@@ -149,10 +149,10 @@ public class AnnouncementController : ControllerBase
         {
             // Delete the announcement.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.AnnouncementDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException)

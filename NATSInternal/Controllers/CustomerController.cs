@@ -2,7 +2,7 @@
 
 [Route("/Api/Customer")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class CustomerController : ControllerBase
 {
     private readonly ICustomerService _service;
@@ -101,10 +101,10 @@ public class CustomerController : ControllerBase
             // Create the customer.
             int createdId = await _service.CreateAsync(requestDto);
             string createdUrl = Url.Action("CustomerDetail", new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.CustomerCreation, createdId);
-            
+
             return Created(createdUrl, createdId);
         }
         catch (OperationException exception)
@@ -137,10 +137,10 @@ public class CustomerController : ControllerBase
         {
             // Update the customer.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.CustomerModification, id);
-            
+
             return Ok();
         }
         catch (OperationException exception)
@@ -160,10 +160,10 @@ public class CustomerController : ControllerBase
         {
             // Delete the customer.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.CustomerDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)

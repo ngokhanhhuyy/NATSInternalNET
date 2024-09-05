@@ -2,7 +2,7 @@
 
 [Route("/Api/Supply")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class SupplyController : ControllerBase
 {
     private readonly ISupplyService _service;
@@ -85,7 +85,7 @@ public class SupplyController : ControllerBase
                 "SupplyDetail",
                 "Supply",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.SupplyCreation, createdId);
             return Created(createdResourceUrl, createdId);
@@ -123,10 +123,10 @@ public class SupplyController : ControllerBase
         {
             // Update the supply.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.SupplyModification, id);
-            
+
             return Ok();
         }
         catch (AuthorizationException)
@@ -157,10 +157,10 @@ public class SupplyController : ControllerBase
         {
             // Delete the supply.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.SupplyDeletion, id);
-            
+
             return Ok();
         }
         catch (AuthorizationException)

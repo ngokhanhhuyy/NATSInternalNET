@@ -22,7 +22,7 @@ public class AuthenticationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> GetAccessToken(
             [FromBody] SignInRequestDto requestDto,
-            [FromQuery] bool includeExchangeToken = true)
+            [FromQuery] bool includeRefreshToken = true)
     {
         // Validate data from request.
         ValidationResult validationResult;
@@ -33,13 +33,13 @@ public class AuthenticationController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Performing login request verification operation.
+        // Perform login request verification operation.
         try
         {
             AccessTokenResponseDto responseDto;
             responseDto = await _authenticationService.GetAccessTokenAsync(
                 requestDto,
-                includeExchangeToken);
+                includeRefreshToken);
             return Ok(responseDto);
         }
         catch (OperationException exception)
@@ -68,4 +68,49 @@ public class AuthenticationController : ControllerBase
         }
     }
 
+    [HttpPost("GetAccessCookie")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetAccessCookie(SignInRequestDto requestDto)
+    {
+        // Validate data from request.
+        ValidationResult validationResult;
+        validationResult = _signInValidator.Validate(requestDto.TransformValues());
+        if (!validationResult.IsValid)
+        {
+            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
+            return BadRequest(ModelState);
+        }
+
+        // Performing login request verification operation.
+        try
+        {
+            int userId = await _authenticationService.SignInAsync(requestDto);
+            return Ok(userId);
+        }
+        catch (OperationException exception)
+        {
+            ModelState.AddModelErrorsFromServiceException(exception);
+            return UnprocessableEntity(ModelState);
+        }
+    }
+
+    [HttpPost("ClearAccessCookie")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ClearAccessCookie()
+    {
+        await _authenticationService.SignOutAsync();
+        return Ok();
+    }
+
+    [HttpGet("CheckAuthenticationStatus")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult CheckAuthenticationStatus()
+    {
+        return Ok();
+    }
 }

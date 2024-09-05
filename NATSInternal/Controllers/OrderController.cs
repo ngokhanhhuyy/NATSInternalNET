@@ -2,7 +2,7 @@
 
 [Route("Api/Order")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class OrderController : ControllerBase
 {
     private readonly IOrderService _service;
@@ -85,10 +85,10 @@ public class OrderController : ControllerBase
                 "OrderDetail",
                 "Order",
                 new { id = createdId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.OrderCreation, createdId);
-            
+
             return Created(createdUrl, createdId);
         }
         catch (OperationException exception)
@@ -124,10 +124,10 @@ public class OrderController : ControllerBase
         {
             // Update the order.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.OrderModification, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -157,10 +157,10 @@ public class OrderController : ControllerBase
         {
             // Delete the order.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.OrderDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)

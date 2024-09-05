@@ -16,7 +16,27 @@ public interface IUserService
     /// calculation).
     /// </returns>
     Task<UserListResponseDto> GetListAsync(UserListRequestDto requestDto);
-    
+
+    /// <summary>
+    /// Get a list of the users who have the specified ids.
+    /// </summary>
+    /// <param name="ids">
+    /// A list of <c><see cref="int"/></c> representing the ids of the users to retrieve.
+    /// </param>
+    /// <returns>A list of objects containing the basic information of the users.</returns>
+    /// <exception cref="ResourceNotFoundException">
+    /// Thrown when there is any of the specified ids that is not found.
+    /// </exception>
+    /// <remarks>
+    /// This method doesn't paginate the results and include the authorization information.
+    /// It will return a list containing a number of results which is exactly the same as the
+    /// number of ids specified in the parameter if all of the users are found. At that time,
+    /// the value of the property <c>PageCount</c> in <c><see cref="UserListResponseDto"/></c>
+    /// will always be 1 and the value of the property <c>Authorization</c> will always be
+    /// null.
+    /// </remarks>
+    Task<UserListResponseDto> GetListAsync(IEnumerable<int> ids);
+
     /// <summary>
     /// Get a list of users who have just joined (within 1 month from
     /// joining date).
@@ -151,7 +171,7 @@ public interface IUserService
     /// New password's complexity doesn't meet requirement.
     /// </exception>
     Task ResetPasswordAsync(int id, UserPasswordResetRequestDto requestDto);
-    
+
     /// <summary>
     /// Delete the user with given id.
     /// </summary>

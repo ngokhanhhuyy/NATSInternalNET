@@ -6,9 +6,9 @@
 public class Resource
 {
     /// <summary>
-    /// The name of the resource (User, Customer, Product, Order, ...).
+    /// The type of the resource (User, Customer, Product, Order, ...).
     /// </summary>
-    public string Name { get; init; }
+    public string Type { get; init; }
 
     /// <summary>
     /// The primary id of the resource.
@@ -24,6 +24,11 @@ public class Resource
     public int? SecondaryId { get; init; }
 
     /// <summary>
+    /// Indicates the mode of the access (detail or update).
+    /// </summary>
+    public ResourceAccessMode Mode { get; init; }
+
+    /// <summary>
     /// Determines of the specified object has the same type and is equal to this
     /// resource.
     /// </summary>
@@ -36,9 +41,10 @@ public class Resource
     {
         if (obj is Resource otherResource)
         {
-            return Name == otherResource.Name
+            return Type == otherResource.Type
                 && PrimaryId == otherResource.PrimaryId
-                && SecondaryId == otherResource.SecondaryId;
+                && SecondaryId == otherResource.SecondaryId
+                && Mode == otherResource.Mode;
         }
 
         return false;
@@ -48,17 +54,17 @@ public class Resource
     /// Serves as the default hash function.
     /// </summary>
     /// <returns>
-    /// A hash code for the current resource, which is based on the <see cref="Name"/>,
+    /// A hash code for the current resource, which is based on the <see cref="Type"/>,
     /// <see cref="PrimaryId"/>, and <see cref="SecondaryId"/> properties.
     /// </returns>
     /// <remarks>
     /// This implementation of <see cref="GetHashCode"/> uses the
     /// <see cref="HashCode.Combine"/> method to generate a hash code that uniquely
-    /// identifies a <see cref="Resource"/> object based on its <see cref="Name"/>,
+    /// identifies a <see cref="Resource"/> object based on its <see cref="Type"/>,
     /// <see cref="PrimaryId"/>, and <see cref="SecondaryId"/>.
     /// </remarks>
     public override int GetHashCode()
     {
-        return HashCode.Combine(Name, PrimaryId, SecondaryId);
+        return HashCode.Combine(Type, PrimaryId, SecondaryId, Mode);
     }
 }

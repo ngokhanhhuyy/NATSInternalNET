@@ -2,7 +2,7 @@
 
 [Route("Api/Country")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class CountryController : ControllerBase
 {
     private readonly ICountryService _service;

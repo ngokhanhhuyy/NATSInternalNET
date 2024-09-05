@@ -1,4 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -44,13 +45,10 @@ public class AuthenticationService : IAuthenticationService
         User user = _userManager.Users
             .Include(u => u.Roles).ThenInclude(r => r.Claims)
             .Include(u => u.RefreshTokens)
-            .SingleOrDefault(u => u.UserName == requestDto.UserName && !u.IsDeleted);
-        if (user == null)
-        {
-            throw new OperationException(
+            .SingleOrDefault(u => u.UserName == requestDto.UserName && !u.IsDeleted)
+            ?? throw new OperationException(
                 nameof(requestDto.UserName),
                 ErrorMessages.NotFound.ReplaceResourceName(DisplayNames.UserName));
-        }
 
         // Check if password is correct.
         bool passwordValid = await _userManager
@@ -136,35 +134,48 @@ public class AuthenticationService : IAuthenticationService
     }
 
     /// <inheritdoc />
-    public async Task SignInAsync(SignInRequestDto requestDto)
+    public async Task<int> SignInAsync(SignInRequestDto requestDto)
     {
-        // Check if user exists
-        int userId = await _userManager.Users
-            .Where(u => u.UserName == requestDto.UserName)
-            .Select(u => u.Id)
-            .SingleOrDefaultAsync();
-        if (userId == 0)
+        // Check if user exists.
+        User user = await _userManager.Users
+            .Include(u => u.Roles).ThenInclude(r => r.Claims)
+            .AsSplitQuery()
+            .SingleOrDefaultAsync(u => u.UserName == requestDto.UserName && !u.IsDeleted);
+        string errorMessage;
+        if (user == null)
         {
-            throw new ResourceNotFoundException(
-                nameof(User),
-                nameof(requestDto),
-                requestDto.UserName);
+            errorMessage = ErrorMessages.NotFoundByProperty
+                .ReplaceResourceName(DisplayNames.User)
+                .ReplacePropertyName(DisplayNames.UserName)
+                .ReplaceAttemptedValue(requestDto.UserName);
+            throw new OperationException(nameof(requestDto.UserName), errorMessage);
         }
 
-        // Performing login
-        Microsoft.AspNetCore.Identity.SignInResult signInResult = await _signInManager
-            .PasswordSignInAsync(
-                userName: requestDto.UserName,
-                password: requestDto.Password,
-                isPersistent: false,
-                lockoutOnFailure: false);
+        // Check the password.
+        SignInResult signInResult = await _signInManager
+            .CheckPasswordSignInAsync(user, requestDto.Password, lockoutOnFailure: false);
         if (!signInResult.Succeeded)
         {
-            throw new OperationException(
-                nameof(requestDto.Password),
-                ErrorMessages.Incorrect
-                    .Replace("{PropertyName}", nameof(requestDto.Password)));
+            errorMessage = ErrorMessages.Incorrect.ReplacePropertyName(DisplayNames.Password);
+            throw new OperationException(nameof(requestDto.Password), errorMessage);
         }
+
+        // Prepare the claims to be added in to the generating cookie.
+        List<Claim> claims =
+        [
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.UserName!),
+            new Claim(ClaimTypes.Role, user.Role.Name!),
+            .. user.Role.Claims.Select(c => new Claim("Permission", c.ClaimValue!))
+        ];
+        claims.AddRange(user.Role.Claims
+            .Where(c => c.ClaimType == "Permission")
+            .Select(c => new Claim("Permission", c.ClaimValue)));
+
+        // Perform sign in operation.
+        await _signInManager.SignInWithClaimsAsync(user, false, claims);
+
+        return user.Id;
     }
 
     /// <inheritdoc />
@@ -184,7 +195,8 @@ public class AuthenticationService : IAuthenticationService
     /// An <c>DateTime</c> object representing the expiring datetime of the token.
     /// </param>
     /// <returns>The generated access token.</returns>
-    private string GenerateAccessToken(User user, DateTime expiringDateTime) {
+    private string GenerateAccessToken(User user, DateTime expiringDateTime)
+    {
         // Prepare payload for access token.
         List<Claim> claims =
         [
@@ -204,6 +216,10 @@ public class AuthenticationService : IAuthenticationService
         return _tokenHandler.WriteToken(accessToken);
     }
 
+    /// <summary>
+    /// Generate a random <c><see cref="string"/></c> as a refresh token.
+    /// </summary>
+    /// <returns>The refresh token.</returns>
     private string GenerateRefreshToken()
     {
         const int tokenLength = 64;
@@ -220,6 +236,24 @@ public class AuthenticationService : IAuthenticationService
         return token;
     }
 
+    /// <summary>
+    /// Extract the user id and username from a given access token.
+    /// </summary>
+    /// <param name="accessToken">
+    /// The <c><see cref="string"/></c> representing the access token to extract.
+    /// </param>
+    /// <returns>
+    /// A <c><see cref="Tuple"/></c> which contains 2 elements. The first element is an
+    /// <c><see cref="int"/></c> representing the user id. The second one is a
+    /// <c><see cref="string"/></c> representing the user's username.
+    /// </returns>
+    /// <remarks>Except the lifetime (expiring time), the issuer, audience and issuer signing
+    /// key in the token will be validated. That means, the token will be considered valid
+    /// even if it has expired.
+    /// </remarks>
+    /// <exception cref="OperationException">
+    /// Thrown when the access token is invalid.
+    /// </exception>
     private (int, string) ExtractUserIdentityFromAccessToken(string accessToken)
     {
         TokenValidationParameters validationParameters;
@@ -254,7 +288,7 @@ public class AuthenticationService : IAuthenticationService
             .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
             ?? throw new OperationException(
                 "ID người dùng không được chứa trong mã truy cập.");
-        
+
         bool parsable = int.TryParse(userIdAsString, out int userId);
         if (!parsable)
         {

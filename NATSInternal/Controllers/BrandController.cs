@@ -2,7 +2,7 @@
 
 [Route("Api/Brand")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class BrandController : ControllerBase
 {
     private readonly IBrandService _service;
@@ -66,12 +66,12 @@ public class BrandController : ControllerBase
                 "BrandDetail",
                 "Brand",
                 new { id = createdBrandId });
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(
                 NotificationType.BrandCreation,
                 createdBrandId);
-            
+
             return Created(createdResourceUrl, createdBrandId);
         }
         catch (OperationException exception)
@@ -105,10 +105,10 @@ public class BrandController : ControllerBase
         {
             // Update the brand.
             await _service.UpdateAsync(id, requestDto);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.BrandModification, id);
-                    
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
@@ -134,10 +134,10 @@ public class BrandController : ControllerBase
         {
             // Delete the brand.
             await _service.DeleteAsync(id);
-            
+
             // Create and distribute the notification to the users.
             await _notifier.Notify(NotificationType.BrandDeletion, id);
-            
+
             return Ok();
         }
         catch (ResourceNotFoundException exception)
