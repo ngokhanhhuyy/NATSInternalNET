@@ -163,10 +163,12 @@ public class ApplicationHub : Hub
     /// started his access to the same resource and store the connection id to the storage.
     /// </summary>
     /// <param name="resource">
-    /// A <c><see cref="Resource"></c> object containing name, primary id and secondary
+    /// A <c><see cref="Resource"/></c> object containing name, primary id and secondary
     /// as the identity of the accessing resource.
     /// </param>
-    /// <returns>A <c><see cref="Task"/></c> object representing the asynchronous opeartion.</returns>
+    /// <returns>
+    /// A <c><see cref="Task"/></c> object representing the asynchronous opeartion.
+    /// </returns>
     public async Task StartResourceAccess(Resource resource)
     {
         // Get the list of all connection ids connecting to the specified resource.
