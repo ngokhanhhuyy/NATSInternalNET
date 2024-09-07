@@ -34,6 +34,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.Cookie.Name = "NATSInternalAuthenticationCookie";
     options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Events.OnRedirectToLogin = options.Events.OnRedirectToAccessDenied = (context) =>
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
