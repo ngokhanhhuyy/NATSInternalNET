@@ -1,7 +1,7 @@
 @host = http://localhost:5000/api
 # @name Authentication
 // @no-log
-POST {{host}}/authentication/getAccessToken
+POST {{host}}/authentication/getAccessToken?includeRefreshToken=False
 Content-Type: application/json
 
 {
@@ -15,6 +15,24 @@ Content-Type: application/json
         client.global.set("accessToken", accessToken);
     }
  %}
+
+###
+# @name GetAccessCookie
+// no-log
+POST {{host}}/authentication/getAccessCookie HTTP/2
+Content-Type: application/json
+
+{
+    "userName": "ngokhanhhuyy",
+    "password": "Huyy47b1"
+}
+
+> {%
+    if (response.status === 200) {
+        console.log("authenticationCookie", response.headers["Set-Cookie"]);
+        client.global.set("authenticationCookie", response.headers["Set-Cookie"]);
+    }
+%}
 
 ###
 # @name CustomerList
@@ -140,3 +158,10 @@ Authorization: Bearer {{accessToken}}
 GET {{host}}/notification
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
+
+###
+# @name ResourceAccess
+// @no-log
+GET {{host}}/resourceAccess/accessingUsers?type=Customer&primaryId=11&mode=0
+Content-Type: application/json
+Cookie: {{authenticationCookie}}

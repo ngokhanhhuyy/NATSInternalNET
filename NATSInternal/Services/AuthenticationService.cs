@@ -217,7 +217,7 @@ public class AuthenticationService : IAuthenticationService
     }
 
     /// <summary>
-    /// Generate a random <c><see cref="string"/></c> as a refresh token.
+    /// Generate a random <see cref="string"/> as a refresh token.
     /// </summary>
     /// <returns>The refresh token.</returns>
     private string GenerateRefreshToken()
@@ -240,12 +240,12 @@ public class AuthenticationService : IAuthenticationService
     /// Extract the user id and username from a given access token.
     /// </summary>
     /// <param name="accessToken">
-    /// The <c><see cref="string"/></c> representing the access token to extract.
+    /// The <see cref="string"/> representing the access token to extract.
     /// </param>
     /// <returns>
-    /// A <c><see cref="Tuple"/></c> which contains 2 elements. The first element is an
-    /// <c><see cref="int"/></c> representing the user id. The second one is a
-    /// <c><see cref="string"/></c> representing the user's username.
+    /// A <see cref="Tuple"/> which contains 2 elements. The first element is an
+    /// <see cref="int"/> representing the user id. The second one is a
+    /// <see cref="string"/> representing the user's username.
     /// </returns>
     /// <remarks>Except the lifetime (expiring time), the issuer, audience and issuer signing
     /// key in the token will be validated. That means, the token will be considered valid

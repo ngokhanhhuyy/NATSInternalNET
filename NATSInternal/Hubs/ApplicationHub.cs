@@ -11,25 +11,25 @@ namespace NATSInternal.Hubs;
 public class ApplicationHub : Hub
 {
     /// <summary>
-    /// An instance of a <c><see cref="IUserService"/></c> interface's implementation which is
+    /// An instance of a <see cref="IUserService"/> interface's implementation which is
     /// injected using dependency injection.
     /// </summary>
     private readonly IUserService _userService;
 
     /// <summary>
-    /// An instance of a <c><see cref="INotificationService"/></c> interface's implementation
+    /// An instance of a <see cref="INotificationService"/> interface's implementation
     /// which is injected using dependency injection.
     /// </summary>
     private readonly INotificationService _notificationService;
 
     /// <summary>
-    /// A <c>Dictionary</c> contaning resources' information and the connection ids of
-    /// the users connecting to each resource.
+    /// A <c>Dictionary</c> contaning resources' information and the connection ids of the
+    /// users connecting to each resource.
     /// </summary>
     /// <remarks>
-    /// The keys are the instances of <c><see cref="Resource"/></c>.<br/>
-    /// The values are the <c><see cref="HashSet{string}"/></c> contanining all the connection
-    /// ids of the users connecting to the each resource.
+    /// The keys are the instances of <see cref="Resource"/>.<br/>
+    /// The values are the <see cref="HashSet{T}"/> where <c>T</c> is <see cref="string"/>,
+    /// contanining all the connection ids of the users connecting to the each resource.
     /// </remarks>
     private static readonly Dictionary<Resource, HashSet<string>> _resourceConnections;
 
@@ -38,29 +38,32 @@ public class ApplicationHub : Hub
     /// and the connection ids of each user.
     /// </summary>
     /// <remarks>
-    /// The keys are the <c><see cref="int"/></c> values representing the id of each user.<br/>
-    /// The values is the <c><see cref="HashSet{T}"/></c> where <c>TKey</c> is
-    /// <c><see cref="string"/></c> contanining all the connection ids associated to the user.
+    /// The keys are the <see cref="int"/> values representing the id of each user.<br/>
+    /// The values is the <see cref="HashSet{T}"/> where <c>TKey</c> is
+    /// <see cref="string"/> contanining all the connection ids associated to the user.
     /// </remarks>
     private static readonly Dictionary<int, HashSet<string>> _userConnections;
 
     /// <summary>
-    /// Initializes a new instance of the <c><see cref="ApplicationHub"/></c> class
+    /// Initializes a new instance of the <see cref="ApplicationHub"/> class
     /// for each connection handling.
     /// </summary>
     /// <param name="userService">
-    /// An instance of the <c><see cref="IUserService"/></c>
+    /// An instance of the <see cref="IUserService"/>.
+    /// </param>
+    /// <param name="notificationService">
+    /// An instance of the <see cref="INotificationService"/>.
     /// </param>
     public ApplicationHub(
         IUserService userService,
-        INotificationService notificationService) : base()
+        INotificationService notificationService)
     {
         _userService = userService;
         _notificationService = notificationService;
     }
 
     /// <summary>
-    /// Initializes the static members of the <c><see cref="ApplicationHub"/></c>
+    /// Initializes the static members of the <see cref="ApplicationHub"/>.
     /// </summary>
     static ApplicationHub()
     {
@@ -71,18 +74,28 @@ public class ApplicationHub : Hub
     /// <summary>
     /// The id of the user who is associated to this hub instance.
     /// </summary>
-    private int UserId => int.Parse(Context.UserIdentifier);
+    private int UserId => int.Parse(Context.UserIdentifier!);
+
+    public static Dictionary<Resource, HashSet<string>> ResourceConnections
+    {
+        get => _resourceConnections;
+    }
+
+    public static Dictionary<int, HashSet<string>> UserConnections
+    {
+        get => _userConnections;
+    }
 
     /// <summary>
     /// Get all the ids of all the users who are connecting to the hub.
     /// </summary>
-    public static List<int> ConnectingUserIds => _userConnections.Keys.ToList();
+    public static HashSet<int> ConnectingUserIds => _userConnections.Keys.ToHashSet();
 
     /// <summary>
     /// Handle when a user connects to the hub.
     /// </summary>
     /// <returns>
-    /// A <c><see cref="Task"/></c> operation representing the async operation.
+    /// A <see cref="Task"/> operation representing the async operation.
     /// </returns>
     /// <remarks>
     /// Add the current user id as key and a list containing the current connection id as
@@ -92,8 +105,9 @@ public class ApplicationHub : Hub
     {
         // Check if the user is already been connecting to the hub with different
         // connection ids.
-        _userConnections.TryGetValue(UserId, out HashSet<string> connectionIds);
-        if (connectionIds == null)
+        bool userIdExists =_userConnections
+            .TryGetValue(UserId, out HashSet<string> connectionIds);
+        if (!userIdExists)
         {
             connectionIds = new HashSet<string>
             {
@@ -114,7 +128,7 @@ public class ApplicationHub : Hub
     /// The <c>Exception</c> storing the reason of the disconnection.
     /// </param>
     /// <returns>
-    /// A <c><see cref="Task"/></c> operation representing the async operation.
+    /// A <see cref="Task"/> operation representing the async operation.
     /// </returns>
     /// <remarks>
     /// Removes the current user id from the user ids dictionary and removes and all of the
@@ -122,9 +136,6 @@ public class ApplicationHub : Hub
     /// </remarks>
     public override async Task OnDisconnectedAsync(Exception exception)
     {
-        // Prepare a list of connections which are to be notified.
-        List<string> connectionIdsToBeNotified = new List<string>();
-
         // Remove the current connection id from the resource access dictionary if exists.
         List<KeyValuePair<Resource, HashSet<string>>> pairs;
         pairs = _resourceConnections.ToList();
@@ -146,14 +157,14 @@ public class ApplicationHub : Hub
 
         // Remove the user id from the connection id dictionary if the list containing
         // the connection ids contans only 1 element.
-        _userConnections.ToList().ForEach(pair =>
+        foreach (KeyValuePair<int, HashSet<string>> pair in _userConnections)
         {
             pair.Value.Remove(Context.ConnectionId);
             if (!pair.Value.Any())
             {
                 _userConnections.Remove(pair.Key);
             }
-        });
+        };
 
         await LogConnectionStatus(false);
     }
@@ -163,11 +174,11 @@ public class ApplicationHub : Hub
     /// started his access to the same resource and store the connection id to the storage.
     /// </summary>
     /// <param name="resource">
-    /// A <c><see cref="Resource"/></c> object containing name, primary id and secondary
+    /// A <see cref="Resource"/> object containing name, primary id and secondary
     /// as the identity of the accessing resource.
     /// </param>
     /// <returns>
-    /// A <c><see cref="Task"/></c> object representing the asynchronous opeartion.
+    /// A <see cref="Task"/> object representing the asynchronous opeartion.
     /// </returns>
     public async Task StartResourceAccess(Resource resource)
     {
@@ -181,10 +192,7 @@ public class ApplicationHub : Hub
         }
 
         // Add the current connection id to the resource connection id list.
-        if (!connectionIds.Contains(Context.ConnectionId))
-        {
-            connectionIds.Add(Context.ConnectionId);
-        }
+        connectionIds.Add(Context.ConnectionId);
 
         // Get a list of all connecting users' information.
         List<int> connectingUserIds = _userConnections
@@ -216,10 +224,10 @@ public class ApplicationHub : Hub
     /// connection id storage.
     /// </summary>
     /// <param name="resource">
-    /// A <c><see cref="Resource"></c> object containing name, primary id and secondary
+    /// A <see cref="Resource"/> object containing name, primary id and secondary
     /// as the identity of the accessing resource.
     /// </param>
-    /// <returns>A <c><see cref="Task"/></c> object representing the asynchronous opeartion.</returns>
+    /// <returns>A <see cref="Task"/> object representing the asynchronous opeartion.</returns>
     public async Task FinishResourceAccess(Resource resource)
     {
         // Get the list of connection ids of the specified resource.
@@ -261,20 +269,20 @@ public class ApplicationHub : Hub
     /// Get a list of user ids of the users who are accessing the specified resource.
     /// </summary>
     /// <param name="resource">The resource which the retrieving users are accessing.</param>
-    /// <returns>A list of <c><see cref="int"/></c> representing the id of the users.</returns>
-    public static List<int> GetUserIdsConnectingToResource(Resource resource)
+    /// <returns>A list of <see cref="int"/> representing the id of the users.</returns>
+    public static HashSet<int> GetUserIdsConnectingToResource(Resource resource)
     {
         // Find the connection ids of the connections to the resource.
         _resourceConnections.TryGetValue(resource, out HashSet<string> connectionIds);
 
         // Find the user ids by the retrieved connection ids.
-        List<int> userIdsConnectingToResource = new List<int>();
+        HashSet<int> userIdsConnectingToResource = new HashSet<int>();
         if (connectionIds != null)
         {
-            userIdsConnectingToResource.AddRange(_userConnections
+            userIdsConnectingToResource = _userConnections
                 .Where(pair => pair.Value.Any(id => connectionIds.Contains(id)))
                 .Select(pair => pair.Key)
-                .ToList());
+                .ToHashSet();
         }
 
         return userIdsConnectingToResource;
@@ -315,7 +323,7 @@ public class ApplicationHub : Hub
     /// <param name="connectionId">
     /// The connection id associated to the finding user.
     /// </param>
-    /// <returns>An <c><see cref="int"/></c> reprensenting the id of the user.</returns>
+    /// <returns>An <see cref="int"/> reprensenting the id of the user.</returns>
     private int FindUserIdFromConnectionId(string connectionId)
     {
         return _userConnections

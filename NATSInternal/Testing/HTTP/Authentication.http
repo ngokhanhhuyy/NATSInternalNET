@@ -15,6 +15,20 @@ Content-Type: application/json
 @accessToken = {{GetAccessToken.response.body.$.accessToken}}
 
 ###
+# @name GetAccessCookie
+// @no-log
+POST {{host}}/authentication/getAccessCookie
+Content-Type: application/json
+
+{
+    "userName": "ngokhanhhuyy",
+    "password": "Huyy47b1"
+}
+
+###
+@accessCookie = {{GetAccessCookie.response.headers.Set-Cookie}}
+
+###
 # @name HealthCheck
 // @no-log
 GET {{host}}/healthcheck/ping
@@ -23,6 +37,13 @@ Content-Type: application/json
 ###
 # @name ResourceAccess-AccessingUsers
 // @no-log
-GET {{host}}/resourceAccess/accessingUsers?name=User&primaryId=1&mode=1
+GET {{host}}/resourceAccess/accessingUsers?name=User&primaryId=11&mode=1
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Cookie: {{accessCookie}}
+
+###
+# @name ResourceAccess-Status
+// @no-log
+GET {{host}}/resourceAccess/status
+Content-Type: application/json
+Cookie: {{accessCookie}}

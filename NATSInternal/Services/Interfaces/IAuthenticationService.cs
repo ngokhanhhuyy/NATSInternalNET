@@ -43,7 +43,7 @@ public interface IAuthenticationService
     /// <summary>Sign in with the specified username and password using cookies.</summary>
     /// <param name="requestDto">An object containing username and password.</param>
     /// <returns>
-    /// A <c><see cref="int"/></c> representing the id of the signed in user.
+    /// A <see cref="int"/> representing the id of the signed in user.
     /// </returns>
     Task<int> SignInAsync(SignInRequestDto requestDto);
 
@@ -52,7 +52,7 @@ public interface IAuthenticationService
     /// from the client.
     /// </summary>
     /// <returns>
-    /// A <c><see cref="Task"/></c> object representing the asynchronous operation.
+    /// A <see cref="Task"/> object representing the asynchronous operation.
     /// </returns>
     Task SignOutAsync();
 }

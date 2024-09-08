@@ -18,7 +18,7 @@ public class ResourceAccessController : ControllerBase
     public async Task<IActionResult> AccessingUser([FromQuery] Resource resource)
     {
         // Get the ids of the users who are accessing the specified resource.
-        List<int> userIds;
+        HashSet<int> userIds;
         if (resource != null)
         {
             userIds = ApplicationHub.GetUserIdsConnectingToResource(resource);
@@ -37,5 +37,26 @@ public class ResourceAccessController : ControllerBase
         {
             return NotFound();
         }
+    }
+
+    [HttpGet("Status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult Status()
+    {
+        return Ok(new
+        {
+            UserConnections = ApplicationHub.UserConnections,
+            ResourceConnections = ApplicationHub.ResourceConnections
+                .Select(pair => new
+                {
+                    Resource = pair.Key,
+                    ConnectionIds = pair.Value
+                }).ToDictionary(
+                    item => $"{item.Resource.Type}.{item.Resource.PrimaryId}" +
+                        $"{item.Resource.SecondaryId}." +
+                        (item.Resource.Mode == ResourceAccessMode.Detail
+                            ? "Detail" : "Update"),
+                    item => item.ConnectionIds)
+        });
     }
 }

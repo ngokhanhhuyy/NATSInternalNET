@@ -8,7 +8,7 @@ public class ResourceAccessStorage
     /// the users connecting to each resource.
     /// </summary>
     /// <remarks>
-    /// The key is an <c><see cref="Resource"/></c> contaning information of the
+    /// The key is an <see cref="Resource"/> contaning information of the
     /// resource.<br/>
     /// The value is a list contanining all the connection ids of the users connecting
     /// to the resource.
