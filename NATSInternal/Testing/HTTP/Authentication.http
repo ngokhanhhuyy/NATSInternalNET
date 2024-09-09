@@ -37,7 +37,7 @@ Content-Type: application/json
 ###
 # @name ResourceAccess-AccessingUsers
 // @no-log
-GET {{host}}/resourceAccess/accessingUsers?name=User&primaryId=11&mode=1
+GET {{host}}/resourceAccess/accessingUsers?type=Customer&primaryId=11&mode=0
 Content-Type: application/json
 Cookie: {{accessCookie}}
 

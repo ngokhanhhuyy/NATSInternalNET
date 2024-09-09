@@ -370,3 +370,4 @@ NATSInternal/Views.zip
 settings.json
 NATSInternal/.config/dotnet-tools.json
 NATSInternal/packages-microsoft-prod.deb
+NATSInternal/wwwroot/images
