@@ -29,6 +29,13 @@ Content-Type: application/json
 @accessCookie = {{GetAccessCookie.response.headers.Set-Cookie}}
 
 ###
+# @name ProductDetail
+// @no-log
+GET {{host}}/product/1
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+###
 # @name HealthCheck
 // @no-log
 GET {{host}}/healthcheck/ping

@@ -23,7 +23,8 @@ public class NotificationService : INotificationService
         // Initialize query.
         int currentUserId = _authorizationService.GetUserId();
         IQueryable<Notification> query = _context.Notifications
-            .Include(n => n.CreatedUser)
+            .Include(n => n.CreatedUser).ThenInclude(u => u.Roles)
+            .Include(n => n.ReadUsers).ThenInclude(u => u.Roles)
             .Include(n => n.ReadUsers).ThenInclude(u => u.ReceivedNotifications)
             .OrderByDescending(n => n.DateTime)
             .Where(n => n.ReceivedUsers.Select(u => u.Id).Contains(currentUserId));

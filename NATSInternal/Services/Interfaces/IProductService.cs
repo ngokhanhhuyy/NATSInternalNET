@@ -13,9 +13,14 @@ public interface IProductService
     /// Get detail information of the product with given id.
     /// </summary>
     /// <param name="id">The id of the product.</param>
+    /// <param name="requestDto">
+    /// An instance of the <see cref="ProductDetailRequestDto"/>, containing the maximum
+    /// result counts for related <c>RecentSupplies</c>, <c>RecentOrders</c> and
+    /// <c>RecentTreatments</c>.
+    /// </param>
     /// <returns>An object containing detail information of the product.</returns>
     /// <exception cref="ResourceNotFoundException"></exception>
-    Task<ProductDetailResponseDto> GetDetailAsync(int id);
+    Task<ProductDetailResponseDto> GetDetailAsync(int id, ProductDetailRequestDto requestDto);
 
     /// <summary>
     /// Create a new product with given data from request.

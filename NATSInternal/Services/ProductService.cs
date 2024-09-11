@@ -5,15 +5,24 @@ public class ProductService : IProductService
 {
     private readonly DatabaseContext _context;
     private readonly IPhotoService _photoService;
+    private readonly ISupplyService _supplyService;
+    private readonly IOrderService _orderService;
+    private readonly ITreatmentService _treatmentService;
     private readonly IAuthorizationService _authorizationService;
 
     public ProductService(
             DatabaseContext context,
             IPhotoService photoService,
+            ISupplyService supplyService,
+            IOrderService orderService,
+            ITreatmentService treatmentService,
             IAuthorizationService authorizationService)
     {
         _context = context;
         _photoService = photoService;
+        _supplyService = supplyService;
+        _orderService = orderService;
+        _treatmentService = treatmentService;
         _authorizationService = authorizationService;
     }
 
@@ -26,7 +35,8 @@ public class ProductService : IProductService
         // Filter by category name.
         if (requestDto.CategoryName != null)
         {
-            query = query.Where(p => p.Category != null && p.Category.Name == requestDto.CategoryName);
+            query = query
+                .Where(p => p.Category != null && p.Category.Name == requestDto.CategoryName);
         }
 
         // Filter by brand id.
@@ -39,7 +49,8 @@ public class ProductService : IProductService
         if (requestDto.ProductName != null)
         {
             string productNonDiacriticsName = requestDto.ProductName.ToNonDiacritics();
-            query = query.Where(p => p.Name.ToLower().Contains(productNonDiacriticsName.ToLower()));
+            query = query
+                .Where(p => p.Name.ToLower().Contains(productNonDiacriticsName.ToLower()));
         }
 
         ProductListResponseDto responseDto = new ProductListResponseDto
@@ -52,7 +63,8 @@ public class ProductService : IProductService
             responseDto.PageCount = 0;
             return responseDto;
         }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(p => new ProductBasicResponseDto(
                 p,
@@ -65,20 +77,54 @@ public class ProductService : IProductService
     }
 
     /// <inheritdoc />
-    public async Task<ProductDetailResponseDto> GetDetailAsync(int id)
+    public async Task<ProductDetailResponseDto> GetDetailAsync(
+            int id,
+            ProductDetailRequestDto requestDto)
     {
-        return await _context.Products
+        Product product = await _context.Products
             .Include(p => p.Brand)
             .Include(p => p.Category)
             .Where(p => p.Id == id)
-            .Select(p => new ProductDetailResponseDto(
-                p,
-                _authorizationService.GetProductAuthorization(p)))
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException(
                 nameof(Product),
                 nameof(id),
                 id.ToString());
+
+        SupplyListResponseDto supplyListResponseDto = await _supplyService
+            .GetListAsync(new SupplyListRequestDto
+            {
+                OrderByAscending = false,
+                OrderByField = nameof(SupplyListRequestDto.FieldOptions.PaidDateTime),
+                Page = 1,
+                ResultsPerPage = requestDto.RecentSuppliesResultCount
+            });
+        OrderListResponseDto orderListResponseDto = await _orderService
+            .GetListAsync(new OrderListRequestDto
+            {
+                OrderByAscending = false,
+                OrderByField = nameof(OrderListRequestDto.FieldOptions.PaidDateTime),
+                Page = 1,
+                ResultsPerPage = requestDto.RecentOrdersResultCount
+            });
+        TreatmentListResponseDto treatmentListResponseDto = await _treatmentService
+            .GetListAsync(new TreatmentListRequestDto
+            {
+                OrderByAscending = false,
+                OrderByField = nameof(TreatmentListRequestDto.FieldOptions.PaidDateTime),
+                Page = 1,
+                ResultsPerPage = requestDto.RecentOrdersResultCount
+            });
+
+        ProductAuthorizationResponseDto authorizationResponseDto = _authorizationService
+            .GetProductAuthorization(product);
+
+        return new ProductDetailResponseDto(
+            product,
+            supplyListResponseDto.Items,
+            orderListResponseDto.Items,
+            treatmentListResponseDto.Items,
+            authorizationResponseDto);
     }
 
     /// <inheritdoc />
@@ -207,7 +253,7 @@ public class ProductService : IProductService
         try
         {
             await _context.SaveChangesAsync();
-            
+
             // The product can be updated successfully.
             // Delete the specified thumbnail and associated photos.
             foreach (string url in urlsToBeDeletedWhenSucceeded)
@@ -222,7 +268,7 @@ public class ProductService : IProductService
             {
                 _photoService.Delete(url);
             }
-            
+
             // Handle the exception.
             if (exception.InnerException is MySqlException sqlException)
             {
@@ -241,10 +287,10 @@ public class ProductService : IProductService
             .Include(p => p.Photos)
             .SingleOrDefaultAsync(p => p.Id == id && !p.IsDeleted)
             ?? throw new ResourceNotFoundException();
-        
+
         // Remove the product and all associated photos.
         _context.Products.Remove(product);
-        
+
         foreach (ProductPhoto photo in product.Photos)
         {
             _context.ProductPhotos.Remove(photo);
@@ -254,14 +300,14 @@ public class ProductService : IProductService
         try
         {
             await _context.SaveChangesAsync();
-            
+
             // The product can be deleted successfully.
             // Delete the thumbnail.
             if (product.ThumbnailUrl != null)
             {
                 _photoService.Delete(product.ThumbnailUrl);
             }
-            
+
             // Delete the photos.
             foreach (ProductPhoto photo in product.Photos)
             {
@@ -274,7 +320,8 @@ public class ProductService : IProductService
             {
                 SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
                 exceptionHandler.Handle(sqlException);
-                // Entity is referenced by some other column's entity, perform soft delete instead.
+                // Entity is referenced by some other column's entity, perform soft delete
+                // instead.
                 if (exceptionHandler.IsDeleteOrUpdateRestricted)
                 {
                     product.IsDeleted = true;
@@ -310,13 +357,13 @@ public class ProductService : IProductService
                     .ReplaceResourceName(DisplayNames.Get(nameof(Brand)));
                 throw new OperationException(errorMessage);
             }
-            
+
             errorMessage = ErrorMessages.NotFound
                 .ReplaceResourceName(DisplayNames.Get(nameof(Brand)));
 
             throw new OperationException(errorMessage);
         }
-        
+
         // Handle unique conflict exception.
         if (exceptionHandler.IsUniqueConstraintViolated)
         {
@@ -365,7 +412,7 @@ public class ProductService : IProductService
     /// An object containing the data for the photos to be updated.
     /// </param>
     /// <returns>
-    /// A <c>Tuple</c> containing 2 lists of strings. The first one contains the urls
+    /// A <see cref="Tuple"/> containing 2 lists of strings. The first one contains the urls
     /// of the photos which must be deleted when the update operation succeeded. The
     /// other one contains the urls of the photos which must be deleted when the
     /// updating operation failed.
@@ -397,7 +444,7 @@ public class ProductService : IProductService
                         .ReplaceAttemptedValue(photoRequestDto.Id.ToString());
                     throw new OperationException($"photos[{i}].id", errorMessage);
                 }
-                
+
                 // Add to list to be deleted later if the transaction succeeds.
                 urlsToBeDeletedWhenSucceeded.Add(productPhoto.Url);
                 product.Photos.Remove(productPhoto);
@@ -412,7 +459,7 @@ public class ProductService : IProductService
                 }
             }
         }
-        
+
         return (urlsToBeDeletedWhenSucceeded, urlsToBeDeletedWhenFailed);
     }
 }

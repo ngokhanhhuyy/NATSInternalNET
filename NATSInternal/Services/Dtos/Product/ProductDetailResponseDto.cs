@@ -16,9 +16,15 @@ public class ProductDetailResponseDto
     public string ThumbnailUrl { get; set; }
     public ProductCategoryResponseDto Category { get; set; }
     public BrandBasicResponseDto Brand { get; set; }
+    public List<SupplyBasicResponseDto> RecentSupplies { get; set; }
+    public List<OrderBasicResponseDto> RecentOrders { get; set; }
+    public List<TreatmentBasicResponseDto> RecentTreatments { get; set; }
 
     public ProductDetailResponseDto(
             Product product,
+            List<SupplyBasicResponseDto> recentSupplies,
+            List<OrderBasicResponseDto> recentOrders,
+            List<TreatmentBasicResponseDto> recentTreatments,
             ProductAuthorizationResponseDto authorization)
     {
         Id = product.Id;
@@ -33,7 +39,10 @@ public class ProductDetailResponseDto
         CreatedDateTime = product.CreatedDateTime;
         UpdatedDateTime = product.UpdatedDateTime;
         ThumbnailUrl = product.ThumbnailUrl;
-        
+        RecentSupplies = recentSupplies;
+        RecentOrders = recentOrders;
+        RecentTreatments = recentTreatments;
+
         if (product.Category != null)
         {
             Category = new ProductCategoryResponseDto(product.Category);

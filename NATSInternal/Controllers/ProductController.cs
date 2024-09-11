@@ -32,12 +32,14 @@ public class ProductController : ControllerBase
     [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ProductDetail(int id)
+    public async Task<IActionResult> ProductDetail(
+            int id,
+            [FromQuery] ProductDetailRequestDto requestDto)
     {
         try
         {
             ProductDetailResponseDto responseDto;
-            responseDto = await _service.GetDetailAsync(id);
+            responseDto = await _service.GetDetailAsync(id, requestDto);
             return Ok(responseDto);
         }
         catch (ResourceNotFoundException exception)
