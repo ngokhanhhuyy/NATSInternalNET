@@ -36,6 +36,13 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 ###
+# @name SupplyList
+// @no-log
+GET {{host}}/supply?month=7&year=2024&productId=1
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+###
 # @name HealthCheck
 // @no-log
 GET {{host}}/healthcheck/ping

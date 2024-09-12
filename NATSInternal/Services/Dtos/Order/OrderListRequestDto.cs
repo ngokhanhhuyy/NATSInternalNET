@@ -6,9 +6,12 @@ public class OrderListRequestDto : IRequestDto<OrderListRequestDto>, ILockableEn
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public int? Month { get; set; }
     public int? Year { get; set; }
+    public int? UserId { get; set; }
+    public int? CustomerId { get; set; }
+    public int? ProductId { get; set; }
     public int Page { get; set; } = 1;
     public int ResultsPerPage { get; set; } = 15;
-        
+
     public OrderListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
@@ -17,7 +20,7 @@ public class OrderListRequestDto : IRequestDto<OrderListRequestDto>, ILockableEn
         Year ??= currentDateTime.Year;
         return this;
     }
-        
+
     public enum FieldOptions
     {
         PaidDateTime,

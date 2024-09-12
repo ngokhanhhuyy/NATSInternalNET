@@ -25,16 +25,14 @@ public class SupplyService : LockableEntityService, ISupplyService
     public async Task<SupplyListResponseDto> GetListAsync(SupplyListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        if (_earliestRecordedMonthYear == null)
-        {
-            _earliestRecordedMonthYear = await _context.Supplies
-                .OrderBy(s => s.PaidDateTime)
-                .Select(s => new MonthYearResponseDto
-                {
-                    Year = s.PaidDateTime.Year,
-                    Month = s.PaidDateTime.Month
-                }).FirstOrDefaultAsync();
-        }
+        _earliestRecordedMonthYear ??= await _context.Supplies
+            .OrderBy(s => s.PaidDateTime)
+            .Select(s => new MonthYearResponseDto
+            {
+                Year = s.PaidDateTime.Year,
+                Month = s.PaidDateTime.Month
+            }).FirstOrDefaultAsync();
+
         List<MonthYearResponseDto> monthYearOptions;
         monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
@@ -97,6 +95,12 @@ public class SupplyService : LockableEntityService, ISupplyService
             query = query.Where(s => s.CreatedUserId == requestDto.UserId.Value);
         }
 
+        // Filter by product id if specified.
+        if (requestDto.ProductId.HasValue)
+        {
+            query = query.Where(s => s.Items.Any(si => si.ProductId == requestDto.ProductId));
+        }
+
         // Initialize response dto.
         SupplyListResponseDto responseDto = new SupplyListResponseDto
         {
@@ -124,7 +128,7 @@ public class SupplyService : LockableEntityService, ISupplyService
     public async Task<SupplyDetailResponseDto> GetDetailAsync(int id)
     {
         // Initialize query.
-        IQueryable<Supply> query =  _context.Supplies
+        IQueryable<Supply> query = _context.Supplies
             .Include(s => s.Items).ThenInclude(si => si.Product)
             .Include(s => s.Photos)
             .Include(s => s.CreatedUser).ThenInclude(u => u.Roles);
@@ -145,7 +149,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                 nameof(Supply),
                 nameof(id),
                 id.ToString());
-        
+
         return new SupplyDetailResponseDto(
             supply,
             _authorizationService.GetSupplyAuthorization(supply),
@@ -253,7 +257,7 @@ public class SupplyService : LockableEntityService, ISupplyService
         long oldItemAmount = supply.ItemAmount;
         long oldShipmentFee = supply.ShipmentFee;
         DateOnly oldPaidDate = DateOnly.FromDateTime(supply.PaidDateTime);
-        
+
         // Determining PaidDateTime.
         if (requestDto.PaidDateTime.HasValue)
         {
@@ -265,7 +269,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
-            
+
             // Validate PaidDateTime.
             try
             {
@@ -277,7 +281,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                     .ReplacePropertyName(DisplayNames.PaidDateTime);
                 throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
             }
-            
+
             supply.PaidDateTime = requestDto.PaidDateTime.Value;
         }
 
@@ -298,7 +302,7 @@ public class SupplyService : LockableEntityService, ISupplyService
             urlsToBeDeletedWhenSucceed.AddRange(photoUpdateResults.Item1);
             urlsToBeDeletedWhenFails.AddRange(photoUpdateResults.Item2);
         }
-        
+
         // Storing new data for update history logging.
         SupplyUpdateHistoryDataDto newData = new SupplyUpdateHistoryDataDto(supply);
 
@@ -309,17 +313,17 @@ public class SupplyService : LockableEntityService, ISupplyService
         try
         {
             await _context.SaveChangesAsync();
-            
+
             // The supply can be saved without any error, adjust the stats.
             // Revert the old stats.
             await _statsService.IncrementSupplyCostAsync(-oldItemAmount, oldPaidDate);
             await _statsService.IncrementShipmentCostAsync(-oldShipmentFee, oldPaidDate);
-            
+
             // Add new stats.
             DateOnly newPaidDate = DateOnly.FromDateTime(supply.PaidDateTime);
             await _statsService.IncrementShipmentCostAsync(supply.ItemAmount, newPaidDate);
             await _statsService.IncrementShipmentCostAsync(supply.ShipmentFee, newPaidDate);
-            
+
             // Commit the transaction and finish the operation.
             await transaction.CommitAsync();
             foreach (string url in urlsToBeDeletedWhenSucceed)
@@ -338,7 +342,7 @@ public class SupplyService : LockableEntityService, ISupplyService
             HandleCreateOrUpdateException(sqlException);
             throw;
         }
-        
+
     }
 
     /// <inheritdoc />
@@ -381,7 +385,7 @@ public class SupplyService : LockableEntityService, ISupplyService
 
             // Commit transaction and finish the operation.
             await transaction.CommitAsync();
-            
+
             // Delete all supply photos after transaction succeeded.
             if (supply.Photos != null)
             {
@@ -426,7 +430,7 @@ public class SupplyService : LockableEntityService, ISupplyService
     /// </summary>
     /// <param name="exception">The exception thrown by the database.</param>
     /// <exception cref="OperationException"></exception>
-    private static void  HandleDeleteExeption(MySqlException exception)
+    private static void HandleDeleteExeption(MySqlException exception)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
@@ -437,7 +441,7 @@ public class SupplyService : LockableEntityService, ISupplyService
             throw new OperationException(errorMessage);
         }
     }
-    
+
     /// <summary>
     /// Create and add items for the specified <c>Supply</c> with the data provided
     /// in the request.
@@ -452,7 +456,7 @@ public class SupplyService : LockableEntityService, ISupplyService
     /// A <c>Task</c> object representing the asynchronous operation.
     /// </returns>
     private async Task CreateItemsAsync(
-            Supply supply, 
+            Supply supply,
             List<SupplyItemRequestDto> requestDtos)
     {
         // Pre-fetch the list of products with the specified ids in the request.
@@ -478,7 +482,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                     .ReplaceAttemptedValue(itemRequestDto.ProductId.ToString());
                 throw new OperationException($"items[{i}].id", errorMessage);
             }
-            
+
             // Initialize item entity.
             SupplyItem supplyItem = new()
             {
@@ -525,7 +529,7 @@ public class SupplyService : LockableEntityService, ISupplyService
             if (itemRequestDto.HasBeenChanged)
             {
                 SupplyItem item;
-                
+
                 // Initialize a new entity when the request doesn't have id.
                 if (itemRequestDto.Id.HasValue)
                 {
@@ -539,7 +543,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                             .ReplaceAttemptedValue(itemRequestDto.Id.ToString());
                         throw new OperationException($"items[{i}].id", errorMessage);
                     }
-                    
+
                     // Delete the entity if specified.
                     if (itemRequestDto.HasBeenDeleted)
                     {
@@ -576,13 +580,13 @@ public class SupplyService : LockableEntityService, ISupplyService
                     };
                     supply.Items.Add(item);
                 }
-                
+
                 // Adjust product stocking quantity.
                 item.Product.StockingQuantity += itemRequestDto.SuppliedQuantity;
             }
         }
     }
-    
+
     /// <summary>
     /// Delete all the items associated to the supply and revert the stocking quantity
     /// of the products associated to each item.
@@ -673,7 +677,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                         .ReplaceAttemptedValue(photoRequestDto.Id.ToString());
                     throw new OperationException($"photos[{i}].id", errorMessage);
                 }
-                
+
                 // Add to list to be deleted later if the transaction succeeds.
                 urlsToBeDeletedWhenSucceeded.Add(supplyPhoto.Url);
                 supply.Photos.Remove(supplyPhoto);
@@ -688,7 +692,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                 }
             }
         }
-        
+
         return (urlsToBeDeletedWhenSucceeded, urlsToBeDeletedWhenFailed);
     }
 
@@ -718,7 +722,7 @@ public class SupplyService : LockableEntityService, ISupplyService
             NewData = JsonSerializer.Serialize(newData),
             UserId = _authorizationService.GetUserId()
         };
-        
+
         supply.UpdateHistories ??= new List<SupplyUpdateHistory>();
         supply.UpdateHistories.Add(updateHistory);
     }

@@ -26,16 +26,13 @@ public class TreatmentService : LockableEntityService, ITreatmentService
             TreatmentListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        if (_earliestRecordedMonthYear == null)
-        {
-            _earliestRecordedMonthYear = await _context.Treatments
+        _earliestRecordedMonthYear ??= await _context.Treatments
                 .OrderBy(s => s.PaidDateTime)
                 .Select(s => new MonthYearResponseDto
                 {
                     Year = s.PaidDateTime.Year,
                     Month = s.PaidDateTime.Month
                 }).FirstOrDefaultAsync();
-        }
         List<MonthYearResponseDto> monthYearOptions;
         monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
@@ -50,20 +47,24 @@ public class TreatmentService : LockableEntityService, ITreatmentService
         {
             case nameof(TreatmentListRequestDto.FieldOptions.Amount):
                 query = requestDto.OrderByAscending
-                    ? query.OrderBy(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
+                    ? query.OrderBy(t => t.Items.Sum(ti =>
+                            (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor))
                         .ThenBy(t => t.PaidDateTime)
-                    : query.OrderByDescending(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
+                    : query.OrderByDescending(t => t.Items.Sum(ti =>
+                            (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor))
                         .ThenByDescending(t => t.PaidDateTime);
                 break;
             default:
                 query = requestDto.OrderByAscending
                     ? query.OrderBy(t => t.PaidDateTime)
-                        .ThenBy(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
+                        .ThenBy(t => t.Items.Sum(ti =>
+                            (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor))
                     : query.OrderByDescending(t => t.PaidDateTime)
-                        .ThenBy(t => t.Items.Sum(ti => (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
+                        .ThenBy(t => t.Items.Sum(ti =>
+                            (ti.Amount + ti.Amount * ti.VatFactor) * ti.Quantity) +
                             (t.ServiceAmount + t.ServiceAmount * t.ServiceVatFactor));
                 break;
         }
@@ -71,9 +72,31 @@ public class TreatmentService : LockableEntityService, ITreatmentService
         // Filter by month and year if specified.
         if (requestDto.Month.HasValue && requestDto.Year.HasValue)
         {
-            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime = new DateTime(
+                requestDto.Year.Value,
+                requestDto.Month.Value,
+                1);
             DateTime endDateTime = startDateTime.AddMonths(1);
-            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
+            query = query
+                .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
+        }
+
+        // Filter by user id if specified.
+        if (requestDto.UserId.HasValue)
+        {
+            query = query.Where(t => t.CreatedUserId == requestDto.UserId);
+        }
+
+        // Filter by customer id if specified.
+        if (requestDto.CustomerId.HasValue)
+        {
+            query = query.Where(c => c.CustomerId == requestDto.CustomerId);
+        }
+
+        // Filter by product id if specified.
+        if (requestDto.ProductId.HasValue)
+        {
+            query = query.Where(t => t.Items.Any(oi => oi.ProductId == requestDto.ProductId));
         }
 
         // Filter by not being soft deleted.

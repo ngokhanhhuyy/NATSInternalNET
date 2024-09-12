@@ -8,7 +8,7 @@ public class OrderService : LockableEntityService, IOrderService
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
     private static MonthYearResponseDto _earliestRecordedMonthYear { get; set; }
-        
+
     public OrderService(
         DatabaseContext context,
         IPhotoService photoService,
@@ -25,16 +25,14 @@ public class OrderService : LockableEntityService, IOrderService
     public async Task<OrderListResponseDto> GetListAsync(OrderListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        if (_earliestRecordedMonthYear == null)
-        {
-            _earliestRecordedMonthYear = await _context.Orders
-                .OrderBy(s => s.PaidDateTime)
-                .Select(s => new MonthYearResponseDto
-                {
-                    Year = s.PaidDateTime.Year,
-                    Month = s.PaidDateTime.Month
-                }).FirstOrDefaultAsync();
-        }
+        _earliestRecordedMonthYear ??= await _context.Orders
+            .OrderBy(s => s.PaidDateTime)
+            .Select(s => new MonthYearResponseDto
+            {
+                Year = s.PaidDateTime.Year,
+                Month = s.PaidDateTime.Month
+            }).FirstOrDefaultAsync();
+
         List<MonthYearResponseDto> monthYearOptions;
         monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
@@ -44,7 +42,7 @@ public class OrderService : LockableEntityService, IOrderService
             .Include(o => o.CreatedUser).ThenInclude(u => u.Roles)
             .Include(o => o.Items)
             .Include(o => o.Photos);
-            
+
         // Sorting direction and sorting by field.
         switch (requestDto.OrderByField)
         {
@@ -72,9 +70,27 @@ public class OrderService : LockableEntityService, IOrderService
             query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
+        // Filter by user id if specified.
+        if (requestDto.UserId.HasValue)
+        {
+            query = query.Where(o => o.CreatedUserId == requestDto.UserId);
+        }
+
+        // Filter by customer id if specified.
+        if (requestDto.CustomerId.HasValue)
+        {
+            query = query.Where(c => c.CustomerId == requestDto.CustomerId);
+        }
+
+        // Filter by product id if specified.
+        if (requestDto.ProductId.HasValue)
+        {
+            query = query.Where(o => o.Items.Any(oi => oi.ProductId == requestDto.ProductId));
+        }
+
         // Filter by not being soft deleted.
         query = query.Where(o => !o.IsDeleted);
-            
+
         // Initialize response dto.
         OrderListResponseDto responseDto = new OrderListResponseDto
         {
@@ -96,7 +112,7 @@ public class OrderService : LockableEntityService, IOrderService
             .Take(requestDto.ResultsPerPage)
             .AsSplitQuery()
             .ToListAsync();
-        
+
         return responseDto;
     }
 
@@ -168,13 +184,13 @@ public class OrderService : LockableEntityService, IOrderService
 
         // Initialize order items entities.
         await CreateItems(order, requestDto.Items);
-        
+
         // Initialize photos.
         if (requestDto.Photos != null)
         {
             await CreatePhotosAsync(order, requestDto.Photos);
         }
-        
+
         // Perform the creating operation.
         try
         {
@@ -256,11 +272,11 @@ public class OrderService : LockableEntityService, IOrderService
         {
             throw new AuthorizationException();
         }
-        
+
         // Use transaction for atomic operations.
         await using IDbContextTransaction transaction = await _context.Database
             .BeginTransactionAsync();
-        
+
         // Storing the old data for update history logging and stats adjustments.
         long oldItemAmount = order.BeforeVatAmount;
         long oldVatAmount = order.VatAmount;
@@ -323,10 +339,10 @@ public class OrderService : LockableEntityService, IOrderService
             urlsToBeDeletedWhenSucceeds.AddRange(photoUpdateResults.Item1);
             urlsToBeDeletedWhenFails.AddRange(photoUpdateResults.Item2);
         }
-        
+
         // Store new data for update history logging.
         OrderUpdateHistoryDataDto newData = new OrderUpdateHistoryDataDto(order);
-        
+
         // Log update history.
         LogUpdateHistory(order, oldData, newData, requestDto.UpdateReason);
 
@@ -341,7 +357,7 @@ public class OrderService : LockableEntityService, IOrderService
             // Revert the old stats.
             await _statsService.IncrementRetailGrossRevenueAsync(-oldItemAmount, oldPaidDate);
             await _statsService.IncrementVatCollectedAmountAsync(-oldVatAmount, oldPaidDate);
-            
+
             // Delete all old photos which have been replaced by new ones.
             DateOnly newPaidDate = DateOnly.FromDateTime(order.PaidDateTime);
             await _statsService.IncrementRetailGrossRevenueAsync(order.BeforeVatAmount, newPaidDate);
@@ -352,7 +368,7 @@ public class OrderService : LockableEntityService, IOrderService
             {
                 _photoService.Delete(url);
             }
-            
+
             // Commit the trasaction and finish the operation.
             await transaction.CommitAsync();
         }
@@ -397,7 +413,7 @@ public class OrderService : LockableEntityService, IOrderService
                 nameof(Order),
                 nameof(id),
                 id.ToString());
-        
+
         // Check if the current user has permission to delete the order.
         if (!_authorizationService.CanDeleteOrder(order))
         {
@@ -475,7 +491,7 @@ public class OrderService : LockableEntityService, IOrderService
         for (int i = 0; i < requestDtos.Count; i++)
         {
             OrderItemRequestDto itemRequestDto = requestDtos[i];
-            
+
             // Get the product from the pre-fetched list.
             Product product = products.SingleOrDefault(p => p.Id == itemRequestDto.ProductId);
 
@@ -702,7 +718,7 @@ public class OrderService : LockableEntityService, IOrderService
 
         return (urlsToBeDeletedWhenSucceeds, urlsToBeDeletedWhenFails);
     }
-    
+
     /// <summary>
     /// Log the old and new data to update history for the specified order.
     /// </summary>
@@ -729,7 +745,7 @@ public class OrderService : LockableEntityService, IOrderService
             NewData = JsonSerializer.Serialize(newData),
             UserId = _authorizationService.GetUserId()
         };
-        
+
         order.UpdateHistories ??= new List<OrderUpdateHistory>();
         order.UpdateHistories.Add(updateHistory);
     }
