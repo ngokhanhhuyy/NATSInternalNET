@@ -104,7 +104,7 @@ public class DebtIncurrenceService :
         catch (DbUpdateException exception)
         when (exception.InnerException is MySqlException sqlException)
         {
-            HandleCreateOrUpdateException(sqlException, debtIncurrence.CreatedUserId);
+            HandleCreateOrUpdateException(sqlException);
             throw;
         }
     }
@@ -237,7 +237,7 @@ public class DebtIncurrenceService :
             // Handling data exception.
             if (exception.InnerException is MySqlException sqlException)
             {
-                HandleCreateOrUpdateException(sqlException, debt.CreatedUserId);
+                HandleCreateOrUpdateException(sqlException);
             }
             
             throw;
@@ -261,8 +261,6 @@ public class DebtIncurrenceService :
         {
             throw new AuthorizationException();
         }
-        
-        //
         
         // Verify that if this debt is deleted, will the remaining debt amount be negative.
         if (debt.Customer.DebtAmount - debt.Amount < 0)
@@ -318,19 +316,20 @@ public class DebtIncurrenceService :
     }
     
     /// <summary>
-    /// Handle exception thrown by the database during the creating or updating operation.
+    /// Handles exception thrown by the database during the creating or updating operation.
     /// </summary>
-    /// <param name="exception">The exception thrown by the database.</param>
-    /// <param name="userId">The user id of the debt.</param>
+    /// <param name="exception">
+    /// An instance of the <see cref="MySqlException"/> class, containing the details of the
+    /// error.
+    /// </param>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the customer with the specified id doesn't exist.
+    /// Throws when the customer with the specified id doesn't exist.
     /// </exception>
-    /// <exception cref="OperationException">
-    /// Thrown when there is any exception which is related to the data during the operation.
+    /// <exception cref="ConcurrencyException">
+    /// Throws when the information of the requesting user has been deleted before the
+    /// operation.
     /// </exception>
-    private void HandleCreateOrUpdateException(
-            MySqlException exception,
-            int userId)
+    private void HandleCreateOrUpdateException(MySqlException exception)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
@@ -341,28 +340,29 @@ public class DebtIncurrenceService :
                 case "customer_id":
                     throw new ResourceNotFoundException();
                 default:
-                    string errorMessage = ErrorMessages.NotFoundByProperty
-                        .ReplacePropertyName(DisplayNames.Id)
-                        .ReplaceResourceName(DisplayNames.User)
-                        .ReplaceAttemptedValue(userId.ToString());
-                    throw new OperationException("id", errorMessage);
+                    throw new ConcurrencyException();
             }
         }
     }
     
     /// <summary>
-    /// Log the old and new data to update history for the specified debt.
+    /// Logs the old and new data to update history for the specified debt.
     /// </summary>
     /// <param name="debt">
-    /// The debt entity which the new update history is associated.
+    /// An instance of the <see cref="DebtIncurrence"/> entity class, representing the debt
+    /// incurrence to which the log data belongs.
     /// </param>
     /// <param name="oldData">
-    /// An object containing the old data of the debt before modification.
+    /// An instance of the <see cref="DebtIncurrenceUpdateHistoryDataDto"/> class, containing
+    /// the old data of the debt before modification.
     /// </param>
     /// <param name="newData">
-    /// An object containing the new data of the debt after modification. 
+    /// An instance of the <see cref="DebtIncurrenceUpdateHistoryDataDto"/> class, containing
+    /// the new data of the debt after modification. 
     /// </param>
-    /// <param name="reason">The reason of the modification.</param>
+    /// <param name="reason">
+    /// A <see cref="string"/> value representing the reason of the update operation.
+    /// </param>
     private void LogUpdateHistory(
             DebtIncurrence debt,
             DebtIncurrenceUpdateHistoryDataDto oldData,

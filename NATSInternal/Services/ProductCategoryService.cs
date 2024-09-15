@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Services;
 
-/// <interitdoc />
+/// <inheritdoc />
 public class ProductCategoryService : IProductCategoryService
 {
     private readonly DatabaseContext _context;
@@ -14,6 +14,7 @@ public class ProductCategoryService : IProductCategoryService
         _authorizationService = authorizationService;
     }
 
+    /// <inheritdoc />
     public async Task<ProductCategoryListResponseDto> GetListAsync()
     {
         return new ProductCategoryListResponseDto
@@ -26,6 +27,7 @@ public class ProductCategoryService : IProductCategoryService
         };
     }
 
+    /// <inheritdoc />
     public async Task<ProductCategoryResponseDto> GetDetailAsync(int id)
     {
         return await _context.ProductCategories
@@ -38,81 +40,151 @@ public class ProductCategoryService : IProductCategoryService
                 id.ToString());
     }
 
+    /// <inheritdoc />
     public async Task<int> CreateAsyns(ProductCategoryRequestDto requestDto)
     {
+        // Initialize the entity.
         ProductCategory productCategory = new ProductCategory
         {
             Name = requestDto.Name,
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime()
         };
 
+        // Perform the creating operation.
         try
         {
             _context.ProductCategories.Add(productCategory);
             await _context.SaveChangesAsync();
             return productCategory.Id;
         }
+        // Handle the exception.
         catch (DbUpdateException exception)
         {
-            if (exception.InnerException is MySqlException)
+            // Handle the concurrency-related exception.
+            if (exception is DbUpdateConcurrencyException)
             {
-                HandleException(exception.InnerException as MySqlException);
+                throw new ConcurrencyException();
+            }
+            
+            // Handle the business-logic-related exception.
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                HandleException(sqlException);
             }
 
             throw;
         }
     }
 
+    /// <inheritdoc />
     public async Task UpdateAsync(int id, ProductCategoryRequestDto requestDto)
     {
-        int affectedRows;
-        try
-        {
-            affectedRows = await _context.ProductCategories
-                .Where(pc => pc.Id == id)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(p => p.Name, requestDto.Name));
-
-            if (affectedRows < 1)
-            {
-                throw new ResourceNotFoundException(
-                    nameof(ProductCategory),
-                    nameof(id),
-                    id.ToString());
-            }
-        }
-        catch (MySqlException exception)
-        {
-            HandleException(exception);
-        }
-    }
-
-    public async Task DeleteAsync(int id)
-    {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        int affectedRows = await _context.ProductCategories
-            .Where(pc => pc.Id == id)
-            .ExecuteDeleteAsync();
-
-        if (affectedRows < 1)
-        {
-            throw new ResourceNotFoundException(
+        // Fetch the entity with the specified id from the database.
+        ProductCategory productCategory = await _context.ProductCategories
+            .SingleOrDefaultAsync(pc => pc.Id == id)
+            ?? throw new ResourceNotFoundException(
                 nameof(ProductCategory),
                 nameof(id),
                 id.ToString());
+        
+        // Update the property value.
+        productCategory.Name = requestDto.Name;
+        
+        // Perform the updating operation.
+        try
+        {
+            await _context.SaveChangesAsync();
         }
+        // Handle the exception.
+        catch (DbUpdateException exception)
+        {
+            // Handle the concurrency-related exception.
+            if (exception is DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException();
+            }
+            
+            // Handle the business-logic-related exception.
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                HandleException(sqlException);
+            }
 
-        await transaction.CommitAsync();
+            throw;
+        }
     }
 
+    /// <inheritdoc />
+    public async Task DeleteAsync(int id)
+    {
+        // Fetch the entity with the specified id from the database.
+        ProductCategory productCategory = await _context.ProductCategories
+            .SingleOrDefaultAsync(pc => pc.Id == id)
+            ?? throw new ResourceNotFoundException(
+                nameof(ProductCategory),
+                nameof(id),
+                id.ToString());
+        
+        // Perform the deleting operation.
+        try
+        {
+            _context.ProductCategories.Remove(productCategory);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            // Handle the concurrency-related exception.
+            if (exception is DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException();
+            }
+            
+            // Handle the business-logic-related exception.
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                HandleException(sqlException);
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Handle the exception which is thrown by the database during the creating or updating
+    /// operation.
+    /// </summary>
+    /// <remarks>
+    /// This method only convert the specified <c>exception</c> into the mapped
+    /// <see cref="OperationException"/> under the defined circumstance.
+    /// </remarks>
+    /// <param name="exception">
+    /// An instance of the <see cref="MySqlException"/> class, contanining the details of the
+    /// error.
+    /// </param>
+    /// <exception cref="OperationException">
+    /// Throws under the following circumstances:<br/>
+    /// - When the <c>exception</c> indicates that the error occurs due to the unique
+    /// constraint violation during the operation.<br/>
+    /// - When the <c>exception</c> indicates that the error occurs due to the restriction
+    /// caused by the existence of some related resource(s).
+    /// </exception>
     private static void HandleException(MySqlException exception)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
+        string errorMessage;
+        
         if (exceptionHandler.IsUniqueConstraintViolated)
         {
-            string errorMessage = ErrorMessages.UniqueDuplicated
+            errorMessage = ErrorMessages.UniqueDuplicated
                 .ReplacePropertyName(DisplayNames.Get(nameof(ProductCategory.Name)));
+            throw new OperationException(errorMessage);
+        }
+        
+        if (exceptionHandler.IsDeleteOrUpdateRestricted)
+        {
+            errorMessage = ErrorMessages.DeleteRestricted
+                .ReplaceResourceName(DisplayNames.Category);
             throw new OperationException(errorMessage);
         }
     }

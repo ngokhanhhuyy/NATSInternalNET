@@ -1,44 +1,100 @@
 ﻿namespace NATSInternal.Services.Interfaces;
 
+/// <summary>
+/// A service to handle the product-category-related operations.
+/// </summary>
 public interface IProductCategoryService
 {
     /// <summary>
-    /// Get a list of available product categories.
+    /// Retrieves a list of all product categories.
     /// </summary>
-    /// <returns>An object containing all available product categories.</returns>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="ProductCategoryListResponseDto"/> class, containing the
+    /// results.
+    /// </returns>
     Task<ProductCategoryListResponseDto> GetListAsync();
 
     /// <summary>
-    /// Get the detail information of the product category with given id.
+    /// Retrieves the details a specfic product category, based on its id.
     /// </summary>
-    /// <param name="id">The id of the product category.</param>
-    /// <returns>An object containing the detail of the product category.</returns>
-    /// <exception cref="ResourceNotFoundException"></exception>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the product category to retrieve.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="ProductCategoryResponseDto"/> class, containing the details
+    /// of the product category.
+    /// </returns>
+    /// <exception cref="ResourceNotFoundException">
+    /// Throws when the product category with the specified id doesn't exist or has already
+    /// been deleted.
+    /// </exception>
     Task<ProductCategoryResponseDto> GetDetailAsync(int id);
 
     /// <summary>
-    /// Create a new product category with the given data from the request.
+    /// Creates a new product category based the specified data.
     /// </summary>
-    /// <param name="requestDto">An object containing the data for a new product category.</param>
-    /// <returns>The id of the created product category.</returns>
-    /// <exception cref="OperationException"></exception>
+    /// <param name="requestDto">
+    /// An instance of the <see cref="ProductCategoryRequestDto"/> class, containing the data
+    /// for the creating operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// <see cref="int"/> representing the id of the new product category.
+    /// </returns>
+    /// <exception cref="ConcurrencyException">
+    /// Throws when a concurrency-related conflict occurs during the operation.
+    /// </exception>
+    /// <exception cref="OperationException">
+    /// Throws when the unique value for the <c>Name</c> property in the <c>requestDto</c>
+    /// argument already exists.
+    /// </exception>
     Task<int> CreateAsyns(ProductCategoryRequestDto requestDto);
 
     /// <summary>
-    /// Update the product category which has the given id with the given data from the request.
+    /// Updates an existing product category based on its id and the specified data.
     /// </summary>
-    /// <param name="id">The id of the product category to be updated.</param
-    /// <param name="requestDto">
-    /// An object containing the data for the product category to be updated.
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the product category to update.
     /// </param>
-    /// <exception cref="ResourceNotFoundException"></exception>
-    /// <exception cref="OperationException"></exception>
+    /// <param name="requestDto">
+    /// An instance of the <see cref="ProductCategoryRequestDto"/> class, contanining the data
+    /// for the updating operation.
+    /// </param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="ResourceNotFoundException">
+    /// Throws when the product category with the specfied id doens't exist or has already been
+    /// deleted.
+    /// </exception>
+    /// <exception cref="ConcurrencyException">
+    /// Throws when a concurrency-related conflict occurs during the operation.
+    /// </exception>
+    /// <exception cref="OperationException">
+    /// Throws when the unique value for the <c>Name</c> property in the <c>requestDto</c>
+    /// argument already exists.
+    /// </exception>
     Task UpdateAsync(int id, ProductCategoryRequestDto requestDto);
 
     /// <summary>
-    /// Delete the product category with given id.
+    /// Deletes an existing product category, based on its id.
     /// </summary>
-    /// <param name="id">The id of the product category to be deleted.</param>
-    /// <exception cref="ResourceNotFoundException"></exception>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the product category to delete.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="ResourceNotFoundException">
+    /// Throws when the product category with the specified id doesn't exist or has already
+    /// been deleted.
+    /// </exception>
+    /// <exception cref="ConcurrencyException">
+    /// Throws when a concurrency-related conflict occurs during the operation.
+    /// </exception>
+    /// <exception cref="OperationException">
+    /// Throws when the product category's deletion is restricted due to the existence of some
+    /// related data.
+    /// </exception>
     Task DeleteAsync(int id);
 }

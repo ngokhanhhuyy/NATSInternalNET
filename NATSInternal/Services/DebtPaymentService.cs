@@ -57,8 +57,8 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
         DateTime paidDateTime = DateTime.UtcNow.ToApplicationTime();
         if (requestDto.PaidDateTime.HasValue)
         {
-            // Check if the current user has permission to specify the created datetime
-            // for the debt payment.
+            // Check if the current user has permission to specify the created datetime for the
+            // debt payment.
             if (!_authorizationService.CanSetDebtPaymentPaidDateTime())
             {
                 throw new AuthorizationException();
@@ -117,7 +117,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
         catch (DbUpdateException exception)
         when (exception.InnerException is MySqlException sqlException)
         {
-            HandleCreateOrUpdateException(sqlException, debtPayment.CreatedUserId);
+            HandleCreateOrUpdateException(sqlException);
             throw;
         }
     }
@@ -163,7 +163,8 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
                 throw new AuthorizationException();
             }
 
-            // Prevent the consultant's PaidDateTime to be modified when the consultant is locked.
+            // Prevent the consultant's PaidDateTime to be modified when the consultant is
+            // locked.
             if (debtPayment.IsLocked)
             {
                 string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
@@ -177,8 +178,8 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             // Assign the new PaidDateTime value only if it's different from the old one.
             if (requestDto.PaidDateTime.Value != debtPayment.PaidDateTime)
             {
-                // Verify if the amount has been changed, and with the new amount,
-                // the remaning debt amount won't be negative.
+                // Verify if the amount has been changed, and with the new amount, the remaning
+                // debt amount won't be negative.
                 if (requestDto.Amount != debtPayment.Amount)
                 {
                     long amountDifference = requestDto.Amount - debtPayment.Amount;
@@ -258,7 +259,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             // Handling data exception.
             if (exception.InnerException is MySqlException sqlException)
             {
-                HandleCreateOrUpdateException(sqlException, debtPayment.CreatedUserId);
+                HandleCreateOrUpdateException(sqlException);
             }
             
             throw;
@@ -291,7 +292,8 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             throw new OperationException(errorMessage);
         }
         
-        // Verify that if this debt payment is deleted, will the remaining debt amount be negative.
+        // Verify that if this debt payment is deleted, will the remaining debt amount be
+        // negative.
         if (debtPayment.Customer.DebtAmount - debtPayment.Amount < 0)
         {
             throw new OperationException(ErrorMessages.NegativeRemainingDebtAmount);
@@ -309,7 +311,8 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             
             // Debt payment has been deleted successfully, adjust the stats.
             DateOnly createdDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
-            await _statsService.IncrementDebtPaidAmountAsync(- debtPayment.Amount, createdDate);
+            await _statsService
+                .IncrementDebtPaidAmountAsync(- debtPayment.Amount, createdDate);
             
             // Commit the transaction, finish the operation.
             await transaction.CommitAsync();
@@ -334,7 +337,8 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
                     
                     // Adjust the stats.
                     DateOnly createdDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
-                    await _statsService.IncrementDebtAmountAsync(debtPayment.Amount, createdDate);
+                    await _statsService
+                        .IncrementDebtAmountAsync(debtPayment.Amount, createdDate);
                     
                     // Save changes and commit the transaction again, finish the operation.
                     await _context.SaveChangesAsync();
@@ -345,17 +349,21 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     }
 
     /// <summary>
-    /// Handle exception thrown by the database during the creating or updating operation.
+    /// Handles the exception thrown by the database during the creating or updating operation.
     /// </summary>
-    /// <param name="exception">The exception thrown by the database.</param>
-    /// <param name="userId">The user id of the debt.</param>
+    /// <param name="exception">
+    /// An instance of the <see cref="MySqlException"/> class, containing the details of the
+    /// error.
+    /// </param>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the customer with the specified id doesn't exist.
+    /// Throws when the <c>exception</c> indicates that the the <c>CustomerId</c> foreign key
+    /// references to a non-existent customer.
     /// </exception>
-    /// <exception cref="OperationException">
-    /// Thrown when there is any exception which is related to the data during the operation.
+    /// <exception cref="ConcurrencyException">
+    /// Throws when the <c>exception</c> indicates that the information of the requesting user
+    /// has been deleted before the operation.
     /// </exception>
-    private void HandleCreateOrUpdateException(MySqlException exception, int userId)
+    private void HandleCreateOrUpdateException(MySqlException exception)
     {
         SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
         exceptionHandler.Handle(exception);
@@ -363,24 +371,24 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
         {
             switch (exceptionHandler.ViolatedFieldName)
             {
+                // The foreign key CustomerId references to a non-existent customer entity.
                 case "customer_id":
                     throw new ResourceNotFoundException();
+                
+                // The foreign key CreatedUserId references to a user which might have been
+                // deleted.
                 default:
-                    string errorMessage = ErrorMessages.NotFoundByProperty
-                        .ReplacePropertyName(DisplayNames.Id);
-                    errorMessage = errorMessage
-                        .ReplaceResourceName(DisplayNames.User)
-                        .ReplaceAttemptedValue(userId.ToString());
-                    throw new OperationException("id", errorMessage);
+                    throw new ConcurrencyException();
             }
         }
     }
     
     /// <summary>
-    /// Log the old and new data to update history for the specified debt payment.
+    /// Logs the old and new data to update history for the specified debt payment.
     /// </summary>
     /// <param name="debtPayment">
-    /// The debt payment entity which the new update history is associated.
+    /// An instance of the <see cref="DebtPayment"/> model class, representing the debt payment
+    /// 
     /// </param>
     /// <param name="oldData">
     /// An object containing the old data of the debt payment before modification.

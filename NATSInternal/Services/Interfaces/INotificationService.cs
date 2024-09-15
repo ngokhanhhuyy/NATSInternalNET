@@ -6,60 +6,78 @@ namespace NATSInternal.Services.Interfaces;
 public interface INotificationService
 {
     /// <summary>
-    /// Gets a paginated list of notifications based on the specified request
-    /// parameters.
+    /// Retrieves a list of notifications, based on the filtering and paginating conditions
+    /// (if specified).
     /// </summary>
     /// <param name="requestDto">
-    /// (Optional) The request parameters for fetching the notification list.
+    /// (Optional) An instance of the <see cref="NotificationListRequestDto"/> class,
+    /// containing the conditions for the results.
     /// </param>
     /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// The task result contains the notification list response DTO.
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="NotificationListRequestDto"/> class, containing the results
+    /// and the additional information for pagination.
     /// </returns>
     Task<NotificationListResponseDto> GetListAsync(
             NotificationListRequestDto requestDto = null);
 
     /// <summary>
-    /// Get a single notification with the specified id. The current user who has
-    /// sent the request must be in the list of the notification's received users.
+    /// Retrieves the information of a single specific notification, based on its id.
     /// </summary>
-    /// <param name="id">The id of the notification.</param>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the notification to retrieve.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="NotificationResponseDto"/> class, containing the information
+    /// of the notification.
+    /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the notification with the specified id which belongs to the
-    /// current user cannot be found.
+    /// Throws when the notification with the specified id cannot be found.
     /// </exception>
     Task<NotificationResponseDto> GetSingleAsync(int id);
 
     /// <summary>
-    /// Mark the notification with the specified id as read.
+    /// Marks a specific notification as read, based on its id.
     /// </summary>
-    /// <param name="id">The id of the notification.</param>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the notification to mark.
+    /// </param>
     /// <returns>
-    /// A <c>Task</c> object representing the asynchronous operation.
+    /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the notification with the specified id which belongs to the
-    /// current user cannot be found.
+    /// Throws when the notification with the specified id which belongs to the requesting user
+    /// cannot be found.
     /// </exception>
     Task MarkAsReadAsync(int id);
 
     /// <summary>
-    /// Mark all the notifications received by the user who sent the request as read.
+    /// Marks all the notifications which belong to the requesting user as read.
     /// </summary>
     /// <returns>
-    /// A <c>Task</c> object representing the asynchronous operation.
+    /// A <see cref="Task"/> representing the asynchronous operation.
+    /// </returns>
     Task MarkAllAsReadAsync();
 
     /// <summary>
-    /// Create a notification which all users can receive with the specified
-    /// notification type and resource ids.
+    /// Creates a notification which all users can receive with the specified notification type
+    /// and resource ids.
     /// </summary>
-    /// <param name="type">The type of the notification.</param>
-    /// <param name="resourceIds">The id(s) of the interacted resource.</param>
+    /// <param name="type">
+    /// An element of the <see cref="NotificationType"/> enumeration, representing the type of
+    /// the notification to create.
+    /// </param>
+    /// <param name="resourceIds">
+    /// A <see cref="List{T}"/> where <c>T</c> is <see cref="int"/>, representing the ids of
+    /// the resource that has been interacted.
+    /// </param>
     /// <returns>
-    /// A tuple containing 2 elements. The first one is a list of the users
-    /// those the created notification is distributed. The second one is the id
-    /// of the created notification.
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is a
+    /// <see cref="Tuple"/> containing 2 following elements.<br/>
+    /// - A <see cref="List{T}"/> where <c>T</c> is <see cref="int"/>, representing the ids of
+    /// the users those the created notification is distributed.<br/>
+    /// - A <see cref="int"/> value, representing the id of the created notification.
     /// </returns>
     Task<(List<int>, int)> CreateAsync(NotificationType type, List<int> resourceIds);
 }

@@ -255,21 +255,21 @@ public interface IStatsService
     Task TemporarilyCloseAsync(DateOnly date);
 
     /// <summary>
-    /// Validate if the specified <c>DateTime</c> is valid for an entity so that
-    /// its locking status won't change after being assigned.
+    /// Validates if the specified <c>statsDateTime</c> argument is valid for an entity so that
+    /// its locking status won't change after the assignment.
     /// </summary>
     /// <typeparam name="TEntity">
-    /// The entity type which inherits from <c>LockableEntity class.</c>
+    /// The entity type which inherits from <see cref="LockableEntity"/> class.
     /// </typeparam>
     /// <param name="entity">
-    /// The entity to which the <c>statsDateTime</c> is assigned.
+    /// The entity to which the <c>statsDateTime</c> argument is assigned.
     /// </param>
     /// <param name="statsDateTime">
-    /// A <c>DateTime</c> object specified in the request representing the DateTime for
-    /// the field in the entity which is used to calculate the statistics.
+    /// A <see cref="DateTime"/> value specified in the request representing the date and time
+    /// for the field in the entity which is used to calculate the statistics.
     /// </param>
     /// <exception cref="ValidationException">
-    /// Thrown when the specified <c>DateTime</c> is not valid to be assigned to the entity.
+    /// Throws when the value specified by the <c>statsDateTime</c> argument is invalid.
     /// </exception>
     void ValidateStatsDateTime<TEntity>(TEntity entity, DateTime statsDateTime)
             where TEntity : LockableEntity;
