@@ -143,8 +143,8 @@ public class ProductService : IProductService
             CreatedDateTime = DateTime.UtcNow.ToApplicationTime(),
             UpdatedDateTime = null,
             StockingQuantity = 0,
-            BrandId = requestDto.Brand?.Id,
-            CategoryId = requestDto.Category?.Id,
+            BrandId = requestDto.BrandId,
+            CategoryId = requestDto.CategoryId,
             Photos = new List<ProductPhoto>()
         };
         _context.Products.Add(product);
@@ -185,6 +185,14 @@ public class ProductService : IProductService
                 }
             }
 
+            
+            // Handle the concurrency-related operation.
+            if (exception is DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException();
+            }
+
+            // Handle the business-logic-related exception.
             if (exception.InnerException is MySqlException sqlException)
             {
                 HandleDeleteOrUpdateException(sqlException);
@@ -212,8 +220,8 @@ public class ProductService : IProductService
         product.VatFactor = requestDto.VatFactor;
         product.IsForRetail = requestDto.IsForRetail;
         product.IsDiscontinued = requestDto.IsDiscontinued;
-        product.CategoryId = requestDto.Category?.Id;
-        product.BrandId = requestDto.Brand?.Id;
+        product.CategoryId = requestDto.CategoryId;
+        product.BrandId = requestDto.BrandId;
         product.UpdatedDateTime = DateTime.UtcNow.ToApplicationTime();
 
         // Prepare lists of urls to be deleted later when the operation
@@ -268,8 +276,14 @@ public class ProductService : IProductService
             {
                 _photoService.Delete(url);
             }
+            
+            // Handle the concurrency-related operation.
+            if (exception is DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException();
+            }
 
-            // Handle the exception.
+            // Handle the business-logic-related exception.
             if (exception.InnerException is MySqlException sqlException)
             {
                 HandleDeleteOrUpdateException(sqlException);
@@ -316,6 +330,13 @@ public class ProductService : IProductService
         }
         catch (DbUpdateException exception)
         {
+            // Handle the concurrency-related exception.
+            if (exception is DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException();
+            }
+            
+            // Handle the business-logic-related exception.
             if (exception.InnerException is MySqlException sqlException)
             {
                 SqlExceptionHandler exceptionHandler = new SqlExceptionHandler();
@@ -359,7 +380,7 @@ public class ProductService : IProductService
             }
 
             errorMessage = ErrorMessages.NotFound
-                .ReplaceResourceName(DisplayNames.Get(nameof(Brand)));
+                .ReplaceResourceName(DisplayNames.Get(nameof(ProductCategory)));
 
             throw new OperationException(errorMessage);
         }

@@ -238,7 +238,8 @@ public class ConsultantService : LockableEntityService, IConsultantService
                 throw new AuthorizationException();
             }
 
-            // Prevent the consultant's PaidDateTime to be modified when the consultant is locked.
+            // Prevent the consultant's PaidDateTime to be modified when the consultant is
+            // locked.
             if (consultant.IsLocked)
             {
                 string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
@@ -255,13 +256,17 @@ public class ConsultantService : LockableEntityService, IConsultantService
                 // Validate the specfied PaidDateTime from the request.
                 try
                 {
-                    _statsService.ValidateStatsDateTime(consultant, requestDto.PaidDateTime.Value);
+                    _statsService.ValidateStatsDateTime(
+                        consultant,
+                        requestDto.PaidDateTime.Value);
                 }
                 catch (ValidationException exception)
                 {
                     string errorMessage = exception.Message
                         .ReplacePropertyName(DisplayNames.PaidDateTime);
-                    throw new OperationException(nameof(requestDto.PaidDateTime), errorMessage);
+                    throw new OperationException(
+                        nameof(requestDto.PaidDateTime),
+                        errorMessage);
                 }
 
                 consultant.PaidDateTime = requestDto.PaidDateTime.Value;

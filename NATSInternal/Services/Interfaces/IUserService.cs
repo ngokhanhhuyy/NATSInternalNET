@@ -1,205 +1,234 @@
 namespace NATSInternal.Services.Interfaces;
 
 /// <summary>
-/// A service class to handle users.
+/// A service class to handle user-related operations.
 /// </summary>
 public interface IUserService
 {
     /// <summary>
-    /// Get a list of users with pagination, filtering and sorting options.
+    /// Retrives a list of user with basic information, based on the specified filtering,
+    /// sorting and paginating conditions.
     /// </summary>
     /// <param name="requestDto">
-    /// An object containing all the options for the list results.
+    /// An instance of the <see cref="UserListRequestDto"/> class, containing the conditions
+    /// for the results.
     /// </param>
     /// <returns>
-    /// An object containing the results and page count (for pagination
-    /// calculation).
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="UserListResponseDto"/> class, containing the results and
+    /// the additional information for pagination.
     /// </returns>
     Task<UserListResponseDto> GetListAsync(UserListRequestDto requestDto);
 
     /// <summary>
-    /// Get a list of the users who have the specified ids.
+    /// Retrieves a list of user with basic information, based on the specified ids.
     /// </summary>
     /// <param name="ids">
-    /// A list of <see cref="int"/> representing the ids of the users to retrieve.
+    /// An instance of the <see cref="IEnumerable{T}"/> implementation where <c>T</c> is
+    /// <see cref="int"/>, representing the ids of the customers to retrieve.
     /// </param>
-    /// <returns>A list of objects containing the basic information of the users.</returns>
+    /// <returns>
+    /// An instance of the <see cref="UserListResponseDto"/> class, containing the results.
+    /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when there is any of the specified ids that is not found.
+    /// Throws when there is any user with the specified id doesn't exist or has already been
+    /// deleted.
     /// </exception>
     /// <remarks>
-    /// This method doesn't paginate the results and include the authorization information.
-    /// It will return a list containing a number of results which is exactly the same as the
-    /// number of ids specified in the parameter if all of the users are found. At that time,
-    /// the value of the property <c>PageCount</c> in <see cref="UserListResponseDto"/>
-    /// will always be 1 and the value of the property <c>Authorization</c> will always be
-    /// null.
+    /// This method's results don't contain neither the information for pagination nor the
+    /// authorization information. It only returns the results containing the users with the
+    /// exactly ids specified in the parameter if all of the users are found. At that time,
+    /// the value of the property <c>PageCount</c> in the <see cref="UserListResponseDto"/>
+    /// instance will always be 1 and the value of the property <c>Authorization</c> will
+    /// always be null.
     /// </remarks>
     Task<UserListResponseDto> GetListAsync(IEnumerable<int> ids);
 
     /// <summary>
-    /// Get a list of users who have just joined (within 1 month from
-    /// joining date).
+    /// Retrieves a list of users who have just joined (within 1 month from joining date) with
+    /// the basic information.
     /// </summary>
     /// <returns>
-    /// An object containing the users who have just joined.
+    /// An instance of the <see cref="UserListResponseDto"/>, containing the results.
     /// </returns>
     Task<UserListResponseDto> GetJoinedRecentlyListAsync();
 
     /// <summary>
-    /// Get a list of users who have upcoming birthday (within
-    /// 1 month from now).
+    /// Retrieves a list of users who have incoming birthdays (within 1 month from now) with
+    /// the basic information.
     /// </summary>
     /// <returns>
-    /// An object containing the users who have upcoming birthday.
+    /// An instance of the <see cref="UserListResponseDto"/> class, containing the results.
     /// </returns>
     Task<UserListResponseDto> GetUpcomingBirthdayListAsync();
 
     /// <summary>
-    /// Get the role information which is associated to the user
-    /// with given id.
+    /// Retrieves a specific user's role details, specified by the user's id.
     /// </summary>
-    /// <param name="id">The id of the user.</param>
-    /// <returns>The full detail of the user's role.</returns>
+    /// <param name="id">An <see cref="int"/> representing the id of the user.</param>
+    /// <returns>
+    /// An instance of the <see cref="RoleDetailResponseDto"/> class, containing the details
+    /// of the role to retrieve.
+    /// </returns>
     Task<RoleDetailResponseDto> GetRoleAsync(int id);
 
     /// <summary>
-    /// Get basic information of the user with given id.
+    /// Retrieves the basic information of a specific user, specified by the user's id.
     /// </summary>
-    /// <param name="id">The id of the user to be retrieved.</param>
-    /// <returns>An object containing basic information of the user.</returns>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the user to retrieve.
+    /// </param>
+    /// <returns>
+    /// An instance of the <see cref="UserBasicResponseDto"/> class, containing the
+    /// basic information of the retrieving user.
+    /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the user doesn't exist.
+    /// Throws when the user with the specified <c>id</c> doesn't exist or has already been
+    /// deleted.
     /// </exception>
     Task<UserBasicResponseDto> GetBasicAsync(int id);
 
     /// <summary>
-    /// Get fully detailed information, including role, claims
-    /// (permissions) of the user with given id.
+    /// Get the details of a specific user, specified by the id of the user.
     /// </summary>
-    /// <param name="id">The id of the user.</param>
-    /// <returns>An object containing all details of the user.</returns>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the user to retrieve.
+    /// </param>
+    /// <returns>
+    /// An instance of the <see cref="UserDetailResponseDto"/> class, containing the details
+    /// of the user.
+    /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// The user with the given id cannot be found in the database.
+    /// Throws when the user with the specified id doesn't exist or has already been deleted.
     /// </exception>
     Task<UserDetailResponseDto> GetDetailAsync(int id);
 
     /// <summary>
-    /// Create user with given information.
+    /// Creates a new user, based on the specified data.
     /// </summary>
     /// <param name="requestDto">
-    /// An object containing all the information for a new user.
+    /// An instance of the <see cref="UserCreateRequestDto"/> class, containing the data for
+    /// the new user.
     /// </param>
-    /// <returns>The id of the created user.</returns>
+    /// <returns>An <see cref="int"/> representing the id of the new user.</returns>
     /// <exception cref="DuplicatedException">
-    /// The username in the provided data already exists.
+    /// Throws when the username specified in the argument for the <c>requestDto</c> parameter
+    /// already exists.
     /// </exception>
     /// <exception cref="ResourceNotFoundException">
-    /// The role name in the provided data doesn't exist.
+    /// Throws when the name of the role, specified by the value of the property
+    /// <c>UserInformation.Role.Name</c> in the argument for the <c>requestDto</c> parameter
+    /// doesn't exist.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to
-    /// create a new user.
+    /// Throws when the requesting user doesn't have enough permissions to create a new user.
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Business rules violation during assign the new user to
+    /// Throws when a business rules violation occurs during the assignment of the new user to
     /// the specified role.
     /// </exception>
     Task<int> CreateAsync(UserCreateRequestDto requestDto);
 
     /// <summary>
-    /// Update a user with given id.
+    /// Updates an existing user, based on the specified id and data.
     /// </summary>
-    /// <param name="id">The id of the user to be updated.</param>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the user to update.
+    /// </param>
     /// <param name="requestDto">
-    /// An object containing new data to be updated.
+    /// An instance of the <see cref="UserUpdateRequestDto"/> class, containg the data for the
+    /// updating operation.
     /// </param>
     /// <returns>
-    /// A Task object representing the asynchronous operation.
+    /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
+    /// Throws when the user with the specified id doesn't exist or has already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have enough permission to
-    /// perform the updating action.
+    /// Throws when the requesting user doesn't have enough permissions to update the target
+    /// user.
     /// </exception>
     Task UpdateAsync(int id, UserUpdateRequestDto requestDto);
 
     /// <summary>
-    /// Change the password of the user with given id.
+    /// Changes the password of the user with the specified id.
     /// </summary>
     /// <param name="id">
-    /// The id of the user to be changed his password.
+    /// An <see cref="int"/> representing the id of the target user.
     /// </param>
     /// <param name="requestDto">
-    /// An object containing the current password, the new
-    /// one and the confirmation one.
+    /// An instance of the <see cref="UserPasswordChangeRequestDto"/> class, contaning the
+    /// current password, the new password and the confirmation password for the operation.
     /// </param>
-    /// <returns></returns>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// The requesting user and the user whose id is specified by the value of the `id`
+    /// argument must be the same one.
+    /// </remarks>
     /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
+    /// Throws when the user with the specified id doens't exist or has already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have enough permission
-    /// to perform this action.
+    /// Throws when the requesting user isn't the target user.
     /// </exception>
     /// <exception cref="OperationException">
-    /// The current password is incorrect.
+    /// Throws when the current password, provided in the <c>requestDto</c> is incorrect.
     /// </exception>
     Task ChangePasswordAsync(int id, UserPasswordChangeRequestDto requestDto);
 
     /// <summary>
-    /// Reset the password of the user with given id (without
-    /// the need of providing the current password).
+    /// Resets the password of the user, specified by the id, without the need of providing
+    /// the current password.
     /// </summary>
     /// <param name="id">
-    /// The id of the user to be reset password.
+    /// An <see cref="int"/> representing the id of the target user.
     /// </param>
     /// <param name="requestDto">
-    /// An object containing new password and confirmation password.
+    /// An instance of the <see cref="UserPasswordResetRequestDto"/> class, contanining the
+    /// new password and the confirmation password for the operation.
     /// </param>
-    /// <returns></returns>
+    /// <returns>A <see cref="Task"/> representing the operation.</returns>
     /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
+    /// Throws when the user with the specified id doesn't exist or has already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to
-    /// perform this action.
+    /// Throws when the requesting user is actually the target user, or doesn't have enough
+    /// permissions to reset the target user's password.
     /// </exception>
     /// <exception cref="OperationException">
-    /// New password's complexity doesn't meet requirement.
+    /// Throws when the specified new password's complexity doesn't meet the requirement.
     /// </exception>
     Task ResetPasswordAsync(int id, UserPasswordResetRequestDto requestDto);
 
     /// <summary>
-    /// Delete the user with given id.
+    /// Deletes the user with the specified id.
     /// </summary>
-    /// <param name="id">The id of the user to be deleted.</param>
+    /// <param name="id">An <see cref="int"/> representing the id of the target user.</param>
     /// <returns>
-    /// A Task object representing the asynchronous operation.
+    /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// The user with given id cannot be found in the database.
+    /// Throws when the user with the specified id doesn't exist or has already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to
-    /// perform this action.
+    /// Throws when the requesting user doesn't have enough permissions to delete the target
+    /// user.
     /// </exception>
     Task DeleteAsync(int id);
 
     /// <summary>
-    /// Restore the user with given id who has been marked as deleted.
+    /// Restores the user with the specified id who has been soft-deleted.
     /// </summary>
-    /// <param name="id">The id of the user to be restored.</param>
-    /// <returns></returns>
+    /// <param name="id">An <see cref="int"/> representing the id of the target user.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <exception cref="ResourceNotFoundException">
-    /// The user who has given id and is marked as deleted cannot
-    /// be found in the database.
+    /// Throws when the user with the specified id hasn't been soft-deleted or has already
+    /// been deleted entirely from the database.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// The user who sent the request doesn't have permission to
-    /// perform this action.
+    /// Throws when the requesting user doesn't have enough permissions to perform the
+    /// operation.
     /// </exception>
     Task RestoreAsync(int id);
 }

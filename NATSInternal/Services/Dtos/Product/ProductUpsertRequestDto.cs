@@ -12,8 +12,8 @@ public class ProductUpsertRequestDto
     public bool IsDiscontinued { get; set; }
     public byte[] ThumbnailFile { get; set; }
     public bool ThumbnailChanged { get; set; }
-    public ProductCategoryRequestDto Category { get; set; }
-    public ProductUpsertBrandRequestDto Brand { get; set; }
+    public int CategoryId { get; set; }
+    public int BrandId { get; set; }
     public List<ProductPhotoRequestDto> Photos { get; set; }
 
     public ProductUpsertRequestDto TransformValues()
@@ -21,8 +21,6 @@ public class ProductUpsertRequestDto
         Name = Name?.ToNullIfEmpty();
         Description = Description?.ToNullIfEmpty();
         Unit = Unit?.ToNullIfEmpty();
-        Category?.TransformValues();
-        Brand?.TransformValues();
         return this;
     }
 }

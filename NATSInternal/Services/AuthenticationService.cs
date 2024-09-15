@@ -141,6 +141,7 @@ public class AuthenticationService : IAuthenticationService
             .Include(u => u.Roles).ThenInclude(r => r.Claims)
             .AsSplitQuery()
             .SingleOrDefaultAsync(u => u.UserName == requestDto.UserName && !u.IsDeleted);
+        
         string errorMessage;
         if (user == null)
         {
@@ -170,7 +171,7 @@ public class AuthenticationService : IAuthenticationService
         ];
         claims.AddRange(user.Role.Claims
             .Where(c => c.ClaimType == "Permission")
-            .Select(c => new Claim("Permission", c.ClaimValue)));
+            .Select(c => new Claim("Permission", c.ClaimValue!)));
 
         // Perform sign in operation.
         await _signInManager.SignInWithClaimsAsync(user, false, claims);

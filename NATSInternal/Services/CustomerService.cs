@@ -238,9 +238,7 @@ public class CustomerService : ICustomerService
                     .SetProperty(c => c.Address, requestDto.Address)
                     .SetProperty(c => c.UpdatedDateTime, DateTime.UtcNow.ToApplicationTime())
                     .SetProperty(c => c.Note, requestDto.Note)
-                    .SetProperty(c => c.IntroducerId, requestDto.IntroducerId.HasValue
-                        ? requestDto.IntroducerId.Value
-                        : null));
+                    .SetProperty(c => c.IntroducerId, requestDto.IntroducerId));
             
             // Check if the entity has been updated.
             if (affactedRows == 0)

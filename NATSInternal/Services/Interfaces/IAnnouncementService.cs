@@ -6,64 +6,78 @@
 public interface IAnnouncementService
 {
     /// <summary>
-    /// Get a list of announcements which each announcement contains basic
-    /// information with filtering condition.
+    /// Retrieves a list of announcements, based on the specified filtering, sorting and
+    /// paginating conditions.
     /// </summary>
     /// <param name="requestDto">
-    /// An object containing filtering condition for the results.
+    /// An instance of the <see cref="AnnouncementListRequestDto"/> class, contaning the
+    /// conditions for the results.
     /// </param>
-    /// <returns>The list of announcements.</returns>
+    /// <returns>
+    /// An instance of the <see cref="AnnouncementListResponseDto"/> class, containing the
+    /// results and the additional information for pagination.
+    /// </returns>
     Task<AnnouncementListResponseDto> GetListAsync(AnnouncementListRequestDto requestDto);
 
     /// <summary>
-    /// Get the fully detailed information of the announcement with the
-    /// specified id.
+    /// Retrieves the details of a specific announcement, based on its id.
     /// </summary>
-    /// <param name="id">The id of the announcement to be retrieve.</param>
-    /// <returns>An object containing the information of the announcement.</returns>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the announcement to retrieve.
+    /// </param>
+    /// <returns>
+    /// An instance of the <see cref="AnnouncementResponseDto"/> class, containing the details
+    /// of the announcement.
+    /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the announcement cannot be found.
+    /// Throws when the announcement with the specified doesn't exist or has already been
+    /// deleted.
     /// </exception>
     Task<AnnouncementResponseDto> GetDetailAsync(int id);
 
     /// <summary>
-    /// Create a new announcement using the data provided from
-    /// the request.
+    /// Creates a new announcement based on the specified data.
     /// </summary>
     /// <param name="requestDto">
-    /// An object containing the data for a new announcement, provided
-    /// from the request.
+    /// An instance of the <see cref="AnnouncementUpsertRequestDto"/> class, containing the
+    /// data for the creating operation.
     /// </param>
     /// <returns>
-    /// The id of the created announcement.
+    /// An <see cref="int"/> represeting the id of the new announcement.
     /// </returns>
     /// <exception cref="ConcurrencyException">
-    /// Thrown when there is some concurrent conflict during the operation.
+    /// Throws when a concurrency-related conflict occurs during the operation.
     /// </exception>
     Task<int> CreateAsync(AnnouncementUpsertRequestDto requestDto);
 
     /// <summary>
-    /// Update the announcement which has the specified id with the data
-    /// provided from the request.
+    /// Updates an existing announcement based on its id and the specified data.
     /// </summary>
-    /// <param name="id">The id of the announcement to be updated.</param>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the announcement to update.
+    /// </param>
     /// <param name="requestDto">
-    /// An object containing the data to be updated, provided from the request.
+    /// An instance of the <see cref="AnnouncementUpsertRequestDto"/> class, containing the
+    /// data for the updating operation.
     /// </param>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the announcement with the specified id cannot be found.
+    /// Throws when the announcement with the specified id doesn't exist or has already been
+    /// deleted.
     /// </exception>
     /// <exception cref="ConcurrencyException">
-    /// Thrown when there is some concurrent conflict during the operation.
+    /// Throws when a concurrency-related conflict occurs during the operation.
     /// </exception>
     Task UpdateAsync(int id, AnnouncementUpsertRequestDto requestDto);
 
     /// <summary>
-    /// Delete the announcement which has the specified id.
+    /// Deletes an existing announcement based on its id.
     /// </summary>
-    /// <param name="id">The id of the announcement to be updated.</param>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the announcement to delete.
+    /// </param>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the announcement with the specified id cannot be found.
+    /// Throws when the announcement with the specified id doesn't exist or has already been
+    /// deleted.
     /// </exception>
     Task DeleteAsync(int id);
 }

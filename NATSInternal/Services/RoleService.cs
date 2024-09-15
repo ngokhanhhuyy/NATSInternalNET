@@ -1,5 +1,6 @@
 ﻿namespace NATSInternal.Services;
 
+/// <inheritdoc />
 public class RoleService : IRoleService
 {
     private readonly DatabaseContext _context;
@@ -9,6 +10,7 @@ public class RoleService : IRoleService
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<RoleListResponseDto> GetListAsync()
     {
         RoleListResponseDto responseDto = new RoleListResponseDto

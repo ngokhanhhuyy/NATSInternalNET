@@ -1,13 +1,13 @@
 namespace NATSInternal.Services;
 
-/// <inheritdoc />
+/// <inheritdoc cref="ITreatmentService" />
 public class TreatmentService : LockableEntityService, ITreatmentService
 {
     private readonly DatabaseContext _context;
     private readonly IAuthorizationService _authorizationService;
     private readonly IPhotoService _photoService;
     private readonly IStatsService _statsService;
-    private static MonthYearResponseDto _earliestRecordedMonthYear = null;
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public TreatmentService(
             DatabaseContext context,
@@ -226,7 +226,7 @@ public class TreatmentService : LockableEntityService, ITreatmentService
             }
 
             // Handle the concurency exception.
-            if (exception.InnerException is DbUpdateConcurrencyException)
+            if (exception is DbUpdateConcurrencyException)
             {
                 throw new ConcurrencyException();
             }
@@ -428,7 +428,8 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     {
         // Fetch the entity from the database and ensure it exists.
         Treatment treatment = await _context.Treatments
-            .Include(t => t.Items).ThenInclude(i => i.Product)
+            .Include(t => t.Items).ThenInclude(i => i.Product).ThenInclude(p => p.Photos)
+            .Include(t => t.Photos)
             .SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted)
             ?? throw new ResourceNotFoundException(
                 nameof(Treatment),

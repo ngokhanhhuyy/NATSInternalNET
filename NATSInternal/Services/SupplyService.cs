@@ -213,7 +213,8 @@ public class SupplyService : LockableEntityService, ISupplyService
 
             return supply.Id;
         }
-        catch (DbUpdateException exception) when (exception.InnerException is MySqlException)
+        catch (DbUpdateException exception)
+        when (exception.InnerException is MySqlException sqlException)
         {
             await transaction.RollbackAsync();
             // Delete all created photos.
@@ -222,7 +223,7 @@ public class SupplyService : LockableEntityService, ISupplyService
                 _photoService.Delete(supplyPhoto.Url);
             }
 
-            HandleCreateOrUpdateException(exception.InnerException as MySqlException);
+            HandleCreateOrUpdateException(sqlException);
             throw;
         }
     }
@@ -332,14 +333,22 @@ public class SupplyService : LockableEntityService, ISupplyService
             }
         }
         catch (DbUpdateException exception)
-        when (exception.InnerException is MySqlException sqlException)
         {
-            await transaction.RollbackAsync();
-            foreach (string url in urlsToBeDeletedWhenFails)
+            if (exception is DbUpdateConcurrencyException)
             {
-                _photoService.Delete(url);
+                throw new ConcurrencyException();
             }
-            HandleCreateOrUpdateException(sqlException);
+            
+            if (exception.InnerException is MySqlException sqlException)
+            {
+                await transaction.RollbackAsync();
+                foreach (string url in urlsToBeDeletedWhenFails)
+                {
+                    _photoService.Delete(url);
+                }
+                HandleCreateOrUpdateException(sqlException);
+            }
+            
             throw;
         }
 
@@ -395,9 +404,18 @@ public class SupplyService : LockableEntityService, ISupplyService
                 }
             }
         }
-        catch (DbUpdateException exception) when (exception.InnerException is MySqlException)
+        catch (DbUpdateException exception)
         {
-            HandleDeleteExeption(exception.InnerException as MySqlException);
+            if (exception is DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException();
+            }
+            
+            if (exception.InnerException is MySqlException sqlException)
+            {
+               HandleDeleteExeption(sqlException);
+            }
+            
             throw;
         }
 

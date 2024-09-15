@@ -218,7 +218,7 @@ public class OrderService : LockableEntityService, IOrderService
             }
 
             // Handle the concurency exception.
-            if (exception.InnerException is DbUpdateConcurrencyException)
+            if (exception is DbUpdateConcurrencyException)
             {
                 throw new ConcurrencyException();
             }

@@ -221,7 +221,8 @@ public class ExpenseService : LockableEntityService, IExpenseService
                         break;
                     case "payee_id":
                         propertyName = nameof(expense.PayeeId);
-                        errorMessage = errorMessage.ReplaceResourceName(DisplayNames.ExpensePayee);
+                        errorMessage = errorMessage
+                            .ReplaceResourceName(DisplayNames.ExpensePayee);
                         break;
                 }
                 throw new OperationException(propertyName, errorMessage);

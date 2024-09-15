@@ -6,80 +6,118 @@
 public interface ITreatmentService
 {
     /// <summary>
-    /// Get a list of treatments which each treatment contains basic
-    /// information with filtering condition.
+    /// Retrieves a list of treatments based on the specified filtering and paginating
+    /// conditions.
     /// </summary>
     /// <param name="requestDto">
-    /// An object containing filtering condition for the results.
+    /// An instance of the <see cref="TreatmentListRequestDto"/> class, containing the
+    /// filtering and paginating conditions for the results.
     /// </param>
-    /// <returns>The list of treatments.</returns>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="TreatmentListResponseDto"/> class, containing the results
+    /// and some additional information for pagination.
+    /// </returns>
     Task<TreatmentListResponseDto> GetListAsync(TreatmentListRequestDto requestDto);
 
     /// <summary>
-    /// Get the detail information of a treatment with the given id.
+    /// Retrieves the details of a specific treatment by its id.
     /// </summary>
-    /// <param name="id">The id of the treatment.</param>
+    /// <param name="id">
+    /// A <see cref="int"/> representing the id of the treatment to retrieve.
+    /// </param>
     /// <returns>
-    /// An object containing the detail information of the treatment.
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="TreatmentDetailResponseDto"/> class, containing the details
+    /// of the treatment.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the treatment with the given id doesn't exist in the datbase.
+    /// Throws when the treatment with the specified id doesn't exist or has already been
+    /// deleted.
     /// </exception>
     Task<TreatmentDetailResponseDto> GetDetailAsync(int id);
 
     /// <summary>
-    /// Create a treatment using the data provided in the request.
+    /// Create a new treatment based on the specified request data.
     /// </summary>
-    /// <param name="requestDto">A object containing the data for a new treatment.</param>
-    /// <returns>The id of the created treatment.</returns>
+    /// <param name="requestDto">
+    /// A instance of the <see cref="TreatmentUpsertRequestDto"/> class, containing the data
+    /// for a new treatment.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// <see cref="int"/> representing the id of the new treatment.
+    /// </returns>
     /// <exception cref="AuthorizationException">
-    /// Thrown when the user doesn't have enough permission to set one or some
-    /// of the treatment properties..
-    /// </exception>
-    /// <exception cref="OperationException">
-    /// Thrown when the is some business logic violation during the operation.
+    /// Throws when the user doesn't have enough permission to set the value for one or some
+    /// of the treatment properties.
     /// </exception>
     /// <exception cref="ConcurrencyException">
-    /// Throw when there is a concurrency conflict during the operation.
+    /// Throws when a concurrency-related conflict occurs during the operation.
+    /// </exception>
+    /// <exception cref="OperationException">
+    /// Throws when the customer with the id specified by the value of the property
+    /// <c>CustomerId</c> or the user with the id specified by the value of the property
+    /// <c>TherapistId</c> in the argument for the <c>requestDto</c> parameter doesn't exist
+    /// or has already been deleted.
     /// </exception>
     Task<int> CreateAsync(TreatmentUpsertRequestDto requestDto);
 
     /// <summary>
-    /// Update a treatment with the given id using the data provided in the request.
+    /// Updates an existing treatment with the specified request data.
     /// </summary>
-    /// <param name="id">The id of the treatment to be updated.</param>
-    /// <param name="requestDto">A object containing the new data to be updated.</param>
-    /// <returns>A Task object representing the asynchronous operation.</returns>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the updating treatment.
+    /// </param>
+    /// <param name="requestDto">
+    /// An instance of the <see cref="TreatmentUpsertRequestDto"/> class, containing the data
+    /// for the treatment to be updated.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation.
+    /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the treatment with the given id doesn't exist in the datbase.
+    /// Throws when the treatment with the specified id doesn't exist or has already been
+    /// deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// Thrown when the user doesn't have enough permission to set one or some
-    /// of the treatment properties..
-    /// </exception>
-    /// <exception cref="OperationException">
-    /// Thrown when the is some business logic violation during the operation.
+    /// Throws when the user doesn't have enough permission to set the value for one or some
+    /// of the treatment properties.
     /// </exception>
     /// <exception cref="ConcurrencyException">
-    /// Throw when there is a concurrency conflict during the operation.
+    /// Throws when a concurrency-related conflict occurs during the operation.
+    /// </exception>
+    /// <exception cref="OperationException">
+    /// Throws when the customer with the id specified by the value of the property
+    /// <c>CustomerId</c> or the user with the id specified by the value of the property
+    /// <c>TherapistId</c> in the argument for the <c>requestDto</c> parameter doesn't exist
+    /// or has already been deleted.
     /// </exception>
     Task UpdateAsync(int id, TreatmentUpsertRequestDto requestDto);
 
     /// <summary>
-    /// Delete the treatment with the given id. If the treatment cannot be deleted due
-    /// to the restriction deleting behavior, the treatment will be soft deleted instead.
+    /// Deletes an existing treatment with the specified id.
     /// </summary>
-    /// <param name="id">The id of the treatment to be deleted.</param>
-    /// <returns>A Task object representing the asynchronous operation.</returns>
+    /// <param name="id">
+    /// An <see cref="int"/> representing the id of the deleting treatment.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation.
+    /// </returns>
+    /// <remarks>
+    /// If the treatment cannot be deleted entirely due to the existence of some related data,
+    /// it will be soft-deleted instead.
+    /// </remarks>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the treatment with the given id doesn't exist in the datbase.
+    /// Throws when the treatment with the specified id doesn't exist or has already been
+    /// deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
-    /// Thrown when the user doesn't have enough permission to set one or some
-    /// of the treatment properties..
+    /// Throws when the user doesn't have enough permissions to set the value for one or some
+    /// of the treatment properties.
     /// </exception>
     /// <exception cref="ConcurrencyException">
-    /// Throw when there is a concurrency conflict during the operation.
+    /// Throws when a concurrency-related conflict occurs during the operation.
     /// </exception>
     Task DeleteAsync(int id);
 }
