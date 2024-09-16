@@ -4,6 +4,10 @@ namespace NATSInternal.Services;
 
 public partial class SqlExceptionHandler
 {
+    /// <summary>
+    /// Extracts the errors details from the specified <c>exception</c>
+    /// </summary>
+    /// <param name="exception"></param>
     public void Handle(MySqlException exception)
     {
         Match match;
