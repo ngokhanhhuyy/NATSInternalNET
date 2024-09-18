@@ -8,6 +8,7 @@ public class TreatmentListRequestDto :
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public int? Month { get; set; }
     public int? Year { get; set; }
+    public bool IgnoreMonthYear { get; set; } = false;
     public int? UserId { get; set; }
     public int? CustomerId { get; set; }
     public int? ProductId { get; set; }

@@ -27,12 +27,12 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     {
         // Initialize list of month and year options.
         _earliestRecordedMonthYear ??= await _context.Treatments
-                .OrderBy(s => s.PaidDateTime)
-                .Select(s => new MonthYearResponseDto
-                {
-                    Year = s.PaidDateTime.Year,
-                    Month = s.PaidDateTime.Month
-                }).FirstOrDefaultAsync();
+            .OrderBy(s => s.PaidDateTime)
+            .Select(s => new MonthYearResponseDto
+            {
+                Year = s.PaidDateTime.Year,
+                Month = s.PaidDateTime.Month
+            }).FirstOrDefaultAsync();
         List<MonthYearResponseDto> monthYearOptions;
         monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
 
@@ -70,12 +70,10 @@ public class TreatmentService : LockableEntityService, ITreatmentService
         }
 
         // Filter by month and year if specified.
-        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
+        if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime = new DateTime(
-                requestDto.Year.Value,
-                requestDto.Month.Value,
-                1);
+            DateTime startDateTime;
+            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
             query = query
                 .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
