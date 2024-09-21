@@ -91,40 +91,10 @@ public class ProductService : IProductService
                 nameof(id),
                 id.ToString());
 
-        SupplyListResponseDto supplyListResponseDto = await _supplyService
-            .GetListAsync(new SupplyListRequestDto
-            {
-                OrderByAscending = false,
-                OrderByField = nameof(SupplyListRequestDto.FieldOptions.PaidDateTime),
-                Page = 1,
-                ResultsPerPage = requestDto.RecentSuppliesResultCount
-            });
-        OrderListResponseDto orderListResponseDto = await _orderService
-            .GetListAsync(new OrderListRequestDto
-            {
-                OrderByAscending = false,
-                OrderByField = nameof(OrderListRequestDto.FieldOptions.PaidDateTime),
-                Page = 1,
-                ResultsPerPage = requestDto.RecentOrdersResultCount
-            });
-        TreatmentListResponseDto treatmentListResponseDto = await _treatmentService
-            .GetListAsync(new TreatmentListRequestDto
-            {
-                OrderByAscending = false,
-                OrderByField = nameof(TreatmentListRequestDto.FieldOptions.PaidDateTime),
-                Page = 1,
-                ResultsPerPage = requestDto.RecentOrdersResultCount
-            });
-
         ProductAuthorizationResponseDto authorizationResponseDto = _authorizationService
             .GetProductAuthorization(product);
 
-        return new ProductDetailResponseDto(
-            product,
-            supplyListResponseDto.Items,
-            orderListResponseDto.Items,
-            treatmentListResponseDto.Items,
-            authorizationResponseDto);
+        return new ProductDetailResponseDto(product, authorizationResponseDto);
     }
 
     /// <inheritdoc />

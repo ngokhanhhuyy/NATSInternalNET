@@ -25,16 +25,18 @@ public class OrderService : LockableEntityService, IOrderService
     public async Task<OrderListResponseDto> GetListAsync(OrderListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        _earliestRecordedMonthYear ??= await _context.Orders
-            .OrderBy(s => s.PaidDateTime)
-            .Select(s => new MonthYearResponseDto
-            {
-                Year = s.PaidDateTime.Year,
-                Month = s.PaidDateTime.Month
-            }).FirstOrDefaultAsync();
-
-        List<MonthYearResponseDto> monthYearOptions;
-        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        List<MonthYearResponseDto> monthYearOptions = null;
+        if (!requestDto.IgnoreMonthYear)
+        {
+            _earliestRecordedMonthYear ??= await _context.Orders
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+            monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        }
 
         // Initialize query.
         IQueryable<Order> query = _context.Orders
@@ -63,11 +65,13 @@ public class OrderService : LockableEntityService, IOrderService
         }
 
         // Filter by month and year if specified.
-        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
+        if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime;
+            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
-            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
+            query = query
+                .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by user id if specified.

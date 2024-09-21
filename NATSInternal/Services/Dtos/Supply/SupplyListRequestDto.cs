@@ -6,6 +6,7 @@ public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>, ILockable
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public int? Year { get; set; }
     public int? Month { get; set; }
+    public bool IgnoreMonthYear { get; set; } = false;
     public int? UserId { get; set; }
     public int? ProductId { get; set; }
     public int Page { get; set; } = 1;

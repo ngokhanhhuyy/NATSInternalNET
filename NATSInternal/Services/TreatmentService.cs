@@ -26,15 +26,18 @@ public class TreatmentService : LockableEntityService, ITreatmentService
             TreatmentListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        _earliestRecordedMonthYear ??= await _context.Treatments
-            .OrderBy(s => s.PaidDateTime)
-            .Select(s => new MonthYearResponseDto
-            {
-                Year = s.PaidDateTime.Year,
-                Month = s.PaidDateTime.Month
-            }).FirstOrDefaultAsync();
-        List<MonthYearResponseDto> monthYearOptions;
-        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        List<MonthYearResponseDto> monthYearOptions = null;
+        if (!requestDto.IgnoreMonthYear)
+        {
+            _earliestRecordedMonthYear ??= await _context.Treatments
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+            monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        }
 
         // Initialize query.
         IQueryable<Treatment> query = _context.Treatments
@@ -113,7 +116,8 @@ public class TreatmentService : LockableEntityService, ITreatmentService
             return responseDto;
         }
 
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(t => new TreatmentBasicResponseDto(
                 t,

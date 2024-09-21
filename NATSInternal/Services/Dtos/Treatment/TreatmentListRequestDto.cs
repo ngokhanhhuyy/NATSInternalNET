@@ -19,8 +19,13 @@ public class TreatmentListRequestDto :
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
         DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        Month ??= currentDateTime.Month;
-        Year ??= currentDateTime.Year;
+
+        if (!IgnoreMonthYear)
+        {
+            Month ??= currentDateTime.Month;
+            Year ??= currentDateTime.Year;
+        }
+        
         return this;
     }
     

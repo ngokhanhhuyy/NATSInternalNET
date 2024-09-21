@@ -76,11 +76,23 @@ public class ApplicationHub : Hub
     /// </summary>
     private int UserId => int.Parse(Context.UserIdentifier!);
 
+    /// <summary>
+    /// A <see cref="Dictionary{TKey, TValue}"/> where <c>TKey</c> is <see cref="Resource"/>,
+    /// representing the resource to which the connection ids are connecting, while
+    /// <c>TValue</c> is <see cref="HashSet{T}"/> with <c>T</c> is <see cref="string"/>,
+    /// representing the ids of the connections.
+    /// </summary>
     public static Dictionary<Resource, HashSet<string>> ResourceConnections
     {
         get => _resourceConnections;
     }
 
+    /// <summary>
+    /// A <see cref="Dictionary{TKey, TValue}"/> where <c>TKey</c> is <see cref="int"/>,
+    /// representing the id of the users connecting to the hub, while <c>TValue</c> is
+    /// <see cref="HashSet{T}"/> with <c>T</c> is <see cref="string"/>, representing the ids
+    /// of the connections associated to each user.
+    /// </summary>
     public static Dictionary<int, HashSet<string>> UserConnections
     {
         get => _userConnections;

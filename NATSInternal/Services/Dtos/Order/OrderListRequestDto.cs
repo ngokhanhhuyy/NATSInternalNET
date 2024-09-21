@@ -6,6 +6,7 @@ public class OrderListRequestDto : IRequestDto<OrderListRequestDto>, ILockableEn
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public int? Month { get; set; }
     public int? Year { get; set; }
+    public bool IgnoreMonthYear { get; set; } = false;
     public int? UserId { get; set; }
     public int? CustomerId { get; set; }
     public int? ProductId { get; set; }
@@ -16,8 +17,13 @@ public class OrderListRequestDto : IRequestDto<OrderListRequestDto>, ILockableEn
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
         DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        Month ??= currentDateTime.Month;
-        Year ??= currentDateTime.Year;
+
+        if (!IgnoreMonthYear)
+        {
+            Month ??= currentDateTime.Month;
+            Year ??= currentDateTime.Year;
+        }
+        
         return this;
     }
 

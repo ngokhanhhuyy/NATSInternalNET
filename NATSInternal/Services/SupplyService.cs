@@ -25,16 +25,19 @@ public class SupplyService : LockableEntityService, ISupplyService
     public async Task<SupplyListResponseDto> GetListAsync(SupplyListRequestDto requestDto)
     {
         // Initialize list of month and year options.
-        _earliestRecordedMonthYear ??= await _context.Supplies
-            .OrderBy(s => s.PaidDateTime)
-            .Select(s => new MonthYearResponseDto
-            {
-                Year = s.PaidDateTime.Year,
-                Month = s.PaidDateTime.Month
-            }).FirstOrDefaultAsync();
+        List<MonthYearResponseDto> monthYearOptions = null;
+        if (!requestDto.IgnoreMonthYear)
+        {
+            _earliestRecordedMonthYear ??= await _context.Supplies
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
 
-        List<MonthYearResponseDto> monthYearOptions;
-        monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+            monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        }
 
         // Query initialization.
         IQueryable<Supply> query = _context.Supplies
@@ -76,17 +79,13 @@ public class SupplyService : LockableEntityService, ISupplyService
         }
 
         // Filter by month and year if specified.
-        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
+        if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime;
+            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
-            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
-        }
-        else
-        {
-            DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-            query = query.Where(s => s.PaidDateTime.Year == currentDateTime.Year)
-                .Where(s => s.PaidDateTime.Month == currentDateTime.Month);
+            query = query
+                .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by user id if specified.
@@ -113,7 +112,8 @@ public class SupplyService : LockableEntityService, ISupplyService
             responseDto.PageCount = 0;
             return responseDto;
         }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(s => new SupplyBasicResponseDto(s))
             .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
