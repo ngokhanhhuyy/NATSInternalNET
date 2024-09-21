@@ -18,7 +18,7 @@ public class CustomerDebtOperationResponseDto
         IsLocked = debt.IsLocked;
         
         DebtIncurrenceAuthorizationResponseDto authorization;
-        authorization = authorizationService.GetDebtAuthorization(debt);
+        authorization = authorizationService.GetDebtIncurrenceAuthorization(debt);
         Authorization = new CustomerDebtOperationAuthorizationResponseDto(authorization);
     }
     

@@ -1,5 +1,9 @@
 namespace NATSInternal.Services.Dtos;
 
+/// <summary>
+/// A DTO class representing the data from the requests for the debt incurrence creating and
+/// updating operations.
+/// </summary>
 public class DebtIncurrenceUpsertRequestDto : IRequestDto<DebtIncurrenceUpsertRequestDto>
 {
     /// <summary>
@@ -24,10 +28,17 @@ public class DebtIncurrenceUpsertRequestDto : IRequestDto<DebtIncurrenceUpsertRe
     public DateTime? IncurredDateTime { get; set; }
 
     /// <summary>
+    /// Represents the id of the customer to which the creating/updating debt incurrence
+    /// belongs.
+    /// </summary>
+    public int CustomerId { get; set; }
+
+    /// <summary>
     /// Contains the reason why the debt incurrence is updated.
     /// </summary>
     public string UpdatingReason { get; set; }
     
+    /// <inheritdoc/>
     public DebtIncurrenceUpsertRequestDto TransformValues()
     {
         Note = Note?.ToNullIfEmpty();

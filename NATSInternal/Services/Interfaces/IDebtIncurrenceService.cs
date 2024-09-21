@@ -6,13 +6,24 @@ namespace NATSInternal.Services.Interfaces;
 public interface IDebtIncurrenceService
 {
     /// <summary>
+    /// Retrieves a list of debt incurrences with the basic information, based on the specified
+    /// filtering, sorting and paginating conditions.
+    /// </summary>
+    /// <param name="requestDto">
+    /// An instance of the <see cref="DebtIncurrenceListRequestDto"/> class, containing the
+    /// conditions for the results.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="DebtIncurrenceListResponseDto"/>, containing the results
+    /// of the operation and the additional information for pagination.
+    /// </returns>
+    Task<DebtIncurrenceListResponseDto> GetListAsync(DebtIncurrenceListRequestDto requestDto);
+
+    /// <summary>
     /// Retrieves the details of a specific debt incurrence by its id.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> value representing the id of the customer to which the retrieving
-    /// debt incurrence belongs.
-    /// </param>
-    /// <param name="debtIncurrenceId">
+    /// <param name="id">
     /// An <see cref="int"/> value representing the id of the debt incurrence to retrieve.
     /// </param>
     /// <returns>
@@ -21,18 +32,14 @@ public interface IDebtIncurrenceService
     /// of the debt incurrence.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Throws when the debt incurrence specified by the <c>customerId</c> and
-    /// <c>debtIncurrenceId</c> arguments doesn't exist or has already been deleted.
+    /// Throws when the debt incurrence, specified by the value of the <c>id</c> argument,
+    /// doesn't exist or has already been deleted.
     /// </exception>
-    Task<DebtIncurrenceDetailResponseDto> GetDetailAsync(int customerId, int debtIncurrenceId);
+    Task<DebtIncurrenceDetailResponseDto> GetDetailAsync(int id);
     
     /// <summary>
     /// Creates a new debt incurrence based on the specified data.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> representing the id of the customer to which the retrieving debt
-    /// incurrence belongs to.
-    /// </param>
     /// <param name="requestDto">
     /// An instance of the <see cref="DebtIncurrenceUpsertRequestDto"/> class, containing the
     /// data for the creating operation.
@@ -41,28 +48,22 @@ public interface IDebtIncurrenceService
     /// A <see cref="Task"/> representing the asynchronous operation, which result is an
     /// <see cref="int"/> value representing the id of the new debt incurrence.
     /// </returns>
-    /// <exception cref="ResourceNotFoundException">
-    /// Throws when the customer which has the id specified by the value of the
-    /// <c>customerId</c> argument doesn't exist or has already been deleted.
-    /// </exception>
     /// <exception cref="AuthorizationException">
     /// Throws when the requesting user doens't have enough permissions to specify a value for
     /// the <c>IncurredDateTime</c> property in the <c>requestDto</c> argument.
     /// </exception>
     /// <exception cref="ConcurrencyException">
-    /// Throws when information of the requesting user has been deleted before the operation.
+    /// Throws under the following circumstances:
+    /// - When information of the requesting user has been deleted before the operation.
+    /// - When the customer which has the id specified by the value of the <c>CustomerId</c>
+    /// property in the <c>requestDto</c> argument doesn't exist or has already been deleted.
     /// </exception>
-    Task<int> CreateAsync(int customerId, DebtIncurrenceUpsertRequestDto requestDto);
+    Task<int> CreateAsync(DebtIncurrenceUpsertRequestDto requestDto);
     
     /// <summary>
-    /// Updates an existing debt incurrence, based on the id of the customer to which it
-    /// belongs, its id and the specified data.
+    /// Updates an existing debt incurrence, based on its id and the specified data.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> representing the id of the customer to which the updating debt
-    /// incurrence belongs.
-    /// </param>
-    /// <param name="debtIncurrenceId">
+    /// <param name="id">
     /// An <see cref="int"/> representing the id of the debt incurrence to update.
     /// </param>
     /// <param name="requestDto">
@@ -76,8 +77,8 @@ public interface IDebtIncurrenceService
     /// Throws when the specified value for the <c>IncurredDateTime</c> property is invalid.
     /// </exception>
     /// <exception cref="ResourceNotFoundException">
-    /// Throws when the customer which has the id specified by the value of the `customerId`
-    /// argument doesn't exist or has already been deleted.
+    /// Throws when the debt incurrence, specified by the value of the <c>id</c> argument,
+    /// doesn't exist or has already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
     /// Throws under the following circumstances:<br/>
@@ -94,31 +95,25 @@ public interface IDebtIncurrenceService
     /// </exception>
     /// <exception cref="OperationException">
     /// Throws under the following circumstances:<br/>
+    /// - The customer which id specified by the <c>CustomerId</c> property in the
+    /// <c>requestDto</c> argument doesn't exist or has already been deleted.
     /// - The <c>IncurredDateTime</c> property in the <c>requestDto</c> argument is specified a
     /// value when the debt incurrence has already been locked.<br/>
     /// - The remaining debt amount of the specified customer becomes negative after the
     /// operation.
     /// </exception>
-    Task UpdateAsync(
-        int customerId,
-        int debtIncurrenceId,
-        DebtIncurrenceUpsertRequestDto requestDto);
+    Task UpdateAsync(int id, DebtIncurrenceUpsertRequestDto requestDto);
     
     /// <summary>
     /// Deletes an existing debt incurrence based on its id.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> value representing the id of the customer to which the debt
-    /// incurrence belongs.
-    /// </param>
-    /// <param name="debtIncurrenceId">
+    /// <param name="id">
     /// An <see cref="int"/> value representing the id of the debt incurrence to delete.
     /// </param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Thrown when the customer specified by the <c>customerId</c> argument, or the debt
-    /// incurrence specified by the <c>debtIncurrenceId</c> argument doesn't exist or has been
-    /// deleted.
+    /// Throws when the debt incurrence with the id specified by the <c>id</c> argument doesn't
+    /// exist or has already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
     /// Throws when the requesting user doesn't have enough permissions to delete the specified
@@ -134,5 +129,5 @@ public interface IDebtIncurrenceService
     /// Throws when the remaining debt amount of the specified customer becomes negative after
     /// the operation.
     /// </exception>
-    Task DeleteAsync(int customerId, int debtIncurrenceId);
+    Task DeleteAsync(int id);
 }

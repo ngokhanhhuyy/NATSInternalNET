@@ -1,13 +1,12 @@
 ﻿namespace NATSInternal.Services;
 
 /// <inheritdoc cref="IDebtIncurrenceService" />
-public class DebtIncurrenceService :
-        LockableEntityService,
-        IDebtIncurrenceService
+public class DebtIncurrenceService : LockableEntityService, IDebtIncurrenceService
 {
     private readonly DatabaseContext _context;
     private readonly IStatsService _statsService;
     private readonly IAuthorizationService _authorizationService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear { get; set; }
 
     public DebtIncurrenceService(
             DatabaseContext context,
@@ -20,9 +19,99 @@ public class DebtIncurrenceService :
     }
 
     /// <inheritdoc />
-    public async Task<DebtIncurrenceDetailResponseDto> GetDetailAsync(
-            int customerId,
-            int debtId)
+    public async Task<DebtIncurrenceListResponseDto> GetListAsync(
+            DebtIncurrenceListRequestDto requestDto)
+    {
+        // Initialize list of month and year options.
+        List<MonthYearResponseDto> monthYearOptions = null;
+        if (!requestDto.IgnoreMonthYear)
+        {
+            _earliestRecordedMonthYear ??= await _context.Orders
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+            monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        }
+
+        // Initialize query.
+        IQueryable<DebtIncurrence> query = _context.DebtIncurrences
+            .Include(di => di.Customer);
+
+        // Sort by the specified direction and field.
+        switch (requestDto.OrderByField)
+        {
+            case nameof(DebtIncurrenceListRequestDto.FieldOptions.Amount):
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(di => di.Amount).ThenBy(di => di.IncurredDateTime)
+                    : query.OrderByDescending(di => di.Amount)
+                        .ThenByDescending(di => di.IncurredDateTime);
+                break;
+            default:
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(di => di.IncurredDateTime).ThenBy(di => di.Amount)
+                    : query.OrderByDescending(di => di.IncurredDateTime)
+                        .ThenByDescending(di => di.Amount);
+                break;
+        }
+
+        // Filter by month and year if specified.
+        if (!requestDto.IgnoreMonthYear)
+        {
+            DateTime startDateTime;
+            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(di =>
+                di.IncurredDateTime >= startDateTime && di.IncurredDateTime < endDateTime);
+        }
+
+        // Filter by user id if specified.
+        if (requestDto.CreatedUserId.HasValue)
+        {
+            query = query.Where(o => o.CreatedUserId == requestDto.CreatedUserId);
+        }
+
+        // Filter by customer id if specified.
+        if (requestDto.CustomerId.HasValue)
+        {
+            query = query.Where(o => o.CustomerId == requestDto.CustomerId);
+        }
+
+        // Filter by not being soft deleted.
+        query = query.Where(o => !o.IsDeleted);
+
+        // Initialize response dto.
+        DebtIncurrenceListResponseDto responseDto = new DebtIncurrenceListResponseDto
+        {
+            MonthYearOptions = monthYearOptions,
+            Authorization = _authorizationService.GetDebtIncurrenceListAuthorization()
+        };
+
+        int resultCount = await query.CountAsync();
+        if (resultCount == 0)
+        {
+            responseDto.PageCount = 0;
+            return responseDto;
+        }
+        
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
+        responseDto.Items = await query
+            .Select(di => new DebtIncurrenceBasicResponseDto(
+                di,
+                _authorizationService.GetDebtIncurrenceAuthorization(di)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Take(requestDto.ResultsPerPage)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return responseDto;
+    }
+
+    /// <inheritdoc />
+    public async Task<DebtIncurrenceDetailResponseDto> GetDetailAsync(int id)
     {
         // Initialize query.
         IQueryable<DebtIncurrence> query = _context.DebtIncurrences
@@ -31,7 +120,7 @@ public class DebtIncurrenceService :
 
         // Determine if the update histories should be fetched.
         bool shouldIncludeUpdateHistories = _authorizationService
-            .CanAccessDebtUpdateHistories();
+            .CanAccessDebtIncurrenceUpdateHistories();
         if (shouldIncludeUpdateHistories)
         {
             query = query.Include(d => d.UpdateHistories);
@@ -40,22 +129,19 @@ public class DebtIncurrenceService :
         // Fetch the entity with the given id and ensure it exists in the database.
         DebtIncurrence debtIncurrence = await query
             .AsSplitQuery()
-            .Where(d => d.CustomerId == customerId)
-            .Where(d => d.Id == debtId)
+            .Where(d => d.Id == id)
             .Where(d => !d.IsDeleted)
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
         return new DebtIncurrenceDetailResponseDto(
             debtIncurrence,
-            _authorizationService.GetDebtAuthorization(debtIncurrence),
+            _authorizationService.GetDebtIncurrenceAuthorization(debtIncurrence),
             mapUpdateHistories: shouldIncludeUpdateHistories);
     }
     
     /// <inheritdoc />
-    public async Task<int> CreateAsync(
-            int customerId,
-            DebtIncurrenceUpsertRequestDto requestDto)
+    public async Task<int> CreateAsync(DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Determining the incurred datetime.
         DateTime incurredDateTime = DateTime.UtcNow.ToApplicationTime();
@@ -77,7 +163,7 @@ public class DebtIncurrenceService :
             Amount = requestDto.Amount,
             Note = requestDto.Note,
             IncurredDateTime = incurredDateTime,
-            CustomerId = customerId,
+            CustomerId = requestDto.CustomerId,
             CreatedUserId = _authorizationService.GetUserId()
         };
         _context.DebtIncurrences.Add(debtIncurrence);
@@ -110,23 +196,19 @@ public class DebtIncurrenceService :
     }
     
     /// <inheritdoc />
-    public async Task UpdateAsync(
-            int customerId,
-            int debtId,
-            DebtIncurrenceUpsertRequestDto requestDto)
+    public async Task UpdateAsync(int id, DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Fetch and ensure the entity with the given id exists in the database.
         DebtIncurrence debt = await _context.DebtIncurrences
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
             .Include(d => d.CreatedUser)
-            .Where(d => d.CustomerId == customerId)
-            .Where(d => d.Id == debtId)
+            .Where(d => d.Id == id)
             .Where(d => !d.IsDeleted)
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
         // Check if the current user has permission to edit the debt.
-        if (!_authorizationService.CanEditDebt(debt))
+        if (!_authorizationService.CanEditDebtIncurrence(debt))
         {
             throw new AuthorizationException();
         }
@@ -245,19 +327,18 @@ public class DebtIncurrenceService :
     }
     
     /// <inheritdoc />
-    public async Task DeleteAsync(int customerId, int debtId)
+    public async Task DeleteAsync(int id)
     {
         // Fetch and ensure the entity with the given id exists in the database.
         DebtIncurrence debt = await _context.DebtIncurrences
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
-            .Where(d => d.CustomerId == customerId)
-            .Where(d => d.Id == debtId)
+            .Where(d => d.Id == id)
             .Where(d => !d.IsDeleted)
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
         // Ensure the user has permission to delete this debt.
-        if (!_authorizationService.CanDeleteDebt())
+        if (!_authorizationService.CanDeleteDebtIncurrence())
         {
             throw new AuthorizationException();
         }
@@ -338,7 +419,9 @@ public class DebtIncurrenceService :
             switch (exceptionHandler.ViolatedFieldName)
             {
                 case "customer_id":
-                    throw new ResourceNotFoundException();
+                    string errorMessage = ErrorMessages.NotFound
+                        .ReplaceResourceName(DisplayNames.Customer);
+                    throw new OperationException("customerId", errorMessage);
                 default:
                     throw new ConcurrencyException();
             }

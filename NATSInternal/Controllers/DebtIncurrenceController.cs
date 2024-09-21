@@ -1,15 +1,15 @@
 namespace NATSInternal.Controllers;
 
-[Route("Api/Customer/{customerId:int}/DebtIncurrence")]
+[Route("Api/DebtIncurrence")]
 [ApiController]
 [Authorize]
-public class CustomerDebtIncurrenceController : ControllerBase
+public class DebtIncurrenceController : ControllerBase
 {
     private readonly IDebtIncurrenceService _service;
     private readonly IValidator<DebtIncurrenceUpsertRequestDto> _upsertValidator;
     private readonly INotifier _notifier;
 
-    public CustomerDebtIncurrenceController(
+    public DebtIncurrenceController(
             IDebtIncurrenceService service,
             IValidator<DebtIncurrenceUpsertRequestDto> upsertValidator,
             INotifier notifier)
@@ -19,16 +19,14 @@ public class CustomerDebtIncurrenceController : ControllerBase
         _notifier = notifier;
     }
 
-    [HttpGet("{debtIncurrenceId:int}")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DebtIncurrenceDetail(
-            int customerId,
-            int debtIncurrenceId)
+    public async Task<IActionResult> DebtIncurrenceDetail(int id)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(customerId, debtIncurrenceId));
+            return Ok(await _service.GetDetailAsync(id));
         }
         catch (ResourceNotFoundException)
         {
@@ -44,7 +42,6 @@ public class CustomerDebtIncurrenceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> DebtIncurrenceCreate(
-            int customerId,
             [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -60,17 +57,14 @@ public class CustomerDebtIncurrenceController : ControllerBase
         try
         {
             // Create the debt incurrence.
-            int createdId = await _service.CreateAsync(customerId, requestDto);
+            int createdId = await _service.CreateAsync(requestDto);
             string createdUrl = Url.Action(
                 "DebtIncurrenceDetail",
                 "CustomerDebtIncurrence",
                 new { id = createdId });
 
             // Create and distribute the notification to the users.
-            await _notifier.Notify(
-                NotificationType.DebtIncurrenceCreation,
-                customerId,
-                createdId);
+            await _notifier.Notify(NotificationType.DebtIncurrenceCreation, createdId);
 
             return Created(createdUrl, createdId);
         }
@@ -89,7 +83,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
         }
     }
 
-    [HttpPut("{debtIncurrenceId:int}")]
+    [HttpPut("{id:int}")]
     [Authorize(Policy = "CanEditDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -98,8 +92,7 @@ public class CustomerDebtIncurrenceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> DebtIncurrenceUpdate(
-            int customerId,
-            int debtIncurrenceId,
+            int id,
             [FromBody] DebtIncurrenceUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -115,13 +108,10 @@ public class CustomerDebtIncurrenceController : ControllerBase
         try
         {
             // Update the debt incurrence.
-            await _service.UpdateAsync(customerId, debtIncurrenceId, requestDto);
+            await _service.UpdateAsync(id, requestDto);
 
             // Create and distribute the notification to the users.
-            await _notifier.Notify(
-                    NotificationType.DebtIncurrenceModification,
-                    customerId,
-                    debtIncurrenceId);
+            await _notifier.Notify(NotificationType.DebtIncurrenceModification, id);
 
             return Ok();
         }
@@ -151,20 +141,15 @@ public class CustomerDebtIncurrenceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtIncurrenceDelete(
-            int customerId,
-            int debtIncurrenceId)
+    public async Task<IActionResult> DebtIncurrenceDelete(int id)
     {
         try
         {
             // Delete the debt incurrence.
-            await _service.DeleteAsync(customerId, debtIncurrenceId);
+            await _service.DeleteAsync(id);
 
             // Create and distribute the notification to the users.
-            await _notifier.Notify(
-                NotificationType.DebtIncurrenceDeletion,
-                customerId,
-                debtIncurrenceId);
+            await _notifier.Notify( NotificationType.DebtIncurrenceDeletion, id);
 
             return Ok();
         }

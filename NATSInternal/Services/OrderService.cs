@@ -45,7 +45,7 @@ public class OrderService : LockableEntityService, IOrderService
             .Include(o => o.Items)
             .Include(o => o.Photos);
 
-        // Sorting direction and sorting by field.
+        // Sort by the specified direction and field.
         switch (requestDto.OrderByField)
         {
             case nameof(OrderListRequestDto.FieldOptions.Amount):
@@ -71,7 +71,7 @@ public class OrderService : LockableEntityService, IOrderService
             startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
             query = query
-                .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
+                .Where(o => o.PaidDateTime >= startDateTime && o.PaidDateTime < endDateTime);
         }
 
         // Filter by user id if specified.
@@ -83,7 +83,7 @@ public class OrderService : LockableEntityService, IOrderService
         // Filter by customer id if specified.
         if (requestDto.CustomerId.HasValue)
         {
-            query = query.Where(c => c.CustomerId == requestDto.CustomerId);
+            query = query.Where(o => o.CustomerId == requestDto.CustomerId);
         }
 
         // Filter by product id if specified.
@@ -101,13 +101,16 @@ public class OrderService : LockableEntityService, IOrderService
             MonthYearOptions = monthYearOptions,
             Authorization = _authorizationService.GetOrderListAuthorization()
         };
+
         int resultCount = await query.CountAsync();
         if (resultCount == 0)
         {
             responseDto.PageCount = 0;
             return responseDto;
         }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(o => new OrderBasicResponseDto(
                 o,

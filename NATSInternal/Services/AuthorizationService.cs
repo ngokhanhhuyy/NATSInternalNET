@@ -82,7 +82,7 @@ public class AuthorizationService : IAuthorizationService
         {
             CanEdit = _user.HasPermission(PermissionConstants.EditCustomer),
             CanDelete = _user.HasPermission(PermissionConstants.DeleteCustomer),
-            CanCreateDebt = CanCreateDebt(),
+            CanCreateDebt = CanCreateDebtIncurrence(),
             CanCreateDebtPayment = CanCreateDebtPayment()
         };
     }
@@ -210,19 +210,29 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    // Authorization for debts.
-    public DebtIncurrenceAuthorizationResponseDto GetDebtAuthorization(DebtIncurrence debt)
+    // Authorization for debt incurrences.
+    public DebtIncurrenceListAuthorizationResponseDto GetDebtIncurrenceListAuthorization()
+    {
+        return new DebtIncurrenceListAuthorizationResponseDto
+        {
+            CanCreate = CanCreateDebtIncurrence()
+        };
+    }
+
+    public DebtIncurrenceAuthorizationResponseDto GetDebtIncurrenceAuthorization(
+            DebtIncurrence debt)
     {
         return new DebtIncurrenceAuthorizationResponseDto
         {
-            CanEdit = CanEditDebt(debt),
-            CanDelete = CanDeleteDebt(),
+            CanEdit = CanEditDebtIncurrence(debt),
+            CanDelete = CanDeleteDebtIncurrence(),
             CanSetCreatedDateTime = CanSetDebtIncurredDateTime()
         };
     }
 
     // Authorization for debt payments.
-    public DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment)
+    public DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(
+            DebtPayment debtPayment)
     {
         return new DebtPaymentAuthorizationResponseDto
         {
@@ -491,12 +501,12 @@ public class AuthorizationService : IAuthorizationService
     }
     
     // Permisisons to interact with debts.
-    public bool CanCreateDebt()
+    public bool CanCreateDebtIncurrence()
     {
         return _user.HasPermission(PermissionConstants.CreateDebtIncurrence);
     }
 
-    public bool CanEditDebt(DebtIncurrence debt)
+    public bool CanEditDebtIncurrence(DebtIncurrence debt)
     {
         if (!_user.HasPermission(PermissionConstants.EditDebtIncurrence))
         {
@@ -511,7 +521,7 @@ public class AuthorizationService : IAuthorizationService
         return true;
     }
     
-    public bool CanDeleteDebt()
+    public bool CanDeleteDebtIncurrence()
     {
         return _user.HasPermission(PermissionConstants.DeleteDebtIncurrence);
     }
@@ -521,7 +531,7 @@ public class AuthorizationService : IAuthorizationService
         return _user.HasPermission(PermissionConstants.SetDebtIncurrenceIncurredDateTime);
     }
     
-    public bool CanAccessDebtUpdateHistories()
+    public bool CanAccessDebtIncurrenceUpdateHistories()
     {
         return _user.HasPermission(PermissionConstants.AccessDebtIncurrenceUpdateHistories);
     }

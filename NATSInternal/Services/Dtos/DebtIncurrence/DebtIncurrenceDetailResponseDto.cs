@@ -8,7 +8,7 @@ public class DebtIncurrenceDetailResponseDto
     public DateTime CreatedDateTime { get; set; }
     public bool IsLocked { get; set; }
     public CustomerBasicResponseDto Customer { get; set; }
-    public UserBasicResponseDto User { get; set; }
+    public UserBasicResponseDto CreatedUser { get; set; }
     public DebtIncurrenceAuthorizationResponseDto Authorization { get; set; }
     public List<DebtIncurrenceUpdateHistoryResponseDto> UpdateHistories { get; set; }
 
@@ -23,7 +23,7 @@ public class DebtIncurrenceDetailResponseDto
         CreatedDateTime = debt.CreatedDateTime;
         IsLocked = debt.IsLocked;
         Customer = new CustomerBasicResponseDto(debt.Customer);
-        User = new UserBasicResponseDto(debt.CreatedUser);
+        CreatedUser = new UserBasicResponseDto(debt.CreatedUser);
         Authorization = authorization;
         
         if (mapUpdateHistories)
