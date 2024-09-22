@@ -2,7 +2,7 @@ namespace NATSInternal.Services.Validations.Validators;
 
 public class DebtUpsertValidator : Validator<DebtIncurrenceUpsertRequestDto>
 {
-    public DebtUpsertValidator(IStatsService statsService)
+    public DebtUpsertValidator()
     {
         RuleFor(dto => dto.Amount)
             .NotEmpty()
@@ -15,7 +15,14 @@ public class DebtUpsertValidator : Validator<DebtIncurrenceUpsertRequestDto>
             .IsValidStatsDateTime()
             .WithName(DisplayNames.IncurredDateTime);
         
-        RuleSet("Create", () => { });
+        RuleSet("Create", () =>
+        {
+            RuleFor(dto => dto.CustomerId)
+                .NotEmpty()
+                .GreaterThan(0)
+                .WithName(DisplayNames.Customer);
+        });
+        
         RuleSet("Update", () =>
         {
             RuleFor(dto => dto.UpdatingReason)
