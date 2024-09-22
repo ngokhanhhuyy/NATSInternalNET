@@ -1,8 +1,8 @@
 namespace NATSInternal.Services.Validations.Validators;
 
-public class DebtUpsertValidator : Validator<DebtIncurrenceUpsertRequestDto>
+public class DebtIncurrenceUpsertValidator : Validator<DebtIncurrenceUpsertRequestDto>
 {
-    public DebtUpsertValidator()
+    public DebtIncurrenceUpsertValidator()
     {
         RuleFor(dto => dto.Amount)
             .NotEmpty()

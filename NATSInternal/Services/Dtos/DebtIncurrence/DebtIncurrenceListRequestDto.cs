@@ -1,6 +1,8 @@
 namespace NATSInternal.Services.Dtos;
 
-public class DebtIncurrenceListRequestDto : IRequestDto<DebtIncurrenceListRequestDto>
+public class DebtIncurrenceListRequestDto :
+        IRequestDto<DebtIncurrenceListRequestDto>,
+        ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; }
     public string OrderByField { get; set; } = nameof(FieldOptions.IncurredDateTime);
@@ -15,6 +17,14 @@ public class DebtIncurrenceListRequestDto : IRequestDto<DebtIncurrenceListReques
     public DebtIncurrenceListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
+
+        if (!IgnoreMonthYear)
+        {
+            DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
+            Month ??= currentDateTime.Month;
+            Year ??= currentDateTime.Year;
+        }
+        
         if (CustomerId == 0)
         {
             CustomerId = null;

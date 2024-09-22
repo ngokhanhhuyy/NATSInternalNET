@@ -359,7 +359,7 @@ public class DebtIncurrenceService : LockableEntityService, IDebtIncurrenceServi
             _context.DebtIncurrences.Remove(debt);
             await _context.SaveChangesAsync();
             
-            // Debt has been deleted successfully, adjust the stats.
+            // DebtIncurrence has been deleted successfully, adjust the stats.
             DateOnly createdDate = DateOnly.FromDateTime(debt.CreatedDateTime);
             await _statsService.IncrementDebtAmountAsync(- debt.Amount, createdDate);
             

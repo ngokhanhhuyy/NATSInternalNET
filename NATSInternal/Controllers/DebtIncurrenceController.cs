@@ -6,17 +6,39 @@ namespace NATSInternal.Controllers;
 public class DebtIncurrenceController : ControllerBase
 {
     private readonly IDebtIncurrenceService _service;
+    private readonly IValidator<DebtIncurrenceListRequestDto> _listValidator;
     private readonly IValidator<DebtIncurrenceUpsertRequestDto> _upsertValidator;
     private readonly INotifier _notifier;
 
     public DebtIncurrenceController(
             IDebtIncurrenceService service,
+            IValidator<DebtIncurrenceListRequestDto> listValidator,
             IValidator<DebtIncurrenceUpsertRequestDto> upsertValidator,
             INotifier notifier)
     {
         _service = service;
+        _listValidator = listValidator;
         _upsertValidator = upsertValidator;
         _notifier = notifier;
+    }
+
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetListAsync(
+            [FromQuery] DebtIncurrenceListRequestDto requestDto)
+    {
+        // Validate data from the request.
+        ValidationResult validationResult;
+        validationResult = _listValidator.Validate(requestDto.TransformValues());
+        if (!validationResult.IsValid)
+        {
+            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
+            return BadRequest(ModelState);
+        }
+
+        // Fetch the list.
+        return Ok(await _service.GetListAsync(requestDto));
     }
 
     [HttpGet("{id:int}")]
@@ -60,7 +82,7 @@ public class DebtIncurrenceController : ControllerBase
             int createdId = await _service.CreateAsync(requestDto);
             string createdUrl = Url.Action(
                 "DebtIncurrenceDetail",
-                "CustomerDebtIncurrence",
+                "DebtIncurrence",
                 new { id = createdId });
 
             // Create and distribute the notification to the users.
@@ -134,7 +156,7 @@ public class DebtIncurrenceController : ControllerBase
         }
     }
 
-    [HttpDelete("{debtIncurrenceId:int}")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteDebtIncurrence")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -1,6 +1,6 @@
 ﻿namespace NATSInternal.Services.Validations.Validators;
 
-public class TreamentListValidator : AbstractValidator<TreatmentListRequestDto>
+public class TreamentListValidator : Validator<TreatmentListRequestDto>
 {
     public TreamentListValidator()
     {

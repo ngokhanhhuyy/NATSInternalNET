@@ -43,6 +43,12 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 ###
+# @name DebtIncurrenceList
+GET {{host}}/debtIncurrence
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+###
 # @name HealthCheck
 // @no-log
 GET {{host}}/healthcheck/ping

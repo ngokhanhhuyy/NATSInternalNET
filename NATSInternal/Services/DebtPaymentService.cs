@@ -309,7 +309,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             _context.DebtPayments.Remove(debtPayment);
             await _context.SaveChangesAsync();
             
-            // Debt payment has been deleted successfully, adjust the stats.
+            // DebtIncurrence payment has been deleted successfully, adjust the stats.
             DateOnly createdDate = DateOnly.FromDateTime(debtPayment.PaidDateTime);
             await _statsService
                 .IncrementDebtPaidAmountAsync(- debtPayment.Amount, createdDate);
