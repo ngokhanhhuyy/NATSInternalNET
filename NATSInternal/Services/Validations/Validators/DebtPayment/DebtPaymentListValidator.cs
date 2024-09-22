@@ -1,12 +1,12 @@
 ﻿namespace NATSInternal.Services.Validations.Validators;
 
-public class TreamentListValidator : Validator<TreatmentListRequestDto>
+public class DebtPaymentListValidator : Validator<DebtPaymentListRequestDto>
 {
-    public TreamentListValidator()
+    public DebtPaymentListValidator()
     {
         RuleFor(dto => dto.OrderByField)
             .NotNull()
-            .IsEnumName(typeof(TreatmentListRequestDto.FieldOptions))
+            .IsEnumName(typeof(DebtPaymentListRequestDto.FieldOptions))
             .WithName(DisplayNames.OrderByField);
         RuleFor(dto => dto.Month)
             .IsValidQueryStatsMonth()

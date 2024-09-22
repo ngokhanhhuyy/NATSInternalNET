@@ -1,11 +1,13 @@
 ﻿namespace NATSInternal.Services.Dtos;
 
-public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>, ILockableEntityListRequestDto
+public class SupplyListRequestDto :
+        IRequestDto<SupplyListRequestDto>,
+        ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; }
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
-    public int? Year { get; set; }
-    public int? Month { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
     public bool IgnoreMonthYear { get; set; } = false;
     public int? UserId { get; set; }
     public int? ProductId { get; set; }
@@ -15,9 +17,21 @@ public class SupplyListRequestDto : IRequestDto<SupplyListRequestDto>, ILockable
     public SupplyListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
+
         DateTime currentDateTime = DateTime.UtcNow.ToApplicationTime();
-        Year ??= currentDateTime.Year;
-        Month ??= currentDateTime.Month;
+        if (!IgnoreMonthYear)
+        {
+            if (Month == 0)
+            {
+                Month = currentDateTime.Month;
+            }
+
+            if (Year == 0)
+            {
+                Year = currentDateTime.Year;
+            }
+        }
+
         return this;
     }
 

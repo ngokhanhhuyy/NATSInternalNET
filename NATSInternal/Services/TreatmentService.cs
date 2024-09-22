@@ -75,8 +75,7 @@ public class TreatmentService : LockableEntityService, ITreatmentService
         // Filter by month and year if specified.
         if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime;
-            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
             query = query
                 .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
@@ -514,16 +513,24 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
 
     /// <summary>
-    /// Create treatment items associated to the given treatment with the data provided
-    /// in the request. This method must only be called during the treatment creating operation.
+    /// Creates treatment items associated to the given treatment with the data provided in the
+    /// request.
     /// </summary>
+    /// <remarks>
+    /// This method must only be called during the treatment creating operation.
+    /// </remarks>
     /// <param name="treatment">
-    /// The treatment which items are to be created.
+    /// An instance of the <see cref="Treatment"/> entity class, representing the treatment to
+    /// which the creating items are associated.
     /// </param>
     /// <param name="requestDtos">
-    /// A list of objects containing the new data for the creating operation.
+    /// A <see cref="List{T}"/> where <c>T</c> is the instances of the
+    /// <see cref="TreatmentItemRequestDto"/> class, containing the new data for the creating
+    /// operation.
     /// </param>
-    private async Task CreateItems(Treatment treatment, List<TreatmentItemRequestDto> requestDtos)
+    private async Task CreateItems(
+            Treatment treatment,
+            List<TreatmentItemRequestDto> requestDtos)
     {
         // Fetch a list of products which ids are specified in the request.
         List<int> requestedProductIds = requestDtos.Select(i => i.ProductId).ToList();
@@ -572,17 +579,26 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
 
     /// <summary>
-    /// Create treatment photos associated to the given treatment with the database provided in the request.
-    /// This method must only be called during the treatment creating operation.
+    /// Creates treatment photos associated to the given treatment with the data provided in
+    /// the request.
     /// </summary>
+    /// <remarks>
+    /// This method must only be called during the treatment creating operation.
+    /// </remarks>
     /// <param name="treatment">
-    /// The treatment which photos are to be created.
+    /// An instance of the <see cref="Treatment"/> entity class, representing the treatment
+    /// with which the creating photos are associated.
     /// </param>
     /// <param name="requestDtos">
-    /// A list of objects containing the data for the creating operation.
+    /// A <see cref="List{T}"/> where <c>T</c> is the instances of the
+    /// <see cref="TreatmentPhotoRequestDto"/> class, containing the data for the operation.
     /// </param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreatePhotosAsync(Treatment treatment, List<TreatmentPhotoRequestDto> requestDtos)
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation.
+    /// </returns>
+    private async Task CreatePhotosAsync(
+            Treatment treatment,
+            List<TreatmentPhotoRequestDto> requestDtos)
     {
         foreach (TreatmentPhotoRequestDto photoRequestDto in requestDtos)
         {
@@ -596,19 +612,30 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
 
     /// <summary>
-    /// Update or create treatment items associated to the given treatment with the data provided
-    /// in the request. This method must only be called during the treatment updating operation.
+    /// Updates or creates treatment items associated to the given treatment with the data
+    /// provided in the request.
     /// </summary>
+    /// <remarks>
+    /// This method must only be called during the treatment updating operation.
+    /// </remarks>
     /// <param name="treatment">
-    /// The treatment which items are to be created or updated.
+    /// An instance of the <see cref="Treatment"/> entity class, representing the treatment
+    /// with which the updating and creating items are associated.
     /// </param>
     /// <param name="requestDtos">
-    /// A list of objects containing the new data for updating operation.
+    /// A <see cref="List{T}"/> where <c>T</c> is the instances of the
+    /// <see cref="TreatmentItemRequestDto"/> class, containing the new data for the updating
+    /// operation.
     /// </param>
     /// <exception cref="OperationException">
-    /// Thrown when there is some business logic violation during the operation.
+    /// Throws under the following circumstances:
+    /// - When the item with the specified id doesn't exist or has already been deleted.
+    /// - When the specified product with which the item is associated doesn't exist or has
+    /// already been deleted.
     /// </exception>
-    private async Task UpdateItems(Treatment treatment, List<TreatmentItemRequestDto> requestDtos)
+    private async Task UpdateItems(
+            Treatment treatment,
+            List<TreatmentItemRequestDto> requestDtos)
     {
         // Pre-fetch a list of products for new items which ids are specfied in the request.
         List<int> productIdsForNewItems = requestDtos
@@ -691,23 +718,31 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
 
     /// <summary>
-    /// Update or create treatment photos associated to the given treatment with the data provided
-    /// in the request. This method must only be called during the treatment updating operation.
+    /// Updates or creates treatment photos associated to the given treatment with the data
+    /// provided in the request.
     /// </summary>
+    /// <remarks>
+    /// This method must only be called during the treatment updating operation.
+    /// </remarks>
     /// <param name="treatment">
-    /// The treatment which photos are to be created or updated.
+    /// An instance of the <see cref="Treatment"/> entity class, representing the treatment
+    /// with which the updating and creating photos are associated.
     /// </param>
     /// <param name="requestDtos">
-    /// A list of objects containing the new data for updating operation.
+    /// A <see cref="List{T}"/> where <c>T</c> is the instances of the
+    /// <see cref="TreatmentPhotoRequestDto"/> class, containing the new data for updating
+    /// operation.
     /// </param>
     /// <returns>
-    /// A tuple containing 2 lists of photos' url strings, the first one represents the deleted photos'
-    /// urls which must be deleted after the whole treatment updating operation succeeds, the second one
-    /// represents the  created photos' urls which must be deleted after the whole treatment updating
-    /// operation fails.
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is a
+    /// <see cref="Tuple"/> of two <see cref="List{T}"/> where <c>T</c> is
+    /// <see cref="string"/>, the first one represents the deleted photos' urls which must be
+    /// deleted after the whole treatment updating operation succeeds, the second one
+    /// represents the  created photos' urls which must be deleted after the whole treatment
+    /// updating operation fails.
     /// </returns>
     /// <exception cref="OperationException">
-    /// Thrown when there is some business logic violation during the operation.
+    /// Throws when the photo with the specified id doesn't exist or has already been deleted.
     /// </exception>
     public async Task<(List<string>, List<string>)> UpdatePhotoAsync(
             Treatment treatment,
@@ -743,7 +778,8 @@ public class TreatmentService : LockableEntityService, ITreatmentService
                     // Create new photo if the request contains new data for a new one.
                     if (requestDto.File != null)
                     {
-                        string url = await _photoService.CreateAsync(requestDto.File, "treatments", true);
+                        string url = await _photoService
+                            .CreateAsync(requestDto.File, "treatments", true);
                         photo.Url = url;
 
                         // Mark the created photo to be deleted later if the transaction fails.
@@ -754,7 +790,8 @@ public class TreatmentService : LockableEntityService, ITreatmentService
             else
             {
                 // Create new photo if the request doesn't have id.
-                string url = await _photoService.CreateAsync(requestDto.File, "treatments", true);
+                string url = await _photoService
+                    .CreateAsync(requestDto.File, "treatments", true);
                 photo = new TreatmentPhoto
                 {
                     Url = url
@@ -770,10 +807,13 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
     
     /// <summary>
-    /// Delete all the items associated to the specified treatment, revert the stocking
+    /// Deletes all the items associated to the specified treatment, revert the stocking
     /// quantity of the products associated to each item.
     /// </summary>
-    /// <param name="treatment">The <c>Treatment</c> of which the items are to be deleted.</param>
+    /// <param name="treatment">
+    /// An instance of the <c>Treatment</c> entity class with which the deleting items are
+    /// associated.
+    /// </param>
     private void DeleteItemsAsync(Treatment treatment)
     {
         foreach (TreatmentItem item in treatment.Items)
@@ -784,18 +824,23 @@ public class TreatmentService : LockableEntityService, ITreatmentService
     }
 
     /// <summary>
-    /// Log the old and new data to update history for the specified treatment.
+    /// Logs the old and new data to update history for the specified treatment.
     /// </summary>
     /// <param name="treatment">
-    /// The treatment entity which the new update history is associated.
+    /// An instance of the <see cref="Treatment"/> entity class, representing the treatment to
+    /// be logged.
     /// </param>
     /// <param name="oldData">
-    /// An object containing the old data of the treatment before modification.
+    /// An instance of the <see cref="TreatmentUpdateHistoryDataDto"/> class, containing the
+    /// old data of the treatment before the modification.
     /// </param>
     /// <param name="newData">
-    /// An object containing the new data of the treatment after modification. 
+    /// An instance of the <see cref="TreatmentUpdateHistoryDataDto"/> class, containing the
+    /// new data of the treatment before the modification.
     /// </param>
-    /// <param name="reason">The reason of the modification.</param>
+    /// <param name="reason">
+    /// A <see cref="string"/> value representing the reason of the modification.
+    /// </param>
     private void LogUpdateHistory(
             Treatment treatment,
             TreatmentUpdateHistoryDataDto oldData,

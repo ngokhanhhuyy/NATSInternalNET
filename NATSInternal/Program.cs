@@ -2,11 +2,8 @@ using NATSInternal.Middlewares;
 using NATSInternal.Services.Identity;
 using System.Globalization;
 using System.Security.Claims;
-// using System.Text;
-// using Microsoft.Extensions.Primitives;
-// using Microsoft.IdentityModel.Tokens;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
 
 // Connection string - EF Core.

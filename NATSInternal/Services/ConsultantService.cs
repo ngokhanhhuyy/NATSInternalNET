@@ -60,11 +60,12 @@ public class ConsultantService : LockableEntityService, IConsultantService
         }
 
         // Filter by month and year if specified.
-        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
+        if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
-            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
+            query = query
+                .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Initialize response dto.
@@ -79,7 +80,8 @@ public class ConsultantService : LockableEntityService, IConsultantService
             responseDto.PageCount = 0;
             return responseDto;
         }
-        responseDto.PageCount = (int)Math.Ceiling((double)resultCount / requestDto.ResultsPerPage);
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
         responseDto.Items = await query
             .Select(c => new ConsultantBasicResponseDto(
                 c,
@@ -161,7 +163,8 @@ public class ConsultantService : LockableEntityService, IConsultantService
 
             // Consultant can be created successfully, adjust the stats.
             DateOnly paidDate = DateOnly.FromDateTime(paidDateTime);
-            await _statsService.IncrementConsultantGrossRevenueAsync(consultant.Amount, paidDate);
+            await _statsService
+                .IncrementConsultantGrossRevenueAsync(consultant.Amount, paidDate);
 
             // Commit the transaction and finish the operation.
             await transaction.CommitAsync();

@@ -6,6 +6,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     private readonly DatabaseContext _context;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStatsService _statsService;
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public DebtPaymentService(
             DatabaseContext context,
@@ -17,10 +18,98 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
         _statsService = statsService;
     }
 
+    public async Task<DebtPaymentListResponseDto> GetListAsync(
+            DebtPaymentListRequestDto requestDto)
+    {
+        // Initialize list of month and year options.
+        List<MonthYearResponseDto> monthYearOptions = null;
+        if (!requestDto.IgnoreMonthYear)
+        {
+            _earliestRecordedMonthYear ??= await _context.Orders
+                .OrderBy(s => s.PaidDateTime)
+                .Select(s => new MonthYearResponseDto
+                {
+                    Year = s.PaidDateTime.Year,
+                    Month = s.PaidDateTime.Month
+                }).FirstOrDefaultAsync();
+            monthYearOptions = GenerateMonthYearOptions(_earliestRecordedMonthYear);
+        }
+
+        // Initialize query.
+        IQueryable<DebtPayment> query = _context.DebtPayments
+            .Include(dp => dp.Customer);
+
+        // Sort by the specified direction and field.
+        switch (requestDto.OrderByField)
+        {
+            case nameof(DebtPaymentListRequestDto.FieldOptions.Amount):
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(di => di.Amount).ThenBy(di => di.PaidDateTime)
+                    : query.OrderByDescending(di => di.Amount)
+                        .ThenByDescending(di => di.PaidDateTime);
+                break;
+            default:
+                query = requestDto.OrderByAscending
+                    ? query.OrderBy(di => di.PaidDateTime).ThenBy(di => di.Amount)
+                    : query.OrderByDescending(di => di.PaidDateTime)
+                        .ThenByDescending(di => di.Amount);
+                break;
+        }
+
+        // Filter by month and year if specified.
+        if (!requestDto.IgnoreMonthYear)
+        {
+            DateTime startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
+            DateTime endDateTime = startDateTime.AddMonths(1);
+            query = query.Where(dp =>
+                dp.PaidDateTime >= startDateTime && dp.PaidDateTime < endDateTime);
+        }
+
+        // Filter by user id if specified.
+        if (requestDto.CreatedUserId.HasValue)
+        {
+            query = query.Where(o => o.CreatedUserId == requestDto.CreatedUserId);
+        }
+
+        // Filter by customer id if specified.
+        if (requestDto.CustomerId.HasValue)
+        {
+            query = query.Where(o => o.CustomerId == requestDto.CustomerId);
+        }
+
+        // Filter by not being soft deleted.
+        query = query.Where(o => !o.IsDeleted);
+
+        // Initialize response dto.
+        DebtPaymentListResponseDto responseDto = new DebtPaymentListResponseDto
+        {
+            MonthYearOptions = monthYearOptions,
+            Authorization = _authorizationService.GetDebtPaymentListAuthorization()
+        };
+
+        int resultCount = await query.CountAsync();
+        if (resultCount == 0)
+        {
+            responseDto.PageCount = 0;
+            return responseDto;
+        }
+        
+        responseDto.PageCount = (int)Math.Ceiling(
+            (double)resultCount / requestDto.ResultsPerPage);
+        responseDto.Items = await query
+            .Select(dp => new DebtPaymentBasicResponseDto(
+                dp,
+                _authorizationService.GetDebtPaymentAuthorization(dp)))
+            .Skip(requestDto.ResultsPerPage * (requestDto.Page - 1))
+            .Take(requestDto.ResultsPerPage)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return responseDto;
+    }
+
     /// <inheritdoc />
-    public async Task<DebtPaymentDetailResponseDto> GetDetailAsync(
-            int customerId,
-            int debtPaymentId)
+    public async Task<DebtPaymentDetailResponseDto> GetDetailAsync(int id)
     {
         // Initalize query.
         IQueryable<DebtPayment> query = _context.DebtPayments
@@ -37,21 +126,19 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
 
         // Fetch the entity with the given id and ensure it exists in the database.
         DebtPayment debtPayment = await query
-            .Where(dp => dp.CustomerId == customerId)
-            .Where(dp => dp.Id == debtPaymentId)
-            .Where(dp => !dp.IsDeleted)
+            .Where(dp => dp.Id == id && !dp.IsDeleted)
             .AsSplitQuery()
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
         return new DebtPaymentDetailResponseDto(
-                debtPayment,
-                _authorizationService.GetDebtPaymentAuthorization(debtPayment),
-                mapUpdateHistories: shouldIncludeUpdateHistories);
+            debtPayment,
+            _authorizationService.GetDebtPaymentAuthorization(debtPayment),
+            mapUpdateHistories: shouldIncludeUpdateHistories);
     }
 
     /// <inheritdoc />
-    public async Task<int> CreateAsync(int customerId, DebtPaymentUpsertRequestDto requestDto)
+    public async Task<int> CreateAsync(DebtPaymentUpsertRequestDto requestDto)
     {
         // Determining the paid datetime.
         DateTime paidDateTime = DateTime.UtcNow.ToApplicationTime();
@@ -67,17 +154,23 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             paidDateTime = requestDto.PaidDateTime.Value;
         }
 
-        // Verify that with the specified amount, the customer's remaining debt amount will
-        // not be negative.
-        string customerNotFoundErrorMessage = ErrorMessages.NotFoundByProperty
-            .ReplaceResourceName(DisplayNames.Customer)
-            .ReplacePropertyName(DisplayNames.Id)
-            .ReplaceAttemptedValue(customerId.ToString());
+        // Find the customer with the specified id.
         Customer customer = await _context.Customers
             .Include(c => c.DebtIncurrences)
             .Include(c => c.DebtPayments)
-            .SingleOrDefaultAsync(c => c.Id == customerId)
-            ?? throw new OperationException(nameof(customerId), customerNotFoundErrorMessage);
+            .SingleOrDefaultAsync(c => c.Id == requestDto.CustomerId);
+        if (customer == null)
+        {
+            string customerNotFoundErrorMessage = ErrorMessages.NotFoundByProperty
+                .ReplaceResourceName(DisplayNames.Customer)
+                .ReplacePropertyName(DisplayNames.Id)
+                .ReplaceAttemptedValue(requestDto.ToString());
+            throw new OperationException(
+                nameof(requestDto.CustomerId),
+                customerNotFoundErrorMessage);
+        }
+
+        // Ensure the remaining debt amount will not be negative after the operation.
         if (customer.DebtAmount - requestDto.Amount < 0)
         {
             const string amountErrorMessage = ErrorMessages.NegativeRemainingDebtAmount;
@@ -90,7 +183,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             Amount = requestDto.Amount,
             Note = requestDto.Note,
             PaidDateTime = paidDateTime,
-            CustomerId = customerId,
+            CustomerId = requestDto.CustomerId,
             CreatedUserId = _authorizationService.GetUserId()
         };
         _context.DebtPayments.Add(debtPayment);
@@ -123,18 +216,13 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     }
     
     /// <inheritdoc />
-    public async Task UpdateAsync(
-            int customerId,
-            int debtPaymentId,
-            DebtPaymentUpsertRequestDto requestDto)
+    public async Task UpdateAsync(int id, DebtPaymentUpsertRequestDto requestDto)
     {
         // Fetch and ensure the entity with the given debtPaymentId exists in the database.
         DebtPayment debtPayment = await _context.DebtPayments
             .Include(d => d.Customer).ThenInclude(c => c.DebtIncurrences)
             .Include(d => d.CreatedUser)
-            .Where(dp => dp.CustomerId == customerId)
-            .Where(dp => dp.Id == debtPaymentId)
-            .Where(dp => !dp.IsDeleted)
+            .Where(dp => dp.Id == id && !dp.IsDeleted)
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
@@ -163,8 +251,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
                 throw new AuthorizationException();
             }
 
-            // Prevent the consultant's PaidDateTime to be modified when the consultant is
-            // locked.
+            // Prevent PaidDateTime to be modified when the debt payment is already locked.
             if (debtPayment.IsLocked)
             {
                 string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked
@@ -267,14 +354,12 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     }
     
     /// <inheritdoc />
-    public async Task DeleteAsync(int customerId, int debtPaymentId)
+    public async Task DeleteAsync(int id)
     {
         // Fetch and ensure the entity with the given debtPaymentId exists in the database.
         DebtPayment debtPayment = await _context.DebtPayments
             .Include(d => d.Customer).ThenInclude(c => c.DebtPayments)
-            .Where(dp => dp.CustomerId == customerId)
-            .Where(dp => dp.Id == debtPaymentId)
-            .Where(dp => !dp.IsDeleted)
+            .Where(dp => dp.Id == id && !dp.IsDeleted)
             .SingleOrDefaultAsync()
             ?? throw new ResourceNotFoundException();
         
@@ -355,7 +440,7 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     /// An instance of the <see cref="MySqlException"/> class, containing the details of the
     /// error.
     /// </param>
-    /// <exception cref="ResourceNotFoundException">
+    /// <exception cref="OperationException">
     /// Throws when the <c>exception</c> indicates that the the <c>CustomerId</c> foreign key
     /// references to a non-existent customer.
     /// </exception>
@@ -373,7 +458,9 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
             {
                 // The foreign key CustomerId references to a non-existent customer entity.
                 case "customer_id":
-                    throw new ResourceNotFoundException();
+                string errorMessage = ErrorMessages.NotFound
+                    .ReplaceResourceName(DisplayNames.Customer);
+                throw new OperationException("customerId", errorMessage);
                 
                 // The foreign key CreatedUserId references to a user which might have been
                 // deleted.
@@ -387,16 +474,20 @@ public class DebtPaymentService : LockableEntityService, IDebtPaymentService
     /// Logs the old and new data to update history for the specified debt payment.
     /// </summary>
     /// <param name="debtPayment">
-    /// An instance of the <see cref="DebtPayment"/> model class, representing the debt payment
-    /// 
+    /// An instance of the <see cref="DebtPayment"/> entity class, representing the debt
+    /// payment to be logged.
     /// </param>
     /// <param name="oldData">
-    /// An object containing the old data of the debt payment before modification.
+    /// An instance of the <see cref="DebtPaymentUpdateHistoryDataDto"/> class, containing the
+    /// data of the debt payment before the modification.
     /// </param>
     /// <param name="newData">
-    /// An object containing the new data of the debt payment after modification. 
+    /// An instance of the <see cref="DebtPaymentUpdateHistoryDataDto"/> class, containing the
+    /// data of the debt payment after the modification.
     /// </param>
-    /// <param name="reason">The reason of the modification.</param>
+    /// <param name="reason">
+    /// The reason of the modification.
+    /// </param>
     private void LogUpdateHistory(
             DebtPayment debtPayment,
             DebtPaymentUpdateHistoryDataDto oldData,

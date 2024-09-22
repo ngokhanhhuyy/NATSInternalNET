@@ -11,9 +11,11 @@ public class ConsultantListValidator : Validator<ConsultantListRequestDto>
             .WithName(DisplayNames.OrderByField);
         RuleFor(dto => dto.Month)
             .IsValidQueryStatsMonth()
+            .When(dto => !dto.IgnoreMonthYear)
             .WithName(DisplayNames.Month);
         RuleFor(dto => dto.Year)
             .IsValidQueryStatsYear()
+            .When(dto => !dto.IgnoreMonthYear)
             .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Page)
             .GreaterThanOrEqualTo(1)

@@ -68,7 +68,7 @@ public class OrderService : LockableEntityService, IOrderService
         if (!requestDto.IgnoreMonthYear)
         {
             DateTime startDateTime;
-            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
             query = query
                 .Where(o => o.PaidDateTime >= startDateTime && o.PaidDateTime < endDateTime);
@@ -367,7 +367,8 @@ public class OrderService : LockableEntityService, IOrderService
 
             // Delete all old photos which have been replaced by new ones.
             DateOnly newPaidDate = DateOnly.FromDateTime(order.PaidDateTime);
-            await _statsService.IncrementRetailGrossRevenueAsync(order.BeforeVatAmount, newPaidDate);
+            await _statsService
+                .IncrementRetailGrossRevenueAsync(order.BeforeVatAmount, newPaidDate);
             await _statsService.IncrementVatCollectedAmountAsync(order.VatAmount, newPaidDate);
 
             // Delete photo files which have been specified.
@@ -633,12 +634,23 @@ public class OrderService : LockableEntityService, IOrderService
     }
 
     /// <summary>
-    /// Create order photos associated to the given order with the database provided in the request.
-    /// This method must only be called during the order creating operation.
+    /// Creates photos which are associated with the specified order.
     /// </summary>
-    /// <param name="order">The order which photos are to be created.</param>
-    /// <param name="requestDtos">A list of objects containing the data for the creating operation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method must only be called during the order creating operation.
+    /// </remarks>
+    /// <param name="order">
+    /// An instance of the <see cref="Order"/> entity class, representing the order with which
+    /// the creating photos are associated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A <see cref="List{T}"/> where <c>T</c> is the instances of the
+    /// <see cref="OrderPhotoRequestDto"/> class, containing the data for the creating
+    /// operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation.
+    /// </returns>
     private async Task CreatePhotosAsync(Order order, List<OrderPhotoRequestDto> requestDtos)
     {
         foreach (OrderPhotoRequestDto photoRequestDto in requestDtos)
@@ -653,18 +665,29 @@ public class OrderService : LockableEntityService, IOrderService
     }
 
     /// <summary>
-    /// Update or create order photos associated to the given order with the data provided
-    /// in the request. This method must only be called during the order updating operation.
+    /// Updates or creates new photos which are associated with the specified order.
     /// </summary>
-    /// <param name="order">The order which photos are to be created or updated.</param>
-    /// <param name="requestDtos">A list of objects containing the new data for updating operation.</param>
+    /// <remarks>
+    /// This method must be called during the order updating operation.
+    /// </remarks>
+    /// <param name="order">
+    /// An instance of the <see cref="Order"/> entity class, which represents the order with
+    /// which the updating or creating photos are associated.
+    /// </param>
+    /// <param name="requestDtos">
+    /// A <see cref="List{T}"/> where <c>T</c> is <see cref="OrderPhotoRequestDto"/>,
+    /// containing the data for the updating operation.
+    /// </param>
     /// <returns>
-    /// A tuple containing 2 lists of photos' url strings, the first one represents the deleted photos'
-    /// urls which must be deleted after the whole order updating operation succeeds, the second one
-    /// represents the  created photos' urls which must be deleted after the whole order updating operation fails.
+    /// A <see cref="Tuple"/> containing two <see cref="List{T}"/> where <c>T</c> is
+    /// <see cref="string"/>. The first one represents the deleted photos' urls which must be
+    /// deleted after the whole order updating operation succeeds, the second one represents
+    /// the created photos' urls which must be deleted after the whole order updating operation
+    /// fails.
     /// </returns>
     /// <exception cref="OperationException">
-    /// Thrown when there is some business logic violation during the operation.
+    /// Throws when a photo with its specified id is indicated to be updated but doesn't exist
+    /// or has already been deleted.
     /// </exception>
     private async Task<(List<string>, List<string>)> UpdatePhotosAsync(
             Order order,
@@ -700,7 +723,8 @@ public class OrderService : LockableEntityService, IOrderService
                     // Create new photo if the request contains new data for a new one.
                     if (requestDto.File != null)
                     {
-                        string url = await _photoService.CreateAsync(requestDto.File, "orders", true);
+                        string url = await _photoService
+                            .CreateAsync(requestDto.File, "orders", true);
                         photo.Url = url;
 
                         // Mark the created photo to be deleted later if the transaction fails.
@@ -727,18 +751,26 @@ public class OrderService : LockableEntityService, IOrderService
     }
 
     /// <summary>
-    /// Log the old and new data to update history for the specified order.
+    /// Logs the old and new data to update history for the specified order.
     /// </summary>
+    /// <remarks>
+    /// This method must only be called during the updating operation of an order.
+    /// </remarks>
     /// <param name="order">
-    /// The order entity which the new update history is associated.
+    /// An instance of the <see cref="Order"/> entity class, representing the order to be
+    /// logged.
     /// </param>
     /// <param name="oldData">
-    /// An object containing the old data of the order before modification.
+    /// An instance of the <see cref="OrderUpdateHistoryDataDto"/> class, containing the data
+    /// of the order before the modification.
     /// </param>
     /// <param name="newData">
-    /// An object containing the new data of the order after modification. 
+    /// An instance of the <see cref="OrderUpdateHistoryDataDto"/> class, containing the data
+    /// of the order after the modification.
     /// </param>
-    /// <param name="reason">The reason of the modification.</param>
+    /// <param name="reason">
+    /// A <see cref="string"/> value representing the reason of the modification.
+    /// </param>
     private void LogUpdateHistory(
             Order order,
             OrderUpdateHistoryDataDto oldData,

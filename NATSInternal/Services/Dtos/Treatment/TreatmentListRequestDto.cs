@@ -6,8 +6,8 @@ public class TreatmentListRequestDto :
 {
     public bool OrderByAscending { get; set; }
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
-    public int? Month { get; set; }
-    public int? Year { get; set; }
+    public int Month { get; set; }
+    public int Year { get; set; }
     public bool IgnoreMonthYear { get; set; } = false;
     public int? UserId { get; set; }
     public int? CustomerId { get; set; }
@@ -22,8 +22,15 @@ public class TreatmentListRequestDto :
 
         if (!IgnoreMonthYear)
         {
-            Month ??= currentDateTime.Month;
-            Year ??= currentDateTime.Year;
+            if (Month == 0)
+            {
+                Month = currentDateTime.Month;
+            }
+
+            if (Year == 0)
+            {
+                Year = currentDateTime.Year;
+            }
         }
         
         return this;

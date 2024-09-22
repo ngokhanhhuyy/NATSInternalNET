@@ -11,9 +11,11 @@ public class ExpenseListValidator : Validator<ExpenseListRequestDto>
             .WithName(DisplayNames.OrderByField);
         RuleFor(dto => dto.Month)
             .IsValidQueryStatsMonth()
+            .When(dto => !dto.IgnoreMonthYear)
             .WithName(DisplayNames.Month);
         RuleFor(dto => dto.Year)
             .IsValidQueryStatsYear()
+            .When(dto => !dto.IgnoreMonthYear)
             .WithName(DisplayNames.Year);
         RuleFor(dto => dto.Category)
             .IsInEnum().WithMessage(ErrorMessages.Invalid)

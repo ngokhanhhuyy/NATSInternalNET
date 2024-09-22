@@ -82,7 +82,7 @@ public class SupplyService : LockableEntityService, ISupplyService
         if (!requestDto.IgnoreMonthYear)
         {
             DateTime startDateTime;
-            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
             query = query
                 .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);

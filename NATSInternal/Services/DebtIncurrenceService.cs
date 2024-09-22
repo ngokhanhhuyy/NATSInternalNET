@@ -6,7 +6,7 @@ public class DebtIncurrenceService : LockableEntityService, IDebtIncurrenceServi
     private readonly DatabaseContext _context;
     private readonly IStatsService _statsService;
     private readonly IAuthorizationService _authorizationService;
-    private static MonthYearResponseDto _earliestRecordedMonthYear { get; set; }
+    private static MonthYearResponseDto _earliestRecordedMonthYear;
 
     public DebtIncurrenceService(
             DatabaseContext context,
@@ -60,8 +60,7 @@ public class DebtIncurrenceService : LockableEntityService, IDebtIncurrenceServi
         // Filter by month and year if specified.
         if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime;
-            startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
             query = query.Where(di =>
                 di.IncurredDateTime >= startDateTime && di.IncurredDateTime < endDateTime);

@@ -231,6 +231,14 @@ public class AuthorizationService : IAuthorizationService
     }
 
     // Authorization for debt payments.
+    public DebtPaymentListAuthorizationResponseDto GetDebtPaymentListAuthorization()
+    {
+        return new DebtPaymentListAuthorizationResponseDto
+        {
+            CanCreate = CanCreateDebtPayment()
+        };
+    }
+
     public DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(
             DebtPayment debtPayment)
     {

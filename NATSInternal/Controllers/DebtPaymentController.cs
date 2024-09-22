@@ -1,34 +1,54 @@
 namespace NATSInternal.Controllers;
 
-[Route("Api/Customer/{customerId:int}/DebtPayment")]
+[Route("Api/DebtPayment")]
 [ApiController]
 [Authorize]
-public class CustomerDebtPaymentController : ControllerBase
+public class DebtPaymentController : ControllerBase
 {
     private readonly IDebtPaymentService _service;
+    private readonly IValidator<DebtPaymentListRequestDto> _listValidator;
     private readonly IValidator<DebtPaymentUpsertRequestDto> _upsertValidator;
     private readonly INotifier _notifier;
 
-    public CustomerDebtPaymentController(
+    public DebtPaymentController(
             IDebtPaymentService service,
+            IValidator<DebtPaymentListRequestDto> listValidator,
             IValidator<DebtPaymentUpsertRequestDto> upsertValidator,
             INotifier notifier)
     {
         _service = service;
+        _listValidator = listValidator;
         _upsertValidator = upsertValidator;
         _notifier = notifier;
     }
 
-    [HttpGet("{debtPaymentId:int}")]
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetListAsync(
+            [FromQuery] DebtPaymentListRequestDto requestDto)
+    {
+        // Validate data from the request.
+        ValidationResult validationResult;
+        validationResult = _listValidator.Validate(requestDto.TransformValues());
+        if (!validationResult.IsValid)
+        {
+            ModelState.AddModelErrorsFromValidationErrors(validationResult.Errors);
+            return BadRequest(ModelState);
+        }
+
+        // Fetch the list.
+        return Ok(await _service.GetListAsync(requestDto));
+    }
+
+    [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DebtPaymentDetail(
-            int customerId,
-            int debtPaymentId)
+    public async Task<IActionResult> DebtPaymentDetail(int id)
     {
         try
         {
-            return Ok(await _service.GetDetailAsync(customerId, debtPaymentId));
+            return Ok(await _service.GetDetailAsync(id));
         }
         catch (ResourceNotFoundException)
         {
@@ -44,7 +64,6 @@ public class CustomerDebtPaymentController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> DebtPaymentCreate(
-            int customerId,
             [FromBody] DebtPaymentUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -60,17 +79,14 @@ public class CustomerDebtPaymentController : ControllerBase
         try
         {
             // Create the debt payment.
-            int createdId = await _service.CreateAsync(customerId, requestDto);
+            int createdId = await _service.CreateAsync(requestDto);
             string createdResourceUrl = Url.Action(
                 "DebtPaymentDetail",
-                "CustomerDebtPayment",
+                "DebtPayment",
                 new { id = createdId });
 
             // Create and distribute the notification to the users.
-            await _notifier.Notify(
-                NotificationType.DebtPaymentCreation,
-                customerId,
-                createdId);
+            await _notifier.Notify(NotificationType.DebtPaymentCreation, createdId);
 
             return Created(createdResourceUrl, createdId);
         }
@@ -89,7 +105,7 @@ public class CustomerDebtPaymentController : ControllerBase
         }
     }
 
-    [HttpPut("{debtPaymentId:int}")]
+    [HttpPut("{id:int}")]
     [Authorize(Policy = "CanEditDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -98,8 +114,7 @@ public class CustomerDebtPaymentController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> DebtPaymentUpdate(
-            int customerId,
-            int debtPaymentId,
+            int id,
             [FromBody] DebtPaymentUpsertRequestDto requestDto)
     {
         // Validate data from the request.
@@ -115,13 +130,10 @@ public class CustomerDebtPaymentController : ControllerBase
         try
         {
             // Update the debt payment.
-            await _service.UpdateAsync(customerId, debtPaymentId, requestDto);
+            await _service.UpdateAsync(id, requestDto);
 
             // Create and distribute the notification to the users.
-            await _notifier.Notify(
-                NotificationType.DebtPaymentModification,
-                customerId,
-                debtPaymentId);
+            await _notifier.Notify(NotificationType.DebtPaymentModification, id);
 
             return Ok();
         }
@@ -144,25 +156,22 @@ public class CustomerDebtPaymentController : ControllerBase
         }
     }
 
-    [HttpDelete("{debtPaymentId:int}")]
+    [HttpDelete("{id:int}")]
     [Authorize(Policy = "CanDeleteDebtPayment")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> DebtPaymentDelete(int customerId, int debtPaymentId)
+    public async Task<IActionResult> DebtPaymentDelete(int id)
     {
         try
         {
             // Delete the debt payment.
-            await _service.DeleteAsync(customerId, debtPaymentId);
+            await _service.DeleteAsync(id);
 
             // Create and distribute the notification to the users.
-            await _notifier.Notify(
-                NotificationType.DebtPaymentDeletion,
-                customerId,
-                debtPaymentId);
+            await _notifier.Notify(NotificationType.DebtPaymentDeletion, id);
 
             return Ok();
         }

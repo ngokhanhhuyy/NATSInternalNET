@@ -48,6 +48,7 @@ public interface IAuthorizationService
     DebtIncurrenceAuthorizationResponseDto GetDebtIncurrenceAuthorization(DebtIncurrence debt);
 
     // Authorization for debt payments.
+    DebtPaymentListAuthorizationResponseDto GetDebtPaymentListAuthorization();
     DebtPaymentAuthorizationResponseDto GetDebtPaymentAuthorization(DebtPayment debtPayment);
 
     // Authorization for consultants.

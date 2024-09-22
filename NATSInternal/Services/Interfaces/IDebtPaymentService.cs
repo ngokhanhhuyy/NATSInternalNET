@@ -6,13 +6,24 @@ namespace NATSInternal.Services.Interfaces;
 public interface IDebtPaymentService
 {
     /// <summary>
+    /// Retrieves a list of debt payments with the basic information, based on the specified
+    /// filtering, sorting and paginating conditions.
+    /// </summary>
+    /// <param name="requestDto">
+    /// An instance of the <see cref="DebtPaymentListRequestDto"/> class, containing the
+    /// conditions for the results.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, which result is an
+    /// instance of the <see cref="DebtPaymentListResponseDto"/>, containing the results
+    /// of the operation and the additional information for pagination.
+    /// </returns>
+    Task<DebtPaymentListResponseDto> GetListAsync(DebtPaymentListRequestDto requestDto);
+
+    /// <summary>
     /// Retrieves the details of a specific debt payment by its id.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> value representing the id of customer to which the retrieving debt
-    /// payment belongs.
-    /// </param>
-    /// <param name="debtPaymentId">
+    /// <param name="id">
     /// An <see cref="int"/> value representing the id of the debt payment to retrieve.
     /// </param>
     /// <returns>
@@ -21,19 +32,14 @@ public interface IDebtPaymentService
     /// details of the debt payment.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Throws when the debt payment specified by the <c>customerId</c> and the
-    /// <c>debtPaymentId</c> arguments doesn't exist or has already been deleted.
+    /// Throws when the debt payment with the specified <c>id</c> arguments doesn't exist or
+    /// has already been deleted.
     /// </exception>
-    Task<DebtPaymentDetailResponseDto> GetDetailAsync(int customerId, int debtPaymentId);
+    Task<DebtPaymentDetailResponseDto> GetDetailAsync(int id);
 
     /// <summary>
-    /// Creates a new debt payment for a specific customer, specfied by the id of the customer
-    /// and the provided data.
+    /// Creates a new debt payment based on the specified data from the request.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> value representing the id of the customer to which the new debt
-    /// payment belongs.
-    /// </param>
     /// <param name="requestDto">
     /// An instance of the <see cref="DebtPaymentUpsertRequestDto"/> class, containing the data
     /// for the creating operation.
@@ -51,22 +57,17 @@ public interface IDebtPaymentService
     /// </exception>
     /// <exception cref="OperationException">
     /// Throws under the following circumstances:<br/>
-    /// - The customer specified by the <c>customerId</c> argument doesn't exist or has already
-    /// been deleted.
+    /// - The customer specified by the <c>CustomerId</c> in the <c>requestDto</c> argument
+    /// doesn't exist or has already been deleted.
     /// - The remaining debt amount of the specified customer becomes negative after the
     /// operation.
     /// </exception>
-    Task<int> CreateAsync(int customerId, DebtPaymentUpsertRequestDto requestDto);
+    Task<int> CreateAsync(DebtPaymentUpsertRequestDto requestDto);
     
     /// <summary>
-    /// Updates an existing debt payment, based on the id of the customer to which it belongs,
-    /// its id and the provided data.
+    /// Updates an existing debt payment, based on its id and the provided data.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> value representing the id of the customer to which the updating
-    /// debt payment belongs.
-    /// </param>
-    /// <param name="debtPaymentId">
+    /// <param name="id">
     /// An <see cref="int"/> value representing the id of the debt payment to update.
     /// </param>
     /// <param name="requestDto">
@@ -77,8 +78,7 @@ public interface IDebtPaymentService
     /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Throws when the debt payment specified by the <c>customerId</c> and the
-    /// <c>debtPaymentId</c> argument doesn't exist.
+    /// Throws when the debt payment specified by the <c>id</c> argument doesn't exist.
     /// </exception>
     /// <exception cref="AuthorizationException">
     /// Throws under the following circumstances:<br/>
@@ -95,7 +95,7 @@ public interface IDebtPaymentService
     /// Throws under the following circumstances:<br/>
     /// - When the <c>PaidDateTime</c> property in the <c>requestDto</c> argument is specified
     /// a value while the debt payment has already been locked.
-    /// - When the remaining debt amount of the specified customer becomes negative after the
+    /// - When the remaining debt amount of the associated customer becomes negative after the
     /// operation.
     /// </exception>
     /// <exception cref="ConcurrencyException">
@@ -104,19 +104,12 @@ public interface IDebtPaymentService
     /// - When the information of the requesting user has been deleted by another process
     /// before the operation.
     /// </exception>
-    Task UpdateAsync(
-        int customerId,
-        int debtPaymentId,
-        DebtPaymentUpsertRequestDto requestDto);
+    Task UpdateAsync(int id, DebtPaymentUpsertRequestDto requestDto);
     
     /// <summary>
     /// Deletes an existing debt payment, specified by its id.
     /// </summary>
-    /// <param name="customerId">
-    /// An <see cref="int"/> value representing the id of the customer to which the deleting
-    /// debt payment belongs.
-    /// </param>
-    /// <param name="debtPaymentId">
+    /// <param name="id">
     /// An <see cref="int"/> value representing the id of the debt payment to delete.
     /// </param>
     /// <returns>
@@ -124,7 +117,7 @@ public interface IDebtPaymentService
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
     /// Throws when the debt payment specified by the <c>customerId</c> and the
-    /// <c>debtPaymentId</c> argument doesn't exist.
+    /// <c>id</c> argument doesn't exist.
     /// </exception>
     /// <exception cref="AuthorizationException">
     /// Throws when the requesting user doesn't have enough permissions to delete the specified
@@ -139,5 +132,5 @@ public interface IDebtPaymentService
     /// <exception cref="ConcurrencyException">
     /// Throws when a concurrency-related conflict occurs during the operation.
     /// </exception>
-    Task DeleteAsync(int customerId, int debtPaymentId);
+    Task DeleteAsync(int id);
 }

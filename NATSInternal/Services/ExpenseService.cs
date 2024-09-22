@@ -62,11 +62,12 @@ public class ExpenseService : LockableEntityService, IExpenseService
         }
 
         // Filter by month and year if specified.
-        if (requestDto.Month.HasValue && requestDto.Year.HasValue)
+        if (!requestDto.IgnoreMonthYear)
         {
-            DateTime startDateTime = new DateTime(requestDto.Year.Value, requestDto.Month.Value, 1);
+            DateTime startDateTime = new DateTime(requestDto.Year, requestDto.Month, 1);
             DateTime endDateTime = startDateTime.AddMonths(1);
-            query = query.Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
+            query = query
+                .Where(s => s.PaidDateTime >= startDateTime && s.PaidDateTime < endDateTime);
         }
 
         // Filter by category.
@@ -485,15 +486,17 @@ public class ExpenseService : LockableEntityService, IExpenseService
             throw new ConcurrencyException();
         }
     }
-    
+
     /// <summary>
-    /// Create photos with the data provided in the request for the specified <c>Expense</c>.
+    /// Creates new photos for the specified expense.
     /// </summary>
     /// <param name="expense">
-    /// The <c>Expense</c> of which the photos are to be created.
+    /// An instance of the <see cref="Expense"/> entity class, representing the expense with
+    /// which the creating photos are associated.
     /// </param>
     /// <param name="requestDtos">
-    /// A list of objects containing the data of the new photos.
+    /// A <see cref="List{T}"/> where <c>T</c> is <see cref="ExpensePhotoRequestDto"/>,
+    /// containing the data for the creating operation.
     /// </param>
     private async Task CreatePhotosAsync(
             Expense expense,
@@ -511,7 +514,7 @@ public class ExpenseService : LockableEntityService, IExpenseService
             expense.Photos.Add(photo);
         }
     }
-    
+
     /// <summary>
     /// Update the specified <c>Expense</c>'s photos with the data provided in the request.
     /// </summary>
@@ -519,16 +522,18 @@ public class ExpenseService : LockableEntityService, IExpenseService
     /// The <c>Expense</c> of which the photos are to be updated.
     /// </param>
     /// <param name="requestDtos">
-    /// A list of objects containing the data for the photos to be updated.
+    /// A <see cref="List{T}"/> where <c>T</c> is <see cref="ExpensePhotoRequestDto"/>,
+    /// containing the data for the photo updating operation.
     /// </param>
     /// <returns>
-    /// A <c>Tuple</c> which contains 2 lists of urls. The first list contains the urls
-    /// which must be deleted after the expense updating operation succeeded. The other
-    /// contains the urls which must be deleted after the expense updating operation failed
-    /// and is aborted.
+    /// A <see cref="Tuple"/> which contains two <see cref="List{T}"/> where <c>T</c> is
+    /// <see cref="string"/>. The first list contains the urls which must be deleted after the
+    /// expense updating operation succeeded. The other contains the urls which must be deleted
+    /// after the expense updating operation failed and is aborted.
     /// </returns>
     /// <exception cref="OperationException">
-    /// Thown when the photo associated to one of the ids specified in the request doesn't exist.
+    /// Thows when the photo which is associated to one of the ids specified in the request
+    /// doesn't exist or has already been deleted.
     /// </exception>
     private async Task<(List<string>, List<string>)> UpdatePhotosAsync(
             Expense expense,
@@ -578,20 +583,25 @@ public class ExpenseService : LockableEntityService, IExpenseService
         
         return (urlsToBeDeletedWhenSucceeded, urlsToBeDeletedWhenFailed);
     }
-    
+
     /// <summary>
-    /// Log the old and new data to update history for the specified expense.
+    /// Logs the old and new data to update history for the specified expense.
     /// </summary>
     /// <param name="expense">
-    /// The expense entity which the new update history is associated.
+    /// An instance of the <see cref="Expense"/> entity class, representing the expense to be
+    /// logged.
     /// </param>
     /// <param name="oldData">
-    /// An object containing the old data of the expense before modification.
+    /// An instance of the <see cref="ExpenseUpdateHistoryDataDto"/> class, containing the data
+    /// of the expense before the modification.
     /// </param>
     /// <param name="newData">
-    /// An object containing the new data of the expense after modification. 
+    /// An instance of the <see cref="ExpenseUpdateHistoryDataDto"/> class, containing the data
+    /// of the expense after the modification.
     /// </param>
-    /// <param name="reason">The reason of the modification.</param>
+    /// <param name="reason">
+    /// A <see cref="string"/> value representing the reason of the modification.
+    /// </param>
     private void LogUpdateHistory(
             Expense expense,
             ExpenseUpdateHistoryDataDto oldData,

@@ -1,20 +1,20 @@
-namespace NATSInternal.Services.Dtos;
+﻿namespace NATSInternal.Services.Dtos;
 
-public class DebtIncurrenceListRequestDto :
-        IRequestDto<DebtIncurrenceListRequestDto>,
+public class DebtPaymentListRequestDto :
+        IRequestDto<DebtPaymentListRequestDto>,
         ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; }
-    public string OrderByField { get; set; } = nameof(FieldOptions.IncurredDateTime);
+    public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);
     public int Month { get; set; }
     public int Year { get; set; }
     public bool IgnoreMonthYear { get; set; }
-    public int? CustomerId  { get; set; }
+    public int? CustomerId { get; set; }
     public int? CreatedUserId { get; set; }
     public int Page { get; set; } = 1;
     public int ResultsPerPage { get; set; } = 15;
 
-    public DebtIncurrenceListRequestDto TransformValues()
+    public DebtPaymentListRequestDto TransformValues()
     {
         OrderByField = OrderByField?.ToNullIfEmpty();
 
@@ -24,7 +24,7 @@ public class DebtIncurrenceListRequestDto :
             Month = Month == 0 ? currentDateTime.Month : Month;
             Year = Year == 0 ? currentDateTime.Year : Year;
         }
-        
+
         if (CustomerId == 0)
         {
             CustomerId = null;
@@ -34,12 +34,13 @@ public class DebtIncurrenceListRequestDto :
         {
             CreatedUserId = null;
         }
+
         return this;
     }
 
     public enum FieldOptions
     {
-        IncurredDateTime,
+        PaidDateTime,
         Amount
     }
 }

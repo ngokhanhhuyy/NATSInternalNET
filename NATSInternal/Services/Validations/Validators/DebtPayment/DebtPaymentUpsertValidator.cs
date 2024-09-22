@@ -15,5 +15,20 @@ public class DebtPaymentUpsertValidator : Validator<DebtPaymentUpsertRequestDto>
             .LaterThanOrEqualToDateTime(statsService.GetResourceMinimumOpenedDateTime())
             .EarlierThanOrEqualToNow()
             .WithName(DisplayNames.PaidDateTime);
+
+        RuleSet("Create", () =>
+        {
+            RuleFor(dto => dto.CustomerId)
+                .NotEmpty()
+                .WithName(DisplayNames.Customer);
+        });
+
+        RuleSet("Update", () =>
+        {
+            RuleFor(dto => dto.UpdatingReason)
+                .NotEmpty()
+                .MaximumLength(255)
+                .WithName(DisplayNames.Reason);
+        });
     }
 }

@@ -101,23 +101,23 @@ public static class RuleValidators
             MinimumStatsDateTime.ToVietnameseString()));
     }
 
-    public static IRuleBuilderOptions<T, int?> IsValidQueryStatsYear<T>(
-            this IRuleBuilder<T, int?> ruleBuilder) where T : ILockableEntityListRequestDto
+    public static IRuleBuilderOptions<T, int> IsValidQueryStatsYear<T>(
+            this IRuleBuilder<T, int> ruleBuilder) where T : ILockableEntityListRequestDto
     {
         return ruleBuilder
             .GreaterThanOrEqualTo(1)
             .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Year);
     }
 
-    public static IRuleBuilderOptions<T, int?> IsValidQueryStatsMonth<T>(
-            this IRuleBuilder<T, int?> ruleBuilder) where T : ILockableEntityListRequestDto
+    public static IRuleBuilderOptions<T, int> IsValidQueryStatsMonth<T>(
+            this IRuleBuilder<T, int> ruleBuilder) where T : ILockableEntityListRequestDto
     {
         return ruleBuilder
             .GreaterThanOrEqualTo(1)
             .LessThanOrEqualTo(DateTime.UtcNow.ToApplicationTime().Month)
-            .When(dto => dto.Year.HasValue && dto.Year == DateTime.UtcNow.ToApplicationTime().Year)
+            .When(dto => dto.Year == DateTime.UtcNow.ToApplicationTime().Year)
             .LessThanOrEqualTo(12)
-            .When(dto => dto.Year.HasValue && dto.Year < DateTime.UtcNow.ToApplicationTime().Year);
+            .When(dto => dto.Year < DateTime.UtcNow.ToApplicationTime().Year);
     }
     
     private static DateTime MinimumStatsDateTime

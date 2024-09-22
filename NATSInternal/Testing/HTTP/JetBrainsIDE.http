@@ -19,7 +19,7 @@ Content-Type: application/json
 ###
 # @name GetAccessCookie
 // no-log
-POST {{host}}/authentication/getAccessCookie HTTP/2
+POST {{host}}/authentication/getAccessCookie
 Content-Type: application/json
 
 {
@@ -29,8 +29,7 @@ Content-Type: application/json
 
 > {%
     if (response.status === 200) {
-        console.log("authenticationCookie", response.headers["Set-Cookie"]);
-        client.global.set("authenticationCookie", response.headers["Set-Cookie"]);
+        client.global.set("accessCookie", response.headers["Set-Cookie"]);
     }
 %}
 
@@ -48,7 +47,7 @@ GET {{host}}/customer?
     {{page}}&
     {{resultsPerPage}}&{{hasRemainingDebtAmountOnly}}
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Cookie: {{accessCookie}}
 
 ###
 # @name CustomerDetail
@@ -76,7 +75,7 @@ Authorization: Bearer {{accessToken}}
 // @no-log
 PUT {{host}}/consultant/1
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Cookie: {{accessCookie}}
 
 {
     "amount": 2500000,
@@ -87,17 +86,24 @@ Authorization: Bearer {{accessToken}}
 }
 
 ###
+# @name DebtIncurrenceList
+// @no-log
+GET {{host}}/debtIncurrence?ignoreMonthYear=True
+Content-Type: application/json
+Authorization: Bearer {{accessCookie}}
+
+###
 # @name DebtIncurrenceCreate
 // @no-log
 POST {{host}}/customer/1/debtIncurrence
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Cookie: {{accessCookie}}
 
 {
     "amount": 500000,
     "note": null,
     "incurredDateTime": null,
-    "customerId": 100
+    "customerId": 0
 }
 
 ###
@@ -164,4 +170,10 @@ Authorization: Bearer {{accessToken}}
 // @no-log
 GET {{host}}/resourceAccess/accessingUsers?type=Customer&primaryId=11&mode=0
 Content-Type: application/json
-Cookie: {{authenticationCookie}}
+Cookie: {{accessCookie}}
+
+###
+# @name Ping
+// @no-log
+# @no-cookie-jar
+GET {{host}}/healthcheck/ping
