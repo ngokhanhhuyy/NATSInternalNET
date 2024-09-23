@@ -231,8 +231,8 @@ public class DebtIncurrenceService : LockableEntityService, IDebtIncurrenceServi
                 throw new AuthorizationException();
             }
 
-            // Prevent the consultant's IncurredDateTime to be modified when the
-            // debt incurrence has already been locked.
+            // Prevent IncurredDateTime to be modified when the debt incurrence has already
+            // been locked.
             if (debt.IsLocked)
             {
                 string errorMessage = ErrorMessages.CannotSetDateTimeAfterLocked

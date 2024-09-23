@@ -95,8 +95,6 @@ public interface IDebtIncurrenceService
     /// </exception>
     /// <exception cref="OperationException">
     /// Throws under the following circumstances:<br/>
-    /// - The customer which id specified by the <c>CustomerId</c> property in the
-    /// <c>requestDto</c> argument doesn't exist or has already been deleted.
     /// - The <c>IncurredDateTime</c> property in the <c>requestDto</c> argument is specified a
     /// value when the debt incurrence has already been locked.<br/>
     /// - The remaining debt amount of the specified customer becomes negative after the

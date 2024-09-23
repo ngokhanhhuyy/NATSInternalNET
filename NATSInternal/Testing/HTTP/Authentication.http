@@ -49,6 +49,19 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 ###
+# @name DebtIncurrenceCreate
+POST {{host}}/debtIncurrence
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+{
+    "amount": 500000,
+    "note": null,
+    "incurredDateTime": null,
+    "customerId": 1
+}
+
+###
 # @name HealthCheck
 // @no-log
 GET {{host}}/healthcheck/ping

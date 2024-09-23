@@ -37,14 +37,12 @@ public class RequestLoggingMiddleware
                 break;
         }
         Console.Write(statusCode);
-        Console.BackgroundColor = ConsoleColor.Black;
-        Console.ForegroundColor = ConsoleColor.White;
+        Console.ResetColor();
         await Console.Out.WriteAsync("     ");
         Console.BackgroundColor = ConsoleColor.White;
         Console.ForegroundColor = ConsoleColor.Black;
         Console.Write(DateTime.UtcNow.ToApplicationTime().ToString(CultureInfo.InvariantCulture));
-        Console.BackgroundColor = ConsoleColor.Black;
-        Console.ForegroundColor = ConsoleColor.White;
+        Console.ResetColor();
         Console.WriteLine($" {method} {path}{queryString}");
     }
 }
