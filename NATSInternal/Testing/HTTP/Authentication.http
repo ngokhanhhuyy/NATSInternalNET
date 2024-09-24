@@ -55,10 +55,29 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 {
-    "amount": 500000,
+    "amount": 4000000,
     "note": null,
     "incurredDateTime": null,
-    "customerId": 1
+    "customerId": 3
+}
+
+###
+# @name DebtPaymentList
+GET {{host}}/debtPayment
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+###
+# @name DebtPaymentCreate
+POST {{host}}/debtPayment
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+{
+    "amount": 5000000,
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 3
 }
 
 ###
