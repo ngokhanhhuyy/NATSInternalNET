@@ -315,15 +315,13 @@ public class ApplicationHub : Hub
         Console.BackgroundColor = isConnected ? ConsoleColor.Green : ConsoleColor.Red;
         Console.ForegroundColor = ConsoleColor.White;
         await Console.Out.WriteAsync("SignalR");
-        Console.BackgroundColor = ConsoleColor.Black;
-        Console.ForegroundColor = ConsoleColor.White;
+        Console.ResetColor();
         await Console.Out.WriteAsync(" ");
         Console.BackgroundColor = ConsoleColor.White;
         Console.ForegroundColor = ConsoleColor.Black;
         await Console.Out.WriteAsync(DateTime.UtcNow.ToApplicationTime()
             .ToString(CultureInfo.InvariantCulture));
-        Console.BackgroundColor = ConsoleColor.Black;
-        Console.ForegroundColor = ConsoleColor.White;
+        Console.ResetColor();
         string connectionStatus = isConnected ? "Connected" : "Disconnected";
         await Console.Out.WriteLineAsync(
             $" {connectionStatus} NotificationHub ({userName}#{userId})");

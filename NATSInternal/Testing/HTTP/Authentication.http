@@ -55,10 +55,10 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 {
-    "amount": 4000000,
+    "amount": 2000000,
     "note": null,
     "incurredDateTime": null,
-    "customerId": 3
+    "customerId": 8
 }
 
 ###
@@ -74,10 +74,10 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 {
-    "amount": 5000000,
+    "amount": 2000000,  
     "note": null,
     "paidDateTime": null,
-    "customerId": 3
+    "customerId": 2
 }
 
 ###
