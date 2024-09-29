@@ -45,7 +45,8 @@ public interface IDebtPaymentService
     /// for the creating operation.
     /// </param>
     /// <returns>
-    /// A <see cref="Task"/> representing the asychronous operation.
+    /// A <see cref="Task"/> representing the asychronous operation, which result is an
+    /// <see cref="int"/> representing the id of the new debt payment.
     /// </returns>
     /// <exception cref="AuthorizationException">
     /// Throws when the requesting user doesn't have enough permissions to specify a value
@@ -63,7 +64,7 @@ public interface IDebtPaymentService
     /// operation.
     /// </exception>
     Task<int> CreateAsync(DebtPaymentUpsertRequestDto requestDto);
-    
+
     /// <summary>
     /// Updates an existing debt payment, based on its id and the provided data.
     /// </summary>
@@ -78,7 +79,8 @@ public interface IDebtPaymentService
     /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
     /// <exception cref="ResourceNotFoundException">
-    /// Throws when the debt payment specified by the <c>id</c> argument doesn't exist.
+    /// Throws when the debt payment specified by the <c>id</c> argument doesn't exist or has
+    /// already been deleted.
     /// </exception>
     /// <exception cref="AuthorizationException">
     /// Throws under the following circumstances:<br/>
@@ -105,7 +107,7 @@ public interface IDebtPaymentService
     /// before the operation.
     /// </exception>
     Task UpdateAsync(int id, DebtPaymentUpsertRequestDto requestDto);
-    
+
     /// <summary>
     /// Deletes an existing debt payment, specified by its id.
     /// </summary>

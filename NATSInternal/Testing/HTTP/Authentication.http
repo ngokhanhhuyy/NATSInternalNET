@@ -49,6 +49,38 @@ Content-Type: application/json
 Cookie: {{accessCookie}}
 
 ###
+# @name DebtIncurrenceCreate
+POST {{host}}/debtIncurrence
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+{
+    "amount": 2000000,
+    "note": null,
+    "incurredDateTime": null,
+    "customerId": 8
+}
+
+###
+# @name DebtPaymentList
+GET {{host}}/debtPayment
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+###
+# @name DebtPaymentCreate
+POST {{host}}/debtPayment
+Content-Type: application/json
+Cookie: {{accessCookie}}
+
+{
+    "amount": 2000000,  
+    "note": null,
+    "paidDateTime": null,
+    "customerId": 2
+}
+
+###
 # @name HealthCheck
 // @no-log
 GET {{host}}/healthcheck/ping

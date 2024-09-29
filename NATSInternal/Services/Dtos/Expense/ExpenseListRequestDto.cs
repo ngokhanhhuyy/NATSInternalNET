@@ -1,6 +1,8 @@
 namespace NATSInternal.Services.Dtos;
 
-public class ExpenseListRequestDto : IRequestDto<ExpenseListRequestDto>, ILockableEntityListRequestDto
+public class ExpenseListRequestDto :
+        IRequestDto<ExpenseListRequestDto>,
+        ILockableEntityListRequestDto
 {
     public bool OrderByAscending { get; set; } = false;
     public string OrderByField { get; set; } = nameof(FieldOptions.PaidDateTime);

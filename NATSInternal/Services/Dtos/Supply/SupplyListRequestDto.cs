@@ -9,7 +9,7 @@ public class SupplyListRequestDto :
     public int Year { get; set; }
     public int Month { get; set; }
     public bool IgnoreMonthYear { get; set; } = false;
-    public int? UserId { get; set; }
+    public int? CreatedUserId { get; set; }
     public int? ProductId { get; set; }
     public int Page { get; set; } = 1;
     public int ResultsPerPage { get; set; } = 15;

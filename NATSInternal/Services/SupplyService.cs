@@ -89,9 +89,9 @@ public class SupplyService : LockableEntityService, ISupplyService
         }
 
         // Filter by user id if specified.
-        if (requestDto.UserId.HasValue)
+        if (requestDto.CreatedUserId.HasValue)
         {
-            query = query.Where(s => s.CreatedUserId == requestDto.UserId.Value);
+            query = query.Where(s => s.CreatedUserId == requestDto.CreatedUserId.Value);
         }
 
         // Filter by product id if specified.
